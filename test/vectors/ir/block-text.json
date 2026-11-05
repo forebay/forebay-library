@@ -1,0 +1,11 @@
+{
+  "definition": "IrBlock",
+  "valid": true,
+  "value": {
+    "kind": "text",
+    "text": "hello world",
+    "extensions": {
+      "cache_control_vendor_field": "ephemeral"
+    }
+  }
+}

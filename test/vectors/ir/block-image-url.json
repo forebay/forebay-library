@@ -1,0 +1,9 @@
+{
+  "definition": "IrBlock",
+  "valid": true,
+  "value": {
+    "kind": "image",
+    "mediaType": "image/jpeg",
+    "url": "https://example.test/cat.jpg"
+  }
+}

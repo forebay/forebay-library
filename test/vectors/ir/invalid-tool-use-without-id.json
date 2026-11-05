@@ -1,0 +1,11 @@
+{
+  "definition": "IrBlock",
+  "valid": false,
+  "value": {
+    "kind": "tool_use",
+    "name": "get_weather",
+    "input": {
+      "city": "Berlin"
+    }
+  }
+}

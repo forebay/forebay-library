@@ -1,0 +1,14 @@
+{
+  "definition": "IrBlock",
+  "valid": true,
+  "value": {
+    "kind": "unknown",
+    "raw": {
+      "type": "document",
+      "source": {
+        "type": "text",
+        "data": "x"
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "definition": "IrRequest",
+  "valid": true,
+  "value": {
+    "model": "test-model-1",
+    "stream": false,
+    "maxTokens": 1024,
+    "temperature": 0.7,
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "kind": "text",
+            "text": "hello world"
+          },
+          {
+            "kind": "thinking",
+            "text": "reasoning about the answer",
+            "signature": "sig-abc123"
+          },
+          {
+            "kind": "tool_use",
+            "id": "call-1",
+            "name": "get_weather",
+            "input": {
+              "city": "Berlin"
+            }
+          },
+          {
+            "kind": "tool_result",
+            "toolUseId": "call-1",
+            "isError": false,
+            "content": [
+              {
+                "kind": "text",
+                "text": "18C, cloudy"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "system": [
+      {
+        "kind": "text",
+        "text": "you are a helpful assistant"
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "look up the weather for a city",
+        "inputSchema": {
+          "type": "object"
+        }
+      }
+    ],
+    "toolChoice": {
+      "type": "AUTO"
+    },
+    "thinking": {
+      "enabled": true,
+      "budgetTokens": 2048
+    },
+    "stopSequences": [
+      "STOP"
+    ],
+    "extensions": {
+      "vendor_safety_settings": "block_none"
+    }
+  }
+}

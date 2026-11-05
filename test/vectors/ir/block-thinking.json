@@ -1,0 +1,9 @@
+{
+  "definition": "IrBlock",
+  "valid": true,
+  "value": {
+    "kind": "thinking",
+    "text": "reasoning about the answer",
+    "signature": "sig-abc123"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "content_block_start",
+    "index": 1,
+    "blockKind": "tool_use",
+    "toolUseId": "call-3",
+    "toolName": "lookup"
+  }
+}

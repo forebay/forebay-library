@@ -1,0 +1,9 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "thinking_signature",
+    "index": 0,
+    "signature": "sig-xyz"
+  }
+}

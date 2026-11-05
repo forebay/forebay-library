@@ -1,0 +1,9 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "thinking_delta",
+    "index": 0,
+    "text": "hmm"
+  }
+}

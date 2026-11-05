@@ -1,0 +1,8 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "content_block_stop",
+    "index": 0
+  }
+}

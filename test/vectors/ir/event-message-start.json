@@ -1,0 +1,14 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "message_start",
+    "id": "msg-1",
+    "model": "test-model-1",
+    "role": "assistant",
+    "usage": {
+      "inputTokens": 50,
+      "outputTokens": 0
+    }
+  }
+}

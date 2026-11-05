@@ -1,0 +1,8 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": false,
+  "value": {
+    "event": "text_delta",
+    "text": "Hel"
+  }
+}

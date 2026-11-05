@@ -1,0 +1,11 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "message_delta",
+    "stopReason": "tool_use",
+    "usage": {
+      "outputTokens": 45
+    }
+  }
+}

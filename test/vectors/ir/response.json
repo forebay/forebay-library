@@ -1,0 +1,32 @@
+{
+  "definition": "IrResponse",
+  "valid": true,
+  "value": {
+    "id": "resp-1",
+    "model": "test-model-1",
+    "stopReason": "tool_use",
+    "usage": {
+      "inputTokens": 120,
+      "outputTokens": 45,
+      "cacheCreationInputTokens": 10,
+      "cacheReadInputTokens": 0
+    },
+    "content": [
+      {
+        "kind": "text",
+        "text": "here is my answer"
+      },
+      {
+        "kind": "tool_use",
+        "id": "call-2",
+        "name": "search",
+        "input": {
+          "query": "weather in Berlin"
+        }
+      }
+    ],
+    "extensions": {
+      "vendor_finish_reason": "TOOL_CALL"
+    }
+  }
+}
