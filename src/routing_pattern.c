@@ -435,9 +435,13 @@ static size_t step(const node *atom, const char *subject, size_t length, size_t 
     }
 }
 
-static size_t previous_boundary(const char *subject, size_t position) {
+static int is_continuation(char byte) {
+    return (((unsigned char)byte) & 0xC0) == 0x80;
+}
+
+static size_t previous_boundary(const char *subject, size_t floor, size_t position) {
     position--;
-    while (position > 0 && (((unsigned char)subject[position]) & 0xC0) == 0x80) {
+    while (position > floor && is_continuation(subject[position])) {
         position--;
     }
     return position;
@@ -466,7 +470,7 @@ static int match_repeated(const routing_pattern *pattern, size_t index, const ch
         if (taken <= atom->minimum) {
             return 0;
         }
-        end = previous_boundary(subject, end);
+        end = previous_boundary(subject, position, end);
         taken--;
     }
 }
@@ -513,6 +517,9 @@ int routing_pattern_find(const routing_pattern *pattern, const char *subject, si
                          size_t *group_length) {
     size_t length = strlen(subject);
     for (size_t start = 0; start <= length; start++) {
+        if (start < length && is_continuation(subject[start])) {
+            continue;
+        }
         capture group = {-1, -1};
         if (match_from(pattern, 0, subject, length, start, &group)) {
             if (group_start != NULL && group_length != NULL && group.start >= 0 && group.end >= group.start) {

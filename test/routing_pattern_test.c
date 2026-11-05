@@ -108,6 +108,13 @@ static void never_splits_a_utf8_character(void) {
     expect_match("^.$", "\xF0\x9F\x98\x80", 1);
 }
 
+static void never_starts_inside_a_utf8_character(void) {
+    expect_group("(.).a", "\xE2\x82\xAC" "a", NULL);
+    expect_match(".*x", "\xE2\x82\xAC", 0);
+    expect_match(".*x", "\xE2\x82\xAC" "x", 1);
+    expect_group("(.)a", "\xE2\x82\xAC" "a", "\xE2\x82\xAC");
+}
+
 static void refuses_what_it_cannot_match_faithfully(void) {
     expect_unsupported("a|b", "alternation");
     expect_unsupported("(a)(b)", "more than one capture group");
@@ -150,6 +157,7 @@ int main(void) {
     backtracks_greedy_quantifiers();
     reads_classes();
     never_splits_a_utf8_character();
+    never_starts_inside_a_utf8_character();
     refuses_what_it_cannot_match_faithfully();
     counts_its_groups();
     if (failures == 0) {
