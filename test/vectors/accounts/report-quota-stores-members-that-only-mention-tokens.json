@@ -1,0 +1,50 @@
+{
+  "source": "a quota reading counts tokens; only credential names are refused",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "acc1",
+    "outcome": "quota",
+    "quota": {
+      "label": "opus",
+      "tokensRemaining": 1200,
+      "inputTokens": 40,
+      "outputTokens": 7,
+      "remainingFraction": 0.5
+    }
+  },
+  "result": {
+    "changed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "quota": {
+          "label": "opus",
+          "tokensRemaining": 1200,
+          "inputTokens": 40,
+          "outputTokens": 7,
+          "remainingFraction": 0.5
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

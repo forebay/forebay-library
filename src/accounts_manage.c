@@ -1,11 +1,7 @@
 #include "accounts_manage.h"
 
-#include <stdio.h>
-
 #include "accounts_secrets.h"
 #include "accounts_support.h"
-
-#define TOKEN_FIX "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
 
 typedef struct upsert_request {
     const char *store;
@@ -136,12 +132,6 @@ static int read_account(const spisor_call *call, upsert_request *request, uint8_
     return 1;
 }
 
-static int32_t refuse_token_member(const char *member, uint8_t **out, size_t *out_len) {
-    char cause[200];
-    snprintf(cause, sizeof(cause), "the account carries the token member %s", member);
-    return service_refuse(cause, TOKEN_FIX, out, out_len);
-}
-
 SERVICE_EXPORT int32_t accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
@@ -152,7 +142,7 @@ SERVICE_EXPORT int32_t accounts_upsert(const uint8_t *in, size_t in_len, uint8_t
     if (accounts_require_store(&call, &request.store, out, out_len, &status) &&
         read_account(&call, &request, out, out_len, &status)) {
         const char *token_member = accounts_find_token_member(request.account);
-        status = token_member != NULL ? refuse_token_member(token_member, out, out_len)
+        status = token_member != NULL ? accounts_refuse_token_member("account", token_member, out, out_len)
                                       : accounts_run_change(request.store, upsert_into, &request, out, out_len);
     }
     spisor_discard_call(&call);

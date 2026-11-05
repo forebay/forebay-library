@@ -20,7 +20,8 @@
     "strategy": "sticky"
   },
   "result": {
-    "id": "a0"
+    "id": "a0",
+    "available": true
   },
   "after": {
     "version": 1,

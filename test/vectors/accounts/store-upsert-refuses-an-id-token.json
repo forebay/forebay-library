@@ -4,11 +4,11 @@
   "argument": {
     "account": {
       "id": "acc1",
-      "ID_TOKEN": "x"
+      "idToken": "x"
     }
   },
   "result": {
-    "refused": "the account carries the token member ID_TOKEN",
+    "refused": "the account carries the token member idToken",
     "fix": "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
   },
   "after": null

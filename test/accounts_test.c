@@ -250,7 +250,7 @@ static void creates_the_missing_parent_directories_and_the_lock_file(void) {
     free(directory);
 }
 
-static const char *const token_names[] = {"access", "refresh", "accessToken", "refresh_token", "ID_TOKEN", "Token"};
+static const char *const token_names[] = {"access", "refresh", "accessToken", "refreshToken", "idToken", "apiKey"};
 
 static void token_members_are_refused(void) {
     char *directory = support_scratch();

@@ -120,9 +120,18 @@ static cJSON *none_answer(const cJSON *accounts, const acquire_request *request)
     return answer;
 }
 
-static cJSON *claimed_answer(const char *id) {
+/**
+ * The claimed id, whether the account is available now, and when it will be when it is not: hybrid claims
+ * the soonest-free account while every account is cooling, and the provider answers 503 from available.
+ */
+static cJSON *claimed_answer(const cJSON *account, const acquire_request *request) {
     cJSON *answer = cJSON_CreateObject();
-    if (answer == NULL || cJSON_AddStringToObject(answer, "id", id) == NULL) {
+    int available = accounts_is_available(account, request->lane, request->now);
+    if (answer == NULL || cJSON_AddStringToObject(answer, "id", accounts_account_id(account)) == NULL ||
+        cJSON_AddBoolToObject(answer, "available", available) == NULL ||
+        (!available &&
+         cJSON_AddNumberToObject(answer, "availableAt",
+                                 accounts_available_at(account, request->lane, request->now)) == NULL)) {
         cJSON_Delete(answer);
         return NULL;
     }
@@ -141,9 +150,12 @@ static void claim(accounts_store *store, const void *given, accounts_outcome *ou
         return;
     }
     cJSON *account = cJSON_GetArrayItem(accounts, index);
-    if (accounts_set_number(account, "lastUsed", request->now)) {
-        outcome->result = claimed_answer(accounts_account_id(account));
+    outcome->result = claimed_answer(account, request);
+    if (outcome->result != NULL && accounts_set_number(account, "lastUsed", request->now)) {
         outcome->changed = 1;
+    } else {
+        cJSON_Delete(outcome->result);
+        outcome->result = NULL;
     }
 }
 

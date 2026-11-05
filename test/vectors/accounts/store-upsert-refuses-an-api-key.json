@@ -4,11 +4,11 @@
   "argument": {
     "account": {
       "id": "acc1",
-      "refresh_token": "x"
+      "apiKey": "x"
     }
   },
   "result": {
-    "refused": "the account carries the token member refresh_token",
+    "refused": "the account carries the token member apiKey",
     "fix": "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
   },
   "after": null

@@ -32,7 +32,9 @@
     "strategy": "hybrid"
   },
   "result": {
-    "id": "a1"
+    "id": "a1",
+    "available": false,
+    "availableAt": 1002000
   },
   "after": {
     "version": 1,

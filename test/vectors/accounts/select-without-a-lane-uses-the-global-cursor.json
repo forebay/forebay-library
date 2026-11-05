@@ -28,7 +28,8 @@
     "strategy": "round-robin"
   },
   "result": {
-    "id": "a2"
+    "id": "a2",
+    "available": true
   },
   "after": {
     "version": 1,
@@ -61,7 +62,8 @@
         "strategy": "round-robin"
       },
       "result": {
-        "id": "a0"
+        "id": "a0",
+        "available": true
       },
       "after": {
         "version": 1,

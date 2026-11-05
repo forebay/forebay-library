@@ -4,6 +4,7 @@
 
 #include "accounts_availability.h"
 #include "accounts_backoff.h"
+#include "accounts_secrets.h"
 #include "accounts_support.h"
 
 #define DEFAULT_JITTER 0.5
@@ -50,17 +51,28 @@ static int apply_success(cJSON *account, const report_request *request, int *cha
     return accounts_set_number(account, "coolingDownUntil", 0) && accounts_set_number(account, "lastUsed", request->now);
 }
 
+/** Whether a cooldown still running at now already lasts until until or longer. */
+static int running_cooldown_covers(const cJSON *account, double until, double now) {
+    const cJSON *running = cJSON_GetObjectItemCaseSensitive(account, "coolingDownUntil");
+    return cJSON_IsNumber(running) && running->valuedouble > now && running->valuedouble >= until;
+}
+
 /**
  * AccountManager.reportError: a cooldown by jittered backoff, unless a reset the provider supplied for this
  * very lane is still active, which owns usable-again on its own. A reset on another lane never suppresses it.
+ * A cooldown already running to a later time, such as a lane-less rate limit, is never shortened.
  */
 static int apply_error(cJSON *account, const report_request *request, int *changed) {
     if (accounts_is_lane_rate_limited(account, request->lane, request->now)) {
         return 1;
     }
+    double until = request->now + backoff_for(request);
+    if (running_cooldown_covers(account, until, request->now)) {
+        return 1;
+    }
     *changed = 1;
     const char *reason = request->reason != NULL ? request->reason : DEFAULT_ERROR_REASON;
-    return set_cooldown(account, request->now + backoff_for(request), reason);
+    return set_cooldown(account, until, reason);
 }
 
 static int set_lane_reset(cJSON *account, const char *lane, double reset_at) {
@@ -85,8 +97,7 @@ static int apply_rate_limited(cJSON *account, const report_request *request, int
         *changed = 1;
         return set_lane_reset(account, request->lane, reset_at);
     }
-    const cJSON *running = cJSON_GetObjectItemCaseSensitive(account, "coolingDownUntil");
-    if (cJSON_IsNumber(running) && running->valuedouble >= reset_at) {
+    if (running_cooldown_covers(account, reset_at, request->now)) {
         return 1;
     }
     *changed = 1;
@@ -240,7 +251,9 @@ SERVICE_EXPORT int32_t accounts_report(const uint8_t *in, size_t in_len, uint8_t
     }
     report_request request;
     if (read_request(&call, &request, out, out_len, &status)) {
-        status = accounts_run_change(request.store, record, &request, out, out_len);
+        const char *token_member = request.quota == NULL ? NULL : accounts_find_token_member(request.quota);
+        status = token_member != NULL ? accounts_refuse_token_member("quota", token_member, out, out_len)
+                                      : accounts_run_change(request.store, record, &request, out, out_len);
     }
     spisor_discard_call(&call);
     return status;

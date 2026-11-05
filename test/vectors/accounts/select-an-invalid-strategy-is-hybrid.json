@@ -24,7 +24,9 @@
     "strategy": "bogus"
   },
   "result": {
-    "id": "a0"
+    "id": "a0",
+    "available": false,
+    "availableAt": 1005000
   },
   "after": {
     "version": 1,

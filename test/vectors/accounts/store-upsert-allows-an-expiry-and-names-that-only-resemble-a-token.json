@@ -1,12 +1,14 @@
 {
-  "source": "decision 3: expires is non-secret state; only access and refresh exactly, or a name containing token, are refused",
+  "source": "decision 3: only the exact names access, refresh, accessToken, refreshToken, idToken and apiKey are refused, case-sensitively",
   "function": "upsert",
   "argument": {
     "account": {
       "id": "acc1",
       "expires": 9,
       "accessedAt": 4,
-      "refreshedAt": 5
+      "refreshedAt": 5,
+      "Access": 1,
+      "id_token": 2
     }
   },
   "result": {
@@ -19,7 +21,9 @@
         "id": "acc1",
         "expires": 9,
         "accessedAt": 4,
-        "refreshedAt": 5
+        "refreshedAt": 5,
+        "Access": 1,
+        "id_token": 2
       }
     ],
     "activeIndex": 0,
