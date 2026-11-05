@@ -1,0 +1,71 @@
+{
+  "source": "RouterTest.ratelimitedPrimary_fallsBackToNextInChain: the chain the router walks",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {
+      "modelMap": {
+        "opus": [
+          {
+            "provider": "rl",
+            "model": "m-rl"
+          },
+          {
+            "provider": "ok",
+            "model": "m-ok"
+          }
+        ]
+      }
+    },
+    "models": {}
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "rl",
+          "model": "m-rl",
+          "name": "m-rl",
+          "derived": false
+        },
+        {
+          "provider": "ok",
+          "model": "m-ok",
+          "name": "m-ok",
+          "derived": false
+        }
+      ],
+      "default": [
+        {
+          "provider": "rl",
+          "model": "m-rl",
+          "name": "m-rl",
+          "derived": true
+        },
+        {
+          "provider": "ok",
+          "model": "m-ok",
+          "name": "m-ok",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "default"
+    ]
+  }
+}

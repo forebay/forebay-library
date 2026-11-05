@@ -1,0 +1,61 @@
+{
+  "source": "ModelMap.pick: a fully stale chain heals only inside the provider it named",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {
+      "modelMap": {
+        "haiku": {
+          "provider": "zed",
+          "model": "old"
+        }
+      }
+    },
+    "models": {
+      "antigravity": {
+        "models": {
+          "m-haiku": {
+            "name": "Haiku"
+          }
+        }
+      },
+      "zed": {
+        "models": {
+          "zed-other": {
+            "name": "Other"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": []
+    },
+    "healed": []
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "source": "ModelMap.modelEnvPairs",
+  "function": "environment",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "OPENCODE",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "sonnet": [
+        {
+          "provider": "p",
+          "model": "s-1",
+          "derived": false
+        }
+      ],
+      "default": []
+    },
+    "port": 40001,
+    "providersEnabled": true,
+    "environment": {},
+    "userHome": "/routing-test-home-that-does-not-exist"
+  },
+  "result": {
+    "environment": {
+      "ANTHROPIC_BASE_URL": "http://127.0.0.1:40001",
+      "OPENCODE_DEFAULT_SONNET_MODEL": "s-1",
+      "OPENCODE_DEFAULT_SONNET_MODEL_NAME": "s-1",
+      "ANTHROPIC_AUTH_TOKEN": "sk-ant-loader-proxy"
+    }
+  }
+}

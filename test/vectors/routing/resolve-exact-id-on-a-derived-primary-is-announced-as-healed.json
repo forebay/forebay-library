@@ -1,0 +1,45 @@
+{
+  "source": "Router.route: a derived primary is a healed mapping",
+  "function": "resolve",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "opus": [
+        {
+          "provider": "p",
+          "model": "m1",
+          "name": "m1",
+          "derived": true
+        }
+      ],
+      "default": []
+    },
+    "models": {},
+    "requestedModel": "m1"
+  },
+  "result": {
+    "chain": [
+      {
+        "provider": "p",
+        "model": "m1",
+        "name": "m1",
+        "derived": true
+      }
+    ],
+    "notice": "healed"
+  }
+}

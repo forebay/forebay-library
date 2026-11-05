@@ -1,0 +1,60 @@
+{
+  "source": "model-map.test.ts resolveModelMap: honors an explicit tier mapping with no catalog",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "stored": {
+      "modelMap": {
+        "opus": {
+          "provider": "antigravity",
+          "model": "claude-opus-4-6-thinking"
+        }
+      }
+    },
+    "models": {}
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "claude-opus-4-6-thinking",
+          "name": "claude-opus-4-6-thinking",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "claude-opus-4-6-thinking",
+          "name": "claude-opus-4-6-thinking",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "default"
+    ]
+  }
+}

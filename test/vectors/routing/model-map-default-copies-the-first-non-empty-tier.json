@@ -1,0 +1,64 @@
+{
+  "source": "ModelMap.resolveModelMap: an empty default is copied, marked derived, from the first non-empty tier",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {},
+    "models": {
+      "antigravity": {
+        "models": {
+          "m-haiku": {
+            "name": "Haiku"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [],
+      "sonnet": [],
+      "haiku": [
+        {
+          "provider": "antigravity",
+          "model": "m-haiku",
+          "name": "Haiku",
+          "derived": true
+        }
+      ],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-haiku",
+          "name": "Haiku",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "haiku",
+      "default"
+    ]
+  }
+}

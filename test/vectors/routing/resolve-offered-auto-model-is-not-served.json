@@ -1,0 +1,60 @@
+{
+  "source": "Router.resolveAssignmentForModel step 3 skips -auto ids",
+  "function": "resolve",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "opus": [
+        {
+          "provider": "ok",
+          "model": "m-ok",
+          "name": "m-ok",
+          "derived": false
+        }
+      ],
+      "default": [
+        {
+          "provider": "ok",
+          "model": "m-ok",
+          "name": "m-ok",
+          "derived": false
+        }
+      ]
+    },
+    "models": {
+      "zed": {
+        "models": {
+          "gpt-auto": {
+            "name": "Auto"
+          }
+        }
+      }
+    },
+    "requestedModel": "gpt-auto"
+  },
+  "result": {
+    "chain": [
+      {
+        "provider": "ok",
+        "model": "m-ok",
+        "name": "m-ok",
+        "derived": false
+      }
+    ],
+    "notice": "model_switched"
+  }
+}

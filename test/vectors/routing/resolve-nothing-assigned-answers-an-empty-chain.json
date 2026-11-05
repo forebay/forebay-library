@@ -1,0 +1,30 @@
+{
+  "source": "ruling 2: the session host passes the request through",
+  "function": "resolve",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "opus": [],
+      "default": []
+    },
+    "models": {},
+    "requestedModel": ""
+  },
+  "result": {
+    "chain": []
+  }
+}

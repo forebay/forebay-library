@@ -21,6 +21,13 @@ add_library(apps SHARED
     src/home.c
     src/javascript.c
     src/registry.c
+    src/routing_environment.c
+    src/routing_model_map.c
+    src/routing_outcome.c
+    src/routing_pattern.c
+    src/routing_resolve.c
+    src/routing_support.c
+    src/routing_tiers.c
     src/support.c)
 target_link_libraries(apps PRIVATE spisor_library)
 set_target_properties(apps PROPERTIES C_VISIBILITY_PRESET hidden)

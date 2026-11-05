@@ -1,0 +1,44 @@
+{
+  "source": "ModelMap.resolveTiers: ranking absent, model keys in order",
+  "function": "tiers",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "models": {
+      "claude-code": {
+        "models": {
+          "claude-haiku-4-6": {
+            "name": "H"
+          },
+          "claude-opus-4-6": {
+            "name": "O"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "tiers": [
+      "opus",
+      "haiku"
+    ]
+  }
+}

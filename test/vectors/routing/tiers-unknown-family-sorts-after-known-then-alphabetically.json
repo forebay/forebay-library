@@ -1,0 +1,58 @@
+{
+  "source": "ModelMap.resolveTiers sort: unknown as 99, then alphabetical",
+  "function": "tiers",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "models": {
+      "claude-code": {
+        "ranking": [
+          "claude-zeta-1",
+          "claude-opus-4",
+          "claude-alpha-2",
+          "claude-fable-5"
+        ],
+        "models": {
+          "claude-zeta-1": {
+            "name": "Z"
+          },
+          "claude-opus-4": {
+            "name": "O"
+          },
+          "claude-alpha-2": {
+            "name": "A"
+          },
+          "claude-fable-5": {
+            "name": "F"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "tiers": [
+      "opus",
+      "fable",
+      "alpha",
+      "zeta"
+    ]
+  }
+}

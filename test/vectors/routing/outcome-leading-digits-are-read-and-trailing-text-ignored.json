@@ -1,0 +1,15 @@
+{
+  "source": "RateLimit.parseIntLenient",
+  "function": "outcome",
+  "argument": {
+    "status": 429,
+    "headers": {
+      "Retry-After": "7s"
+    },
+    "now": 1000000
+  },
+  "result": {
+    "rateLimited": true,
+    "resetAt": 1007000
+  }
+}

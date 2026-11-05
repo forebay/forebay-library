@@ -1,0 +1,31 @@
+{
+  "source": "matcher subset: exactly one capture group",
+  "function": "tiers",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-[a-z]+-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "models": {}
+  },
+  "result": {
+    "refused": "tierRegex must contain exactly one capture group",
+    "fix": "write the pattern with only ^ $ literals . [] \\d \\w \\s * + ? and at most one capture group"
+  }
+}

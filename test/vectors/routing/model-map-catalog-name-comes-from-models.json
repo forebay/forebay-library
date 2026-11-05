@@ -1,0 +1,77 @@
+{
+  "source": "ModelMapTest.catalogEntries_readsFromModelsCache",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {
+      "modelMap": {
+        "opus": {
+          "provider": "antigravity",
+          "model": "m-opus"
+        }
+      }
+    },
+    "models": {
+      "antigravity": {
+        "models": {
+          "m-opus": {
+            "name": "M Opus",
+            "limit": {
+              "context": 200000,
+              "output": 8192
+            }
+          }
+        },
+        "ranking": [
+          "m-opus"
+        ]
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "default"
+    ]
+  }
+}

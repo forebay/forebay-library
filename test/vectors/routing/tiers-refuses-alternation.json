@@ -1,0 +1,31 @@
+{
+  "source": "matcher subset: refusal naming the construct",
+  "function": "tiers",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-(opus|sonnet)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "models": {}
+  },
+  "result": {
+    "refused": "tierRegex uses an unsupported construct: alternation with |",
+    "fix": "write the pattern with only ^ $ literals . [] \\d \\w \\s * + ? and at most one capture group"
+  }
+}

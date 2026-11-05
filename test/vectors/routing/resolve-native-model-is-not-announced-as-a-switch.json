@@ -1,0 +1,51 @@
+{
+  "source": "Router.resolveAssignmentForModel: nativeModelPattern silences the notice",
+  "function": "resolve",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "map": {
+      "opus": [
+        {
+          "provider": "ok",
+          "model": "m-ok",
+          "name": "m-ok",
+          "derived": false
+        }
+      ],
+      "default": [
+        {
+          "provider": "ok",
+          "model": "m-ok",
+          "name": "m-ok",
+          "derived": false
+        }
+      ]
+    },
+    "models": {},
+    "requestedModel": "claude-unknown-9"
+  },
+  "result": {
+    "chain": [
+      {
+        "provider": "ok",
+        "model": "m-ok",
+        "name": "m-ok",
+        "derived": false
+      }
+    ]
+  }
+}

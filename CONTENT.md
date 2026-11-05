@@ -23,6 +23,30 @@ keeps no cache either, so it answers what basekit answers on a cold cache; basek
 the registry path and mtime alone, so a second call with a different environment, or a write within
 the same mtime, can answer stale there and never here.
 
+## The routing service
+
+`routing` holds the decisions of basekit's model map and router as synchronous `json` functions that
+read nothing of the process: time and the filesystem are arguments. `profile` has the shape of
+`contracts/front-door.schema.json#/definitions/Profile`, `models` is basekit's `models.json`
+(`{ <provider>: { models, ranking } }`) and `map` is `{ <tier>|default: Assignment[] }` with
+`Assignment = { provider, model, name, derived }`.
+
+| function | answer |
+| --- | --- |
+| `tiers({ profile, models })` | `{ tiers }`: `tierRegex` group 1 over the tier source's ranking, ordered by `tierOrder`, unknown last |
+| `modelMap({ profile, stored, models })` | `{ map, healed }`: stored entries kept, healed within their provider, or derived |
+| `resolve({ profile, map, models, requestedModel })` | `{ chain, notice? }`: exact id, tier keyword, an offered model, then the default |
+| `outcome({ status, headers, now })` | `{ rateLimited, resetAt? }` from 429, `x-hub-rate-limited`, `x-hub-retry-after-ms`, `retry-after` |
+| `environment({ profile, map, port, providersEnabled, environment, userHome })` | `{ environment }`: the base URL, and with providers the model pairs and the placeholder token unless the application has a login of its own |
+
+A refusal is a successful answer `{ "refused", "fix" }`. Windows has no `regcomp`, so one matcher
+serves every platform: `^ $`, literals, `.`, classes, `\d \w \s`, `* + ?` on one atom and at most one
+capture group. A pattern using anything else is refused naming the construct. `notice` is
+`model_switched` when the default tier serves a model nothing offers (unless `nativeModelPattern`
+says it is the application's own), else `healed` when the chain's primary is derived.
+`test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
+`Router.java`.
+
 ## Where basekit answers empty and where it throws
 
 An absent, unreadable or malformed registry, or one that is not an object, answers `{"apps": []}` with

@@ -1,0 +1,81 @@
+{
+  "source": "model-map.test.ts profileTiers: detects families from the tier-source ranking",
+  "function": "tiers",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "models": {
+      "claude-code": {
+        "ranking": [
+          "claude-opus-4-6-thinking",
+          "claude-sonnet-4-6",
+          "claude-haiku-4-6",
+          "claude-fable-5",
+          "claude-opus-4-6-auto"
+        ],
+        "models": {
+          "claude-opus-4-6-thinking": {
+            "name": "Opus 4.6 Thinking"
+          },
+          "claude-sonnet-4-6": {
+            "name": "Sonnet 4.6"
+          },
+          "claude-haiku-4-6": {
+            "name": "Haiku 4.6"
+          },
+          "claude-fable-5": {
+            "name": "Fable 5"
+          },
+          "claude-opus-4-6-auto": {
+            "name": "Opus Auto"
+          }
+        },
+        "scores": {}
+      },
+      "antigravity": {
+        "ranking": [
+          "claude-opus-4-6-thinking-x",
+          "gemini-3-pro"
+        ],
+        "models": {
+          "claude-opus-4-6-thinking-x": {
+            "name": "Antigravity Opus"
+          },
+          "gemini-3-pro": {
+            "name": "Gemini 3 Pro"
+          }
+        },
+        "scores": {
+          "claude-opus-4-6-thinking-x": 80,
+          "gemini-3-pro": 60
+        }
+      }
+    }
+  },
+  "result": {
+    "tiers": [
+      "opus",
+      "sonnet",
+      "haiku",
+      "fable"
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "source": "IrRouterTest.handleIrThrows429TypedException: claude-opus-4-1 resolves to the opus chain",
+  "function": "resolve",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "opus": [
+        {
+          "provider": "primary",
+          "model": "m-primary",
+          "name": "m-primary",
+          "derived": false
+        },
+        {
+          "provider": "fallback",
+          "model": "m-fallback",
+          "name": "m-fallback",
+          "derived": false
+        }
+      ],
+      "default": [
+        {
+          "provider": "primary",
+          "model": "m-primary",
+          "name": "m-primary",
+          "derived": true
+        },
+        {
+          "provider": "fallback",
+          "model": "m-fallback",
+          "name": "m-fallback",
+          "derived": true
+        }
+      ]
+    },
+    "models": {},
+    "requestedModel": "claude-opus-4-1"
+  },
+  "result": {
+    "chain": [
+      {
+        "provider": "primary",
+        "model": "m-primary",
+        "name": "m-primary",
+        "derived": false
+      },
+      {
+        "provider": "fallback",
+        "model": "m-fallback",
+        "name": "m-fallback",
+        "derived": false
+      }
+    ]
+  }
+}
