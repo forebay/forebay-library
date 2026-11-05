@@ -1,7 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://forebay.github.io/library/contracts/front-door.schema.json",
-  "title": "What a front door declares and what its four functions answer",
+  "title": "What a front door answers to its five functions: profile, decodeRequest, encodeResponse, encodeEvent and rateLimitReply",
+  "description": "A front door and a provider are weivel capabilities a plugin provides (capabilities in its plugin.json, context.provide at activation), not services it registers; the session host calls them and checks every answer against these definitions.",
   "definitions": {
     "Profile": {
       "type": "object",
@@ -29,10 +30,23 @@
         "status": { "type": "integer", "minimum": 100, "maximum": 599 }
       }
     },
+    "ProfileAnswer": {
+      "$ref": "#/definitions/Profile"
+    },
+    "PassThrough": {
+      "description": "A request the front door does not route, which the session host forwards undecoded to the profile's upstream.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passThrough"],
+      "properties": {
+        "passThrough": { "const": true }
+      }
+    },
     "DecodeRequestAnswer": {
       "oneOf": [
         { "$ref": "ir.schema.json#/definitions/IrRequest" },
-        { "$ref": "ir.schema.json#/definitions/IrFailure" }
+        { "$ref": "ir.schema.json#/definitions/IrFailure" },
+        { "$ref": "#/definitions/PassThrough" }
       ]
     },
     "EncodeResponseAnswer": {

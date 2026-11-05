@@ -51,7 +51,7 @@ describe("the contract schemas", () => {
 
   it.each([
     ["ir.schema.json", ["IrRequest", "IrResponse", "IrBlock", "IrStreamEvent", "IrFailure"]],
-    ["front-door.schema.json", ["Profile"]],
+    ["front-door.schema.json", ["Profile", "ProfileAnswer", "PassThrough", "DecodeRequestAnswer", "EncodeResponseAnswer", "EncodeEventAnswer", "RateLimitReplyAnswer"]],
     ["provider.schema.json", ["ModelsAnswer", "HandleIrAnswer"]],
   ] as const)("%s declares its named definitions", (file, names) => {
     for (const name of names) {
@@ -93,6 +93,26 @@ describe("the contract schemas", () => {
     expect(validate(profile)).toBe(true);
     const { tierOrder, ...incomplete } = profile;
     expect(validate(incomplete)).toBe(false);
+  });
+
+  it("answers profile with a profile and refuses one missing its upstream", () => {
+    const validate = definitionValidator(ajv, "front-door.schema.json", "ProfileAnswer");
+    const profile = {
+      tierSourceProvider: "anthropic", tierOrder: ["opus"], tierFallback: ["opus"], tierRegex: "^claude-([a-z]+)-\\d",
+      envPrefix: "ANTHROPIC", defaultContext: 200000, defaultOutput: 64000, nativeModelPattern: null,
+      upstream: "https://api.example.test",
+    };
+    expect(validate(profile), JSON.stringify(validate.errors)).toBe(true);
+    const { upstream, ...incomplete } = profile;
+    expect(validate(incomplete)).toBe(false);
+  });
+
+  it("lets decodeRequest pass a request through, and refuses a pass-through that is not true or carries more", () => {
+    const validate = definitionValidator(ajv, "front-door.schema.json", "DecodeRequestAnswer");
+    expect(validate({ passThrough: true }), JSON.stringify(validate.errors)).toBe(true);
+    expect(validate({ passThrough: false })).toBe(false);
+    expect(validate({ passThrough: true, status: 200 })).toBe(false);
+    expect(validate({ status: 400, headers: {}, body: "bad" })).toBe(true);
   });
 
   it("accepts a models answer and a handleIr failure, and refuses a model without a context", () => {
