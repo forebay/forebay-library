@@ -85,7 +85,7 @@ static int has_account_on_disk(const char *user_home, int *out_of_memory) {
         *out_of_memory = 1;
         return 0;
     }
-    spisor_json_file_state state;
+    spisor_json_file_state state = SPISOR_JSON_FILE_UNREADABLE;
     cJSON *state_file = spisor_read_json_file(path, &state);
     free(path);
     int signed_in = state_file != NULL && is_truthy(cJSON_GetObjectItemCaseSensitive(state_file, "oauthAccount"));

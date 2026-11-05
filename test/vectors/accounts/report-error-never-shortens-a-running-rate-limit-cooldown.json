@@ -1,0 +1,69 @@
+{
+  "source": "a lane-less rate limit sets a cooldown, and a later lane-less error must not replace it with a shorter backoff",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "acc1",
+    "outcome": "rate-limited",
+    "resetAt": 1090000
+  },
+  "result": {
+    "changed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "coolingDownUntil": 1090000,
+        "cooldownReason": "rate limited"
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "then": [
+    {
+      "function": "report",
+      "argument": {
+        "now": 1000000,
+        "id": "acc1",
+        "outcome": "error",
+        "random": 0.5,
+        "baseMilliseconds": 1000,
+        "maxMilliseconds": 300000
+      },
+      "result": {
+        "changed": false
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "acc1",
+            "label": "acc1",
+            "enabled": true,
+            "coolingDownUntil": 1090000,
+            "cooldownReason": "rate limited"
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {}
+      }
+    }
+  ]
+}

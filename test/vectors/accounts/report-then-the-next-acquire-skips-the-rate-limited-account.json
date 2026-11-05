@@ -24,7 +24,8 @@
     "strategy": "round-robin"
   },
   "result": {
-    "id": "acc1"
+    "id": "acc1",
+    "available": true
   },
   "then": [
     {
@@ -48,7 +49,8 @@
         "strategy": "round-robin"
       },
       "result": {
-        "id": "acc0"
+        "id": "acc0",
+        "available": true
       },
       "after": {
         "version": 1,

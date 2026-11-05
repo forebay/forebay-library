@@ -2,12 +2,12 @@
 #define ACCOUNTS_STORE_H
 
 #include "cJSON.h"
-#include "hosts_lock.h"
+#include "spisor/lock.h"
 
 /** One account store file, parsed and normalized, and the lock held over it while a change is made. */
 typedef struct accounts_store {
     char *path;
-    runtime_hosts_guard *guard;
+    spisor_lock *guard;
     cJSON *document;
 } accounts_store;
 
@@ -25,7 +25,7 @@ typedef enum accounts_store_status {
  * stays held until accounts_store_close; without it nothing is created or locked. On any status but
  * READY the store holds nothing and needs no close.
  *
- * @implNote The lock is the one the runtime's registry takes (runtime_lock_file), an OS file lock on an
+ * @implNote The lock is the one the runtime registry takes (spisor_lock_file), an OS file lock on an
  * open handle, so a crash cannot leave it held. A file that is not a JSON object is UNREADABLE and is
  * never replaced: a write over it would destroy accounts the caller cannot see.
  */

@@ -850,6 +850,12 @@
               "id": {
                 "type": "string"
               },
+              "available": {
+                "type": "boolean"
+              },
+              "availableAt": {
+                "type": "number"
+              },
               "none": {
                 "type": "boolean"
               },

@@ -24,7 +24,8 @@
     "strategy": "sticky"
   },
   "result": {
-    "id": "a1"
+    "id": "a1",
+    "available": true
   },
   "after": {
     "version": 1,

@@ -27,7 +27,8 @@
     "strategy": "sticky"
   },
   "result": {
-    "id": "a1"
+    "id": "a1",
+    "available": true
   },
   "then": [
     {
@@ -38,7 +39,8 @@
         "strategy": "sticky"
       },
       "result": {
-        "id": "a0"
+        "id": "a0",
+        "available": true
       },
       "after": {
         "version": 1,

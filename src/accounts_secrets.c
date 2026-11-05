@@ -1,20 +1,25 @@
 #include "accounts_secrets.h"
 
+#include <stdio.h>
 #include <string.h>
 
-#include "service_support.h"
+#define TOKEN_FIX "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
 
-static int names_a_token(const char *name) {
-    size_t length = strlen(name);
-    return service_contains_ignoring_case(name, "token") ||
-           (length == strlen("access") && service_contains_ignoring_case(name, "access")) ||
-           (length == strlen("refresh") && service_contains_ignoring_case(name, "refresh"));
+static const char *const credential_names[] = {"access", "refresh", "accessToken", "refreshToken", "idToken", "apiKey"};
+
+static int names_a_credential(const char *name) {
+    for (size_t index = 0; index < sizeof(credential_names) / sizeof(credential_names[0]); index++) {
+        if (strcmp(name, credential_names[index]) == 0) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 const char *accounts_find_token_member(const cJSON *value) {
     const cJSON *child = NULL;
     cJSON_ArrayForEach(child, value) {
-        if (cJSON_IsObject(value) && child->string != NULL && names_a_token(child->string)) {
+        if (cJSON_IsObject(value) && child->string != NULL && names_a_credential(child->string)) {
             return child->string;
         }
         const char *nested = accounts_find_token_member(child);
@@ -23,4 +28,10 @@ const char *accounts_find_token_member(const cJSON *value) {
         }
     }
     return NULL;
+}
+
+int32_t accounts_refuse_token_member(const char *subject, const char *member, uint8_t **out, size_t *out_len) {
+    char cause[200];
+    snprintf(cause, sizeof(cause), "the %s carries the token member %s", subject, member);
+    return service_refuse(cause, TOKEN_FIX, out, out_len);
 }

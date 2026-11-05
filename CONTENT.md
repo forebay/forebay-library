@@ -61,18 +61,17 @@ provider. Time and randomness are arguments (`now`, `random` in [0, 1)).
 | `list({ store })` | `{ accounts }`; a missing or unreadable store lists as empty |
 | `upsert({ store, account })` | `{ outcome: "added" or "updated" or "unchanged" }`, matched by `id`, members the store does not know kept, compared with key order ignored and array order kept |
 | `remove({ store, id })` | `{ removed }` |
-| `acquire({ store, lane?, strategy, now })` | `{ id }` after writing the cursor and `lastUsed`, else `{ none: true, nextAvailableAt? }`; `round-robin`, `sticky`, `hybrid`, anything else as `hybrid` |
+| `acquire({ store, lane?, strategy, now })` | `{ id, available, availableAt? }` after writing the cursor and `lastUsed` (`available: false` with the account's `availableAt` when hybrid claimed the soonest-free account while every account is cooling), else `{ none: true, nextAvailableAt? }`; `round-robin`, `sticky`, `hybrid`, anything else as `hybrid` |
 | `report({ store, id, lane?, outcome, now, ... })` | `{ changed }` for `success`, `rate-limited` (`resetAt`, else the backoff), `error`, `disabled` (`reason`) or `quota` (`quota`) |
 | `tokenExpired({ expires?, now, skewMilliseconds? })` | `{ expired }`, 60000 ms of skew by default |
 | `hasCapacity({ pools })` | `{ capacity }`: any pool with `remainingFraction` above 0 |
 
 Backoff is `floor(raw / 2 + random * raw / 2)` with `raw = min(maxMilliseconds, baseMilliseconds * 2^attempt)`;
-`random` defaults to 0.5. An `error` on a lane that holds an active reset changes nothing, and a
+`random` defaults to 0.5. An `error` on a lane that holds an active reset changes nothing, and no `error` or `rate-limited` report shortens a cooldown already running, and a
 `rate-limited` report with no lane becomes an account-wide cooldown, because selection only reads a lane's
 reset for a named lane.
 
-Tokens never reach the store: `upsert` refuses an account carrying `access`, `refresh` or any member whose
-name contains `token`, at any depth, as a successful `{ refused, fix }` answer. Every read-modify-write holds
+Tokens never reach the store: `upsert` refuses an account, and `report` refuses a `quota`, carrying a member named exactly `access`, `refresh`, `accessToken`, `refreshToken`, `idToken` or `apiKey` (case-sensitive, at any depth) as a successful `{ refused, fix }` answer; quota members such as `tokensRemaining` are stored. Every read-modify-write holds
 `<store>.lock`, the OS file lock the runtime's registry takes, once, and the file is replaced atomically, so
 two processes sharing one store lose no update. A store that is not a JSON object answers a refusal and is
 never overwritten. `test/vectors/accounts/` holds the vectors; `before` and `after` are the store, and `then`

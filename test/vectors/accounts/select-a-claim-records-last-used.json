@@ -19,7 +19,8 @@
     "strategy": "hybrid"
   },
   "result": {
-    "id": "acc1"
+    "id": "acc1",
+    "available": true
   },
   "after": {
     "version": 1,
