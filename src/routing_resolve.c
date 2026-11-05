@@ -9,7 +9,8 @@
 typedef struct resolution {
     const cJSON *chain;
     cJSON *owned_chain;
-    const char *notice;
+    int switched;
+    int healed;
 } resolution;
 
 static cJSON *normalized_map(const cJSON *map) {
@@ -100,7 +101,8 @@ static int resolve_chain(const cJSON *map, const cJSON *catalog, const char *req
                          const routing_pattern *native, resolution *resolved) {
     resolved->chain = NULL;
     resolved->owned_chain = NULL;
-    resolved->notice = NULL;
+    resolved->switched = 0;
+    resolved->healed = 0;
     if (requested[0] != '\0') {
         resolved->chain = chain_serving_model(map, requested);
     }
@@ -114,25 +116,32 @@ static int resolve_chain(const cJSON *map, const cJSON *catalog, const char *req
                 return resolved->owned_chain != NULL;
             }
             if (!matches_native(native, requested)) {
-                resolved->notice = NOTICE_SWITCHED;
+                resolved->switched = 1;
             }
         }
         resolved->chain = slot_chain_or_default(map, slot);
     }
-    if (resolved->notice == NULL && primary_is_derived(resolved->chain)) {
-        resolved->notice = NOTICE_HEALED;
-    }
+    resolved->healed = primary_is_derived(resolved->chain);
     return 1;
+}
+
+static int add_notices(cJSON *result, const resolution *resolved) {
+    cJSON *notices = cJSON_CreateArray();
+    if (notices == NULL) {
+        return 0;
+    }
+    if ((resolved->switched && !routing_push(notices, cJSON_CreateString(NOTICE_SWITCHED))) ||
+        (resolved->healed && !routing_push(notices, cJSON_CreateString(NOTICE_HEALED)))) {
+        cJSON_Delete(notices);
+        return 0;
+    }
+    return routing_add(result, "notices", notices);
 }
 
 static cJSON *answer_for(const resolution *resolved) {
     cJSON *result = cJSON_CreateObject();
     cJSON *chain = resolved->chain == NULL ? cJSON_CreateArray() : cJSON_Duplicate(resolved->chain, 1);
-    if (result == NULL || !routing_add(result, "chain", chain)) {
-        cJSON_Delete(result);
-        return NULL;
-    }
-    if (resolved->notice != NULL && cJSON_AddStringToObject(result, "notice", resolved->notice) == NULL) {
+    if (result == NULL || !routing_add(result, "chain", chain) || !add_notices(result, resolved)) {
         cJSON_Delete(result);
         return NULL;
     }

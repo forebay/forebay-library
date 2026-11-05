@@ -47,6 +47,8 @@
         "derived": false
       }
     ],
-    "notice": "model_switched"
+    "notices": [
+      "model_switched"
+    ]
   }
 }
