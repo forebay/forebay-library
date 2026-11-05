@@ -1,0 +1,12 @@
+{
+  "source": "RateLimitTest.rateLimitResetMs_noHeaders_zero",
+  "function": "outcome",
+  "argument": {
+    "status": 200,
+    "headers": {},
+    "now": 1000000
+  },
+  "result": {
+    "rateLimited": false
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "source": "matcher subset: refusal naming the construct",
+  "function": "resolve",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "(a)|b"
+    },
+    "map": {},
+    "models": {},
+    "requestedModel": "x"
+  },
+  "result": {
+    "refused": "nativeModelPattern uses an unsupported construct: alternation with |",
+    "fix": "write the pattern with only ^ $ literals . [] \\d \\w \\s * + ? and at most one capture group"
+  }
+}

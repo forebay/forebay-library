@@ -1,0 +1,68 @@
+{
+  "source": "model-map.test.ts resolveModelMap: a provider declared but never fetched still resolves with its declared name",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "stored": {
+      "modelMap": {
+        "opus": {
+          "provider": "newprov",
+          "model": "newprov-model-1"
+        }
+      }
+    },
+    "models": {
+      "newprov": {
+        "models": {
+          "newprov-model-1": {
+            "name": "New Provider Model"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "newprov",
+          "model": "newprov-model-1",
+          "name": "New Provider Model",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "default": [
+        {
+          "provider": "newprov",
+          "model": "newprov-model-1",
+          "name": "New Provider Model",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "default"
+    ]
+  }
+}

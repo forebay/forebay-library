@@ -1,0 +1,70 @@
+{
+  "source": "ModelMapTest.resolveModelMap_suppliedCatalogKey_resolvesAProviderAbsentFromModelsJson",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {
+      "modelMap": {
+        "opus": {
+          "provider": "newprov",
+          "model": "newprov-model-1"
+        }
+      }
+    },
+    "models": {
+      "newprov": {
+        "models": {
+          "newprov-model-1": {
+            "name": "New Provider Model"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "newprov",
+          "model": "newprov-model-1",
+          "name": "New Provider Model",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "newprov",
+          "model": "newprov-model-1",
+          "name": "New Provider Model",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "default"
+    ]
+  }
+}

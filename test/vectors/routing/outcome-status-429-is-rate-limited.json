@@ -1,0 +1,12 @@
+{
+  "source": "RateLimitTest.isRateLimited_status429_true",
+  "function": "outcome",
+  "argument": {
+    "status": 429,
+    "headers": {},
+    "now": 1000000
+  },
+  "result": {
+    "rateLimited": true
+  }
+}

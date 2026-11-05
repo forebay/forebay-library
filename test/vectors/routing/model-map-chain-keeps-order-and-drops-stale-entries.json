@@ -1,0 +1,106 @@
+{
+  "source": "ModelMap.pick: stored entries kept in order while the catalog holds them",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {
+      "modelMap": {
+        "opus": [
+          {
+            "provider": "a",
+            "model": "m1"
+          },
+          {
+            "provider": "b",
+            "model": "gone"
+          },
+          {
+            "provider": "c",
+            "model": "m3"
+          }
+        ]
+      }
+    },
+    "models": {
+      "a": {
+        "models": {
+          "m1": {
+            "name": "One"
+          }
+        }
+      },
+      "b": {
+        "models": {
+          "other": {
+            "name": "Other"
+          }
+        }
+      },
+      "c": {
+        "models": {
+          "m3": {
+            "name": "Three"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "a",
+          "model": "m1",
+          "name": "One",
+          "derived": false
+        },
+        {
+          "provider": "c",
+          "model": "m3",
+          "name": "Three",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "a",
+          "model": "m1",
+          "name": "One",
+          "derived": true
+        },
+        {
+          "provider": "c",
+          "model": "m3",
+          "name": "Three",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "default"
+    ]
+  }
+}

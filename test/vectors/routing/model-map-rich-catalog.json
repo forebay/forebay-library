@@ -1,0 +1,139 @@
+{
+  "source": "model-map.test.ts: fully-stored tier kept; stale tier heals within its own provider; unset tier derives from the tier source; stale -auto id heals; no -auto id resolves; unset default copies the first non-empty tier",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "stored": {
+      "modelMap": {
+        "opus": {
+          "provider": "antigravity",
+          "model": "claude-opus-OLD-STALE"
+        },
+        "sonnet": {
+          "provider": "claude-code",
+          "model": "claude-sonnet-4-6"
+        },
+        "fable": {
+          "provider": "claude-code",
+          "model": "claude-fable-5-auto"
+        }
+      }
+    },
+    "models": {
+      "claude-code": {
+        "ranking": [
+          "claude-opus-4-6-thinking",
+          "claude-sonnet-4-6",
+          "claude-haiku-4-6",
+          "claude-fable-5",
+          "claude-opus-4-6-auto"
+        ],
+        "models": {
+          "claude-opus-4-6-thinking": {
+            "name": "Opus 4.6 Thinking"
+          },
+          "claude-sonnet-4-6": {
+            "name": "Sonnet 4.6"
+          },
+          "claude-haiku-4-6": {
+            "name": "Haiku 4.6"
+          },
+          "claude-fable-5": {
+            "name": "Fable 5"
+          },
+          "claude-opus-4-6-auto": {
+            "name": "Opus Auto"
+          }
+        },
+        "scores": {}
+      },
+      "antigravity": {
+        "ranking": [
+          "claude-opus-4-6-thinking-x",
+          "gemini-3-pro"
+        ],
+        "models": {
+          "claude-opus-4-6-thinking-x": {
+            "name": "Antigravity Opus"
+          },
+          "gemini-3-pro": {
+            "name": "Gemini 3 Pro"
+          }
+        },
+        "scores": {
+          "claude-opus-4-6-thinking-x": 80,
+          "gemini-3-pro": 60
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "claude-opus-4-6-thinking-x",
+          "name": "Antigravity Opus",
+          "derived": true
+        }
+      ],
+      "sonnet": [
+        {
+          "provider": "claude-code",
+          "model": "claude-sonnet-4-6",
+          "name": "Sonnet 4.6",
+          "derived": false
+        }
+      ],
+      "haiku": [
+        {
+          "provider": "claude-code",
+          "model": "claude-haiku-4-6",
+          "name": "Haiku 4.6",
+          "derived": true
+        }
+      ],
+      "fable": [
+        {
+          "provider": "claude-code",
+          "model": "claude-fable-5",
+          "name": "Fable 5",
+          "derived": true
+        }
+      ],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "claude-opus-4-6-thinking-x",
+          "name": "Antigravity Opus",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "opus",
+      "haiku",
+      "fable",
+      "default"
+    ]
+  }
+}

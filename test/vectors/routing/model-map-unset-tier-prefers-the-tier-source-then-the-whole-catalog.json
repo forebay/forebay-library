@@ -1,0 +1,79 @@
+{
+  "source": "ModelMap.pick: derivation from the tier-source provider, then the whole catalog",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {},
+    "models": {
+      "antigravity": {
+        "models": {
+          "m-opus": {
+            "name": "Opus"
+          }
+        }
+      },
+      "zed": {
+        "models": {
+          "zed-sonnet-1": {
+            "name": "Zed Sonnet"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "Opus",
+          "derived": true
+        }
+      ],
+      "sonnet": [
+        {
+          "provider": "zed",
+          "model": "zed-sonnet-1",
+          "name": "Zed Sonnet",
+          "derived": true
+        }
+      ],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "Opus",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "opus",
+      "sonnet",
+      "default"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "source": "IrRouterTest.handleIrThrows400TypedException_surfacesVerbatim_noFallbackAttempted",
+  "function": "outcome",
+  "argument": {
+    "status": 400,
+    "headers": {},
+    "now": 1000000
+  },
+  "result": {
+    "rateLimited": false
+  }
+}

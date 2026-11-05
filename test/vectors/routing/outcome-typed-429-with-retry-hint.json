@@ -1,0 +1,15 @@
+{
+  "source": "IrRouterTest.handleIrThrows429TypedException: retryAfterMs becomes x-hub-retry-after-ms",
+  "function": "outcome",
+  "argument": {
+    "status": 429,
+    "headers": {
+      "x-hub-retry-after-ms": "5000"
+    },
+    "now": 1000000
+  },
+  "result": {
+    "rateLimited": true,
+    "resetAt": 1005000
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "source": "ModelMap.resolveModelMap: a stored default is resolved like any slot",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {
+      "modelMap": {
+        "default": {
+          "provider": "a",
+          "model": "m1"
+        }
+      }
+    },
+    "models": {
+      "a": {
+        "models": {
+          "m1": {
+            "name": "One"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "a",
+          "model": "m1",
+          "name": "One",
+          "derived": false
+        }
+      ]
+    },
+    "healed": []
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "source": "RouterTest.allEntriesRateLimited_synthesizesNative429: the one-entry chain",
+  "function": "resolve",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "ok",
+      "tierOrder": [
+        "opus"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "opus": [
+        {
+          "provider": "rl",
+          "model": "m-rl",
+          "name": "m-rl",
+          "derived": false
+        }
+      ],
+      "default": [
+        {
+          "provider": "rl",
+          "model": "m-rl",
+          "name": "m-rl",
+          "derived": true
+        }
+      ]
+    },
+    "models": {},
+    "requestedModel": ""
+  },
+  "result": {
+    "chain": [
+      {
+        "provider": "rl",
+        "model": "m-rl",
+        "name": "m-rl",
+        "derived": true
+      }
+    ],
+    "notice": "healed"
+  }
+}

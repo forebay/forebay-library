@@ -1,0 +1,34 @@
+{
+  "source": "model-map.test.ts profileTiers: empty catalog falls back to tierFallback",
+  "function": "tiers",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "models": {}
+  },
+  "result": {
+    "tiers": [
+      "opus",
+      "sonnet",
+      "haiku"
+    ]
+  }
+}

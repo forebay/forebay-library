@@ -1,0 +1,45 @@
+{
+  "source": "ModelMap.resolveTiers: no id matches tierRegex",
+  "function": "tiers",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": "^claude-"
+    },
+    "models": {
+      "claude-code": {
+        "ranking": [
+          "gemini-3-pro"
+        ],
+        "models": {
+          "gemini-3-pro": {
+            "name": "G"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "tiers": [
+      "opus",
+      "sonnet",
+      "haiku"
+    ]
+  }
+}

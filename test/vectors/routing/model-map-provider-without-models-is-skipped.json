@@ -1,0 +1,64 @@
+{
+  "source": "ModelMapTest.catalogEntries_providerWithNoCache_isSkipped",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {
+      "modelMap": {
+        "opus": {
+          "provider": "unknown-provider",
+          "model": "x"
+        }
+      }
+    },
+    "models": {
+      "unknown-provider": {}
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "unknown-provider",
+          "model": "x",
+          "name": "x",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "unknown-provider",
+          "model": "x",
+          "name": "x",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "default"
+    ]
+  }
+}

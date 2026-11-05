@@ -1,0 +1,14 @@
+{
+  "source": "RateLimit.parseIntLenient: Integer.parseInt overflow answers absent",
+  "function": "outcome",
+  "argument": {
+    "status": 429,
+    "headers": {
+      "retry-after": "99999999999"
+    },
+    "now": 1000000
+  },
+  "result": {
+    "rateLimited": true
+  }
+}

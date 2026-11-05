@@ -74,6 +74,540 @@
           }
         }
       ]
+    },
+    {
+      "id": "routing",
+      "functions": [
+        {
+          "name": "tiers",
+          "symbol": "routing_tiers",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "tierSourceProvider": {
+                    "type": "string"
+                  },
+                  "tierOrder": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierFallback": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierRegex": {
+                    "type": "string"
+                  },
+                  "envPrefix": {
+                    "type": "string"
+                  },
+                  "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "defaultContext": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "defaultOutput": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "upstream": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "tierSourceProvider",
+                  "tierOrder",
+                  "tierFallback",
+                  "tierRegex"
+                ]
+              },
+              "models": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object"
+                }
+              }
+            },
+            "required": [
+              "profile",
+              "models"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "tiers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "modelMap",
+          "symbol": "routing_model_map",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "tierSourceProvider": {
+                    "type": "string"
+                  },
+                  "tierOrder": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierFallback": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierRegex": {
+                    "type": "string"
+                  },
+                  "envPrefix": {
+                    "type": "string"
+                  },
+                  "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "defaultContext": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "defaultOutput": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "upstream": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "tierSourceProvider",
+                  "tierOrder",
+                  "tierFallback",
+                  "tierRegex"
+                ]
+              },
+              "stored": {
+                "type": "object"
+              },
+              "models": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object"
+                }
+              }
+            },
+            "required": [
+              "profile",
+              "stored",
+              "models"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "map": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "derived": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "provider",
+                      "model",
+                      "name",
+                      "derived"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "healed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "resolve",
+          "symbol": "routing_resolve",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "tierSourceProvider": {
+                    "type": "string"
+                  },
+                  "tierOrder": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierFallback": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierRegex": {
+                    "type": "string"
+                  },
+                  "envPrefix": {
+                    "type": "string"
+                  },
+                  "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "defaultContext": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "defaultOutput": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "upstream": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": []
+              },
+              "map": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "derived": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "provider",
+                      "model",
+                      "name",
+                      "derived"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "models": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object"
+                }
+              },
+              "requestedModel": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile",
+              "map",
+              "models",
+              "requestedModel"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "chain": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "derived": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "model",
+                    "name",
+                    "derived"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "notice": {
+                "enum": [
+                  "model_switched",
+                  "healed"
+                ]
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "outcome",
+          "symbol": "routing_outcome",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "integer"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "now": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "status",
+              "headers",
+              "now"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "rateLimited": {
+                "type": "boolean"
+              },
+              "resetAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "rateLimited"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "environment",
+          "symbol": "routing_environment",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "tierSourceProvider": {
+                    "type": "string"
+                  },
+                  "tierOrder": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierFallback": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tierRegex": {
+                    "type": "string"
+                  },
+                  "envPrefix": {
+                    "type": "string"
+                  },
+                  "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "defaultContext": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "defaultOutput": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "upstream": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "envPrefix"
+                ]
+              },
+              "map": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "derived": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "provider",
+                      "model",
+                      "name",
+                      "derived"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "providersEnabled": {
+                "type": "boolean"
+              },
+              "environment": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "userHome": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile",
+              "map",
+              "port",
+              "providersEnabled",
+              "environment",
+              "userHome"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "environment": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "environment"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
     }
   ]
 }

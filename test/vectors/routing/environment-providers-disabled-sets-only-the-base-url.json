@@ -1,0 +1,57 @@
+{
+  "source": "decision 7",
+  "function": "environment",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": true
+        }
+      ]
+    },
+    "port": 40001,
+    "providersEnabled": false,
+    "environment": {},
+    "userHome": "/routing-test-home-that-does-not-exist"
+  },
+  "result": {
+    "environment": {
+      "ANTHROPIC_BASE_URL": "http://127.0.0.1:40001"
+    }
+  }
+}

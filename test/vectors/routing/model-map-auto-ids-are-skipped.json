@@ -1,0 +1,71 @@
+{
+  "source": "ModelMap.resolveModelMap: -auto ids never enter the catalog",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {},
+    "models": {
+      "antigravity": {
+        "ranking": [
+          "m-opus-auto",
+          "m-opus"
+        ],
+        "models": {
+          "m-opus-auto": {
+            "name": "Auto"
+          },
+          "m-opus": {
+            "name": "Opus"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "Opus",
+          "derived": true
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "Opus",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "opus",
+      "default"
+    ]
+  }
+}
