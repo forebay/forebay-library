@@ -28,18 +28,23 @@ static apps_function find_function(const char *name) {
     return NULL;
 }
 
-/** Lays out the vector's files in a fresh directory and points the argument's userHome at it. */
-static void lay_out_files(cJSON *argument, const cJSON *files) {
-    char *home = support_scratch();
+/**
+ * Lays out the vector's files in a fresh directory and points the argument at it: its userHome, or with
+ * `filesUnder` the environment variable that names it, the userHome then left as the vector gives it.
+ */
+static void lay_out_files(cJSON *argument, const cJSON *files, const cJSON *under) {
+    char *directory = support_scratch();
     const cJSON *file = NULL;
     cJSON_ArrayForEach(file, files) {
-        char *path = support_join(home, file->string);
+        char *path = support_join(directory, file->string);
         support_write(path, file->valuestring);
         free(path);
     }
-    cJSON_DeleteItemFromObjectCaseSensitive(argument, "userHome");
-    cJSON_AddStringToObject(argument, "userHome", home);
-    free(home);
+    cJSON *target = cJSON_IsString(under) ? cJSON_GetObjectItemCaseSensitive(argument, "environment") : argument;
+    const char *member = cJSON_IsString(under) ? under->valuestring : "userHome";
+    cJSON_DeleteItemFromObjectCaseSensitive(target, member);
+    cJSON_AddStringToObject(target, member, directory);
+    free(directory);
 }
 
 static void run_vector(const char *path) {
@@ -55,7 +60,7 @@ static void run_vector(const char *path) {
     } else {
         const cJSON *files = cJSON_GetObjectItemCaseSensitive(vector, "files");
         if (files != NULL) {
-            lay_out_files(argument, files);
+            lay_out_files(argument, files, cJSON_GetObjectItemCaseSensitive(vector, "filesUnder"));
         }
         char *input = cJSON_PrintUnformatted(argument);
         char *expected = cJSON_PrintUnformatted(result);

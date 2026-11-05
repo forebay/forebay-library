@@ -74,12 +74,19 @@ static int is_truthy(const cJSON *value) {
     return 1;
 }
 
-/** Whether the application's own state file records a signed-in account. */
-static int has_account_on_disk(const char *user_home, int *out_of_memory) {
-    if (user_home == NULL || user_home[0] == '\0') {
+/**
+ * Whether the application's own state file records a signed-in account.
+ *
+ * @implNote Claude Code reads its state from join(CLAUDE_CONFIG_DIR || homedir(), ".claude.json"), so a set
+ * CLAUDE_CONFIG_DIR replaces the user's home rather than adding a second place.
+ */
+static int has_account_on_disk(const cJSON *environment, const char *user_home, int *out_of_memory) {
+    const char *config_directory = variable(environment, "CLAUDE_CONFIG_DIR");
+    const char *directory = has_text(config_directory) ? config_directory : user_home;
+    if (directory == NULL || directory[0] == '\0') {
         return 0;
     }
-    const char *segments[] = {user_home, ".claude.json"};
+    const char *segments[] = {directory, ".claude.json"};
     char *path = spisor_path_join(SERVICE_WINDOWS, segments, 2);
     if (path == NULL) {
         *out_of_memory = 1;
@@ -96,7 +103,8 @@ static int has_account_on_disk(const char *user_home, int *out_of_memory) {
 static int has_own_login(const cJSON *environment, const char *user_home, int *out_of_memory) {
     return has_text(variable(environment, "ANTHROPIC_API_KEY")) ||
            is_own_token(variable(environment, "ANTHROPIC_AUTH_TOKEN")) ||
-           has_account_on_disk(user_home, out_of_memory);
+           has_text(variable(environment, "CLAUDE_CODE_OAUTH_TOKEN")) ||
+           has_account_on_disk(environment, user_home, out_of_memory);
 }
 
 static int add_variable(cJSON *environment, const char *name, const char *value) {

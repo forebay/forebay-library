@@ -45,8 +45,13 @@ capture group. A pattern using anything else is refused naming the construct. `n
 `model_switched` when the default tier serves a model nothing offers (unless `nativeModelPattern`
 says it is the application's own), then `healed` when the chain's primary is derived; both are
 listed when both apply, in that order.
+The application has a login of its own when its environment carries a non-blank `ANTHROPIC_API_KEY` or
+`CLAUDE_CODE_OAUTH_TOKEN`, or an `ANTHROPIC_AUTH_TOKEN` other than the placeholder, or when `.claude.json`
+records an `oauthAccount`: the one in `CLAUDE_CONFIG_DIR` when that is set, else the one in `userHome`, the
+file Claude Code itself reads.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
-`Router.java`.
+`Router.java`. A vector's `files` are laid out in a fresh directory that becomes its `userHome`, or with
+`filesUnder` the value of the environment variable it names.
 
 ## The accounts service
 
