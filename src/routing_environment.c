@@ -25,7 +25,7 @@ static int equals_ignoring_case(const char *left, const char *right) {
 /** The variable as the host's environment matches names: exact, and on Windows ignoring case too. */
 static const char *variable(const cJSON *environment, const char *name) {
     const cJSON *entry = cJSON_GetObjectItemCaseSensitive(environment, name);
-    if (!cJSON_IsString(entry) && ROUTING_WINDOWS) {
+    if (!cJSON_IsString(entry) && SERVICE_WINDOWS) {
         cJSON_ArrayForEach(entry, environment) {
             if (equals_ignoring_case(entry->string, name)) {
                 break;
@@ -80,7 +80,7 @@ static int has_account_on_disk(const char *user_home, int *out_of_memory) {
         return 0;
     }
     const char *segments[] = {user_home, ".claude.json"};
-    char *path = spisor_path_join(ROUTING_WINDOWS, segments, 2);
+    char *path = spisor_path_join(SERVICE_WINDOWS, segments, 2);
     if (path == NULL) {
         *out_of_memory = 1;
         return 0;
@@ -100,7 +100,7 @@ static int has_own_login(const cJSON *environment, const char *user_home, int *o
 }
 
 static int add_variable(cJSON *environment, const char *name, const char *value) {
-    return routing_add(environment, name, cJSON_CreateString(value));
+    return service_add(environment, name, cJSON_CreateString(value));
 }
 
 static int add_pair(cJSON *environment, const char *prefix, const char *upper_tier, const cJSON *primary) {
@@ -196,14 +196,14 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
     const cJSON *enabled = NULL;
     const cJSON *home = NULL;
     memset(asked, 0, sizeof(*asked));
-    if (!routing_require(call, "profile", routing_is_object, "an object", &profile, out, out_len, status) ||
-        !routing_require(call, "map", routing_is_object, "an object", &asked->map, out, out_len, status) ||
-        !routing_require(call, "port", is_port, "a port number from 1 to 65535", &port, out, out_len, status) ||
-        !routing_require(call, "providersEnabled", routing_is_boolean, "a boolean", &enabled, out, out_len,
+    if (!service_require(call, "profile", service_is_object, "an object", &profile, out, out_len, status) ||
+        !service_require(call, "map", service_is_object, "an object", &asked->map, out, out_len, status) ||
+        !service_require(call, "port", is_port, "a port number from 1 to 65535", &port, out, out_len, status) ||
+        !service_require(call, "providersEnabled", service_is_boolean, "a boolean", &enabled, out, out_len,
                          status) ||
-        !routing_require(call, "environment", routing_is_object, "an object", &asked->environment, out, out_len,
+        !service_require(call, "environment", service_is_object, "an object", &asked->environment, out, out_len,
                          status) ||
-        !routing_require(call, "userHome", routing_is_string, "a string", &home, out, out_len, status) ||
+        !service_require(call, "userHome", service_is_string, "a string", &home, out, out_len, status) ||
         !routing_read_profile(profile, NEEDS_ENV_PREFIX, &asked->profile, out, out_len, status)) {
         return 0;
     }
@@ -213,15 +213,15 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
     return 1;
 }
 
-ROUTING_EXPORT int32_t routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
-    int32_t status = routing_open(in, in_len, &call, out, out_len);
+    int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
     }
     request asked;
     if (read_request(&call, &asked, out, out_len, &status)) {
-        status = routing_answer(routing_wrap("environment", build_environment(&asked)), out, out_len);
+        status = service_answer(service_wrap("environment", build_environment(&asked)), out, out_len);
     }
     spisor_discard_call(&call);
     return status;

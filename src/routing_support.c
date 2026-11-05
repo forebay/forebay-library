@@ -4,86 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-int32_t routing_out_of_memory(uint8_t **out, size_t *out_len) {
-    *out = NULL;
-    *out_len = 0;
-    return SPISOR_STATUS_OUT_OF_MEMORY;
-}
-
-int32_t routing_answer(cJSON *result, uint8_t **out, size_t *out_len) {
-    if (result == NULL) {
-        return routing_out_of_memory(out, out_len);
-    }
-    int32_t status = spisor_succeed(result, out, out_len);
-    cJSON_Delete(result);
-    return status;
-}
-
-int32_t routing_refuse(const char *cause, const char *fix, uint8_t **out, size_t *out_len) {
-    cJSON *refusal = cJSON_CreateObject();
-    if (refusal == NULL || cJSON_AddStringToObject(refusal, "refused", cause) == NULL ||
-        cJSON_AddStringToObject(refusal, "fix", fix) == NULL) {
-        cJSON_Delete(refusal);
-        return routing_out_of_memory(out, out_len);
-    }
-    return routing_answer(refusal, out, out_len);
-}
-
 int32_t routing_answer_refusal(const routing_refusal *refusal, uint8_t **out, size_t *out_len) {
     if (!refusal->refused) {
-        return routing_out_of_memory(out, out_len);
+        return service_out_of_memory(out, out_len);
     }
-    return routing_refuse(refusal->cause, refusal->fix, out, out_len);
-}
-
-int32_t routing_fail(const char *subject, const char *problem, const char *fix, uint8_t **out, size_t *out_len) {
-    char message[256];
-    snprintf(message, sizeof(message), "%s %s", subject, problem);
-    return spisor_fail(message, fix, out, out_len);
-}
-
-int32_t routing_open(const uint8_t *in, size_t in_len, spisor_call *call, uint8_t **out, size_t *out_len) {
-    memset(call, 0, sizeof(*call));
-    int32_t status = spisor_parse_call(in, in_len, 0, call, out, out_len);
-    if (status == SPISOR_STATUS_SUCCESS && !cJSON_IsObject(call->argument)) {
-        spisor_discard_call(call);
-        return spisor_fail("the argument is not an object", "send the argument as a JSON object", out, out_len);
-    }
-    return status;
-}
-
-int routing_is_object(const cJSON *value) {
-    return cJSON_IsObject(value);
-}
-
-int routing_is_array(const cJSON *value) {
-    return cJSON_IsArray(value);
-}
-
-int routing_is_string(const cJSON *value) {
-    return cJSON_IsString(value);
-}
-
-int routing_is_number(const cJSON *value) {
-    return cJSON_IsNumber(value);
-}
-
-int routing_is_boolean(const cJSON *value) {
-    return cJSON_IsBool(value);
-}
-
-int routing_require(const spisor_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
-                    const cJSON **member, uint8_t **out, size_t *out_len, int32_t *status) {
-    *member = cJSON_GetObjectItemCaseSensitive(call->argument, name);
-    if (*member != NULL && is_type(*member)) {
-        return 1;
-    }
-    char problem[96];
-    char fix[128];
-    snprintf(problem, sizeof(problem), "is missing or is not %s", type_name);
-    snprintf(fix, sizeof(fix), "send %s as %s", name, type_name);
-    *status = routing_fail(name, problem, fix, out, out_len);
-    return 0;
+    return service_refuse(refusal->cause, refusal->fix, out, out_len);
 }
 
 static int all_strings(const cJSON *list) {
@@ -100,7 +25,7 @@ static int profile_string(const cJSON *profile, const char *name, const char **v
                           int32_t *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, name);
     if (!cJSON_IsString(member)) {
-        *status = routing_fail("the profile member", name, "send the profile with this member as a string", out,
+        *status = service_fail("the profile member", name, "send the profile with this member as a string", out,
                                out_len);
         return 0;
     }
@@ -112,7 +37,7 @@ static int profile_list(const cJSON *profile, const char *name, const cJSON **va
                         int32_t *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, name);
     if (!cJSON_IsArray(member) || !all_strings(member)) {
-        *status = routing_fail("the profile member", name, "send the profile with this member as a list of strings",
+        *status = service_fail("the profile member", name, "send the profile with this member as a list of strings",
                                out, out_len);
         return 0;
     }
@@ -152,41 +77,6 @@ int routing_read_profile(const cJSON *profile, int need, routing_profile *read, 
     return 0;
 }
 
-int routing_add(cJSON *object, const char *name, cJSON *item) {
-    if (item == NULL) {
-        return 0;
-    }
-    if (!cJSON_AddItemToObject(object, name, item)) {
-        cJSON_Delete(item);
-        return 0;
-    }
-    return 1;
-}
-
-cJSON *routing_wrap(const char *name, cJSON *item) {
-    cJSON *wrapper = cJSON_CreateObject();
-    if (wrapper == NULL) {
-        cJSON_Delete(item);
-        return NULL;
-    }
-    if (!routing_add(wrapper, name, item)) {
-        cJSON_Delete(wrapper);
-        return NULL;
-    }
-    return wrapper;
-}
-
-int routing_push(cJSON *array, cJSON *item) {
-    if (item == NULL) {
-        return 0;
-    }
-    if (!cJSON_AddItemToArray(array, item)) {
-        cJSON_Delete(item);
-        return 0;
-    }
-    return 1;
-}
-
 cJSON *routing_assignment(const char *provider, const char *model, const char *name, int derived) {
     cJSON *assignment = cJSON_CreateObject();
     if (assignment == NULL || cJSON_AddStringToObject(assignment, "provider", provider) == NULL ||
@@ -218,7 +108,7 @@ static cJSON *assignment_from(const cJSON *raw) {
 }
 
 static int append_if_valid(cJSON *chain, const cJSON *entry) {
-    return !is_valid_entry(entry) || routing_push(chain, assignment_from(entry));
+    return !is_valid_entry(entry) || service_push(chain, assignment_from(entry));
 }
 
 cJSON *routing_normalize_chain(const cJSON *raw) {
@@ -250,7 +140,7 @@ cJSON *routing_ranked_ids(const cJSON *provider_entry) {
     const cJSON *ranking = cJSON_GetObjectItemCaseSensitive(provider_entry, "ranking");
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, ranking) {
-        if (cJSON_IsString(item) && !routing_push(ids, cJSON_CreateString(item->valuestring))) {
+        if (cJSON_IsString(item) && !service_push(ids, cJSON_CreateString(item->valuestring))) {
             cJSON_Delete(ids);
             return NULL;
         }
@@ -261,7 +151,7 @@ cJSON *routing_ranked_ids(const cJSON *provider_entry) {
     const cJSON *models = cJSON_GetObjectItemCaseSensitive(provider_entry, "models");
     if (cJSON_IsObject(models)) {
         cJSON_ArrayForEach(item, models) {
-            if (!routing_push(ids, cJSON_CreateString(item->string))) {
+            if (!service_push(ids, cJSON_CreateString(item->string))) {
                 cJSON_Delete(ids);
                 return NULL;
             }
@@ -322,7 +212,7 @@ static int add_provider_models(cJSON *catalog, const cJSON *provider_entry, cons
         if (raw == NULL || cJSON_IsNull(raw) || routing_is_auto(id->valuestring)) {
             continue;
         }
-        if (!routing_push(catalog, routing_assignment(provider, id->valuestring,
+        if (!service_push(catalog, routing_assignment(provider, id->valuestring,
                                                       display_name(raw, id->valuestring), 0))) {
             cJSON_Delete(ids);
             return 0;

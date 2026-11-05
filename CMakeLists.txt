@@ -28,6 +28,7 @@ add_library(apps SHARED
     src/routing_resolve.c
     src/routing_support.c
     src/routing_tiers.c
+    src/service_support.c
     src/support.c)
 target_link_libraries(apps PRIVATE spisor_library)
 set_target_properties(apps PROPERTIES C_VISIBILITY_PRESET hidden)
