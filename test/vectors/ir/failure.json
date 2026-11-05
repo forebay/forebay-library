@@ -1,0 +1,12 @@
+{
+  "definition": "IrFailure",
+  "valid": true,
+  "value": {
+    "status": 429,
+    "headers": {
+      "retry-after": "7"
+    },
+    "body": "{\"error\":\"rate\"}",
+    "retryAfterMilliseconds": 7000
+  }
+}

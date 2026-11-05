@@ -1,0 +1,9 @@
+{
+  "definition": "IrBlock",
+  "valid": true,
+  "value": {
+    "kind": "image",
+    "mediaType": "image/png",
+    "data": "iVBORw0KGgo="
+  }
+}

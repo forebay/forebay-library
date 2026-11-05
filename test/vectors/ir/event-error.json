@@ -1,0 +1,9 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "error",
+    "errorType": "overloaded_error",
+    "message": "try again"
+  }
+}

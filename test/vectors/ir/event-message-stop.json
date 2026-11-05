@@ -1,0 +1,7 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "message_stop"
+  }
+}

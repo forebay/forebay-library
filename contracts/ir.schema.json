@@ -1,0 +1,329 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forebay.github.io/library/contracts/ir.schema.json",
+  "title": "The neutral request, response, block and stream event every provider and front door speaks",
+  "definitions": {
+    "Extensions": {
+      "type": ["object", "null"]
+    },
+    "NullableString": {
+      "type": ["string", "null"]
+    },
+    "NullableCount": {
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "BlockIndex": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "IrStopReason": {
+      "type": "string"
+    },
+    "IrUsage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cacheCreationInputTokens": { "$ref": "#/definitions/NullableCount" },
+        "cacheReadInputTokens": { "$ref": "#/definitions/NullableCount" },
+        "inputTokens": { "$ref": "#/definitions/NullableCount" },
+        "outputTokens": { "$ref": "#/definitions/NullableCount" },
+        "reasoningTokens": { "$ref": "#/definitions/NullableCount" },
+        "totalTokens": { "$ref": "#/definitions/NullableCount" }
+      }
+    },
+    "IrTool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "inputSchema"],
+      "properties": {
+        "description": { "$ref": "#/definitions/NullableString" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "inputSchema": {},
+        "name": { "type": "string" }
+      }
+    },
+    "IrToolChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "name": { "$ref": "#/definitions/NullableString" },
+        "type": { "type": "string" }
+      }
+    },
+    "IrThinking": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "budgetTokens": { "$ref": "#/definitions/NullableCount" },
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "IrMessage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "content"],
+      "properties": {
+        "content": { "type": "array", "items": { "$ref": "#/definitions/IrBlock" } },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "role": { "type": "string" }
+      }
+    },
+    "TextBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "cacheControl": { "$ref": "#/definitions/NullableString" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "kind": { "const": "text" },
+        "text": { "type": "string" }
+      }
+    },
+    "ImageBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "mediaType"],
+      "properties": {
+        "cacheControl": { "$ref": "#/definitions/NullableString" },
+        "data": { "$ref": "#/definitions/NullableString" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "kind": { "const": "image" },
+        "mediaType": { "type": "string" },
+        "url": { "$ref": "#/definitions/NullableString" }
+      }
+    },
+    "ToolUseBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "name", "input"],
+      "properties": {
+        "cacheControl": { "$ref": "#/definitions/NullableString" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "id": { "type": "string" },
+        "input": {},
+        "kind": { "const": "tool_use" },
+        "name": { "type": "string" }
+      }
+    },
+    "ToolResultBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "toolUseId", "content"],
+      "properties": {
+        "cacheControl": { "$ref": "#/definitions/NullableString" },
+        "content": { "type": "array", "items": { "$ref": "#/definitions/IrBlock" } },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "isError": { "type": ["boolean", "null"] },
+        "kind": { "const": "tool_result" },
+        "toolUseId": { "type": "string" }
+      }
+    },
+    "ThinkingBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "cacheControl": { "$ref": "#/definitions/NullableString" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "kind": { "const": "thinking" },
+        "signature": { "$ref": "#/definitions/NullableString" },
+        "text": { "type": "string" }
+      }
+    },
+    "UnknownBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "raw"],
+      "properties": {
+        "cacheControl": { "$ref": "#/definitions/NullableString" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "kind": { "const": "unknown" },
+        "raw": { "type": "object" }
+      }
+    },
+    "IrBlock": {
+      "oneOf": [
+        { "$ref": "#/definitions/TextBlock" },
+        { "$ref": "#/definitions/ImageBlock" },
+        { "$ref": "#/definitions/ToolUseBlock" },
+        { "$ref": "#/definitions/ToolResultBlock" },
+        { "$ref": "#/definitions/ThinkingBlock" },
+        { "$ref": "#/definitions/UnknownBlock" }
+      ]
+    },
+    "IrRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "messages", "stream"],
+      "properties": {
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "maxTokens": { "$ref": "#/definitions/NullableCount" },
+        "messages": { "type": "array", "items": { "$ref": "#/definitions/IrMessage" } },
+        "metadata": { "type": ["object", "null"] },
+        "model": { "type": "string" },
+        "stopSequences": { "type": ["array", "null"], "items": { "type": "string" } },
+        "stream": { "type": "boolean" },
+        "system": { "type": ["array", "null"], "items": { "$ref": "#/definitions/IrBlock" } },
+        "temperature": { "type": ["number", "null"] },
+        "thinking": { "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/IrThinking" }] },
+        "toolChoice": { "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/IrToolChoice" }] },
+        "tools": { "type": ["array", "null"], "items": { "$ref": "#/definitions/IrTool" } },
+        "topK": { "$ref": "#/definitions/NullableCount" },
+        "topP": { "type": ["number", "null"] }
+      }
+    },
+    "IrResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "model", "stopReason", "content"],
+      "properties": {
+        "content": { "type": "array", "items": { "$ref": "#/definitions/IrBlock" } },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "id": { "type": "string" },
+        "model": { "type": "string" },
+        "stopReason": { "$ref": "#/definitions/IrStopReason" },
+        "usage": { "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/IrUsage" }] }
+      }
+    },
+    "MessageStartEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "event": { "const": "message_start" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "id": { "$ref": "#/definitions/NullableString" },
+        "model": { "$ref": "#/definitions/NullableString" },
+        "role": { "$ref": "#/definitions/NullableString" },
+        "usage": { "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/IrUsage" }] }
+      }
+    },
+    "ContentBlockStartEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "index", "blockKind"],
+      "properties": {
+        "blockKind": { "enum": ["text", "tool_use", "thinking"] },
+        "event": { "const": "content_block_start" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "index": { "$ref": "#/definitions/BlockIndex" },
+        "toolName": { "$ref": "#/definitions/NullableString" },
+        "toolUseId": { "$ref": "#/definitions/NullableString" }
+      }
+    },
+    "TextDeltaEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "index"],
+      "properties": {
+        "event": { "const": "text_delta" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "index": { "$ref": "#/definitions/BlockIndex" },
+        "text": { "$ref": "#/definitions/NullableString" }
+      }
+    },
+    "ThinkingDeltaEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "index"],
+      "properties": {
+        "event": { "const": "thinking_delta" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "index": { "$ref": "#/definitions/BlockIndex" },
+        "text": { "$ref": "#/definitions/NullableString" }
+      }
+    },
+    "ThinkingSignatureEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "index"],
+      "properties": {
+        "event": { "const": "thinking_signature" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "index": { "$ref": "#/definitions/BlockIndex" },
+        "signature": { "$ref": "#/definitions/NullableString" }
+      }
+    },
+    "ToolInputDeltaEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "index"],
+      "properties": {
+        "event": { "const": "tool_input_delta" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "index": { "$ref": "#/definitions/BlockIndex" },
+        "partialJson": { "$ref": "#/definitions/NullableString" }
+      }
+    },
+    "ContentBlockStopEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "index"],
+      "properties": {
+        "event": { "const": "content_block_stop" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "index": { "$ref": "#/definitions/BlockIndex" }
+      }
+    },
+    "MessageDeltaEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "event": { "const": "message_delta" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "stopReason": { "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/IrStopReason" }] },
+        "usage": { "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/IrUsage" }] }
+      }
+    },
+    "MessageStopEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "event": { "const": "message_stop" },
+        "extensions": { "$ref": "#/definitions/Extensions" }
+      }
+    },
+    "ErrorEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event"],
+      "properties": {
+        "errorType": { "$ref": "#/definitions/NullableString" },
+        "event": { "const": "error" },
+        "extensions": { "$ref": "#/definitions/Extensions" },
+        "message": { "$ref": "#/definitions/NullableString" }
+      }
+    },
+    "IrStreamEvent": {
+      "oneOf": [
+        { "$ref": "#/definitions/MessageStartEvent" },
+        { "$ref": "#/definitions/ContentBlockStartEvent" },
+        { "$ref": "#/definitions/TextDeltaEvent" },
+        { "$ref": "#/definitions/ThinkingDeltaEvent" },
+        { "$ref": "#/definitions/ThinkingSignatureEvent" },
+        { "$ref": "#/definitions/ToolInputDeltaEvent" },
+        { "$ref": "#/definitions/ContentBlockStopEvent" },
+        { "$ref": "#/definitions/MessageDeltaEvent" },
+        { "$ref": "#/definitions/MessageStopEvent" },
+        { "$ref": "#/definitions/ErrorEvent" }
+      ]
+    },
+    "IrFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "headers", "body"],
+      "properties": {
+        "body": { "type": "string" },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+        "retryAfterMilliseconds": { "type": "integer", "minimum": 0 },
+        "status": { "type": "integer", "minimum": 100, "maximum": 599 }
+      }
+    }
+  }
+}

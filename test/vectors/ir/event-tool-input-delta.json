@@ -1,0 +1,9 @@
+{
+  "definition": "IrStreamEvent",
+  "valid": true,
+  "value": {
+    "event": "tool_input_delta",
+    "index": 2,
+    "partialJson": "{\"city\":\"Ber"
+  }
+}

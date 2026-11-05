@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forebay.github.io/library/contracts/provider.schema.json",
+  "title": "What a provider answers to models and handleIr",
+  "definitions": {
+    "ModelEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "context", "output"],
+      "properties": {
+        "context": { "type": "integer", "minimum": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "output": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "ModelsAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["models"],
+      "properties": {
+        "defaultModelId": { "type": "string" },
+        "models": { "type": "array", "items": { "$ref": "#/definitions/ModelEntry" } }
+      }
+    },
+    "IrEventStream": {
+      "type": "array",
+      "items": { "$ref": "ir.schema.json#/definitions/IrStreamEvent" }
+    },
+    "HandleIrAnswer": {
+      "oneOf": [
+        { "$ref": "ir.schema.json#/definitions/IrResponse" },
+        { "$ref": "ir.schema.json#/definitions/IrFailure" },
+        { "$ref": "#/definitions/IrEventStream" }
+      ]
+    }
+  }
+}

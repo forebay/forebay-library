@@ -1,0 +1,15 @@
+{
+  "definition": "IrBlock",
+  "valid": true,
+  "value": {
+    "kind": "tool_result",
+    "toolUseId": "call-1",
+    "isError": false,
+    "content": [
+      {
+        "kind": "text",
+        "text": "18C, cloudy"
+      }
+    ]
+  }
+}

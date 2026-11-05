@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://forebay.github.io/library/contracts/front-door.schema.json",
+  "title": "What a front door declares and what its four functions answer",
+  "definitions": {
+    "Profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tierSourceProvider", "tierOrder", "tierFallback", "tierRegex", "envPrefix", "defaultContext", "defaultOutput", "upstream"],
+      "properties": {
+        "defaultContext": { "type": "integer", "minimum": 1 },
+        "defaultOutput": { "type": "integer", "minimum": 1 },
+        "envPrefix": { "type": "string" },
+        "nativeModelPattern": { "type": ["string", "null"] },
+        "tierFallback": { "type": "array", "items": { "type": "string" } },
+        "tierOrder": { "type": "array", "items": { "type": "string" } },
+        "tierRegex": { "type": "string" },
+        "tierSourceProvider": { "type": "string" },
+        "upstream": { "type": "string", "minLength": 1 }
+      }
+    },
+    "WireReply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "headers", "body"],
+      "properties": {
+        "body": { "type": "string" },
+        "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+        "status": { "type": "integer", "minimum": 100, "maximum": 599 }
+      }
+    },
+    "DecodeRequestAnswer": {
+      "oneOf": [
+        { "$ref": "ir.schema.json#/definitions/IrRequest" },
+        { "$ref": "ir.schema.json#/definitions/IrFailure" }
+      ]
+    },
+    "EncodeResponseAnswer": {
+      "$ref": "#/definitions/WireReply"
+    },
+    "EncodeEventAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chunks"],
+      "properties": {
+        "chunks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "RateLimitReplyAnswer": {
+      "$ref": "#/definitions/WireReply"
+    }
+  }
+}
