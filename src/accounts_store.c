@@ -46,9 +46,9 @@ static int ensure_folder_of(const char *path) {
     return ready;
 }
 
-static runtime_hosts_guard *lock_beside(const char *path) {
+static spisor_lock *lock_beside(const char *path) {
     char *lock_path = with_suffix(path, LOCK_SUFFIX);
-    runtime_hosts_guard *guard = lock_path == NULL ? NULL : runtime_lock_file(lock_path);
+    spisor_lock *guard = lock_path == NULL ? NULL : spisor_lock_file(lock_path);
     free(lock_path);
     return guard;
 }
@@ -102,7 +102,7 @@ static int normalize(cJSON *document) {
 }
 
 static accounts_store_status read_document(const char *path, cJSON **document) {
-    spisor_json_file_state state = SPISOR_JSON_FILE_ABSENT;
+    spisor_json_file_state state = SPISOR_JSON_FILE_UNREADABLE;
     cJSON *parsed = spisor_read_json_file(path, &state);
     if (state == SPISOR_JSON_FILE_ABSENT) {
         *document = cJSON_CreateObject();
@@ -160,7 +160,7 @@ accounts_store_status accounts_store_save(const accounts_store *store) {
 }
 
 void accounts_store_close(accounts_store *store) {
-    runtime_hosts_unlock(store->guard);
+    spisor_unlock(store->guard);
     cJSON_Delete(store->document);
     free(store->path);
     memset(store, 0, sizeof(*store));
