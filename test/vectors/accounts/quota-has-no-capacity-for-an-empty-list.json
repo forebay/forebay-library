@@ -1,0 +1,10 @@
+{
+  "source": "quota-health.test.ts: has no capacity for an empty pool list",
+  "function": "hasCapacity",
+  "argument": {
+    "pools": []
+  },
+  "result": {
+    "capacity": false
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "source": "AccountStoreTest.list_returnsEmptyPoolWhenStoreContainsMalformedJson",
+  "beforeText": "{ not json",
+  "function": "list",
+  "argument": {},
+  "result": {
+    "accounts": []
+  },
+  "afterText": "{ not json"
+}

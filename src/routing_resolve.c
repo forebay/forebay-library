@@ -20,7 +20,7 @@ static cJSON *normalized_map(const cJSON *map) {
         return NULL;
     }
     cJSON_ArrayForEach(chain, map) {
-        if (!routing_add(normalized, chain->string, routing_normalize_chain(chain))) {
+        if (!service_add(normalized, chain->string, routing_normalize_chain(chain))) {
             cJSON_Delete(normalized);
             return NULL;
         }
@@ -44,7 +44,7 @@ static const cJSON *chain_serving_model(const cJSON *map, const char *requested)
 static const char *slot_for_model(const cJSON *map, const char *requested) {
     const cJSON *chain = NULL;
     cJSON_ArrayForEach(chain, map) {
-        if (strcmp(chain->string, DEFAULT_SLOT) != 0 && routing_contains_ignoring_case(requested, chain->string)) {
+        if (strcmp(chain->string, DEFAULT_SLOT) != 0 && service_contains_ignoring_case(requested, chain->string)) {
             return chain->string;
         }
     }
@@ -63,7 +63,7 @@ static const cJSON *catalog_entry_for(const cJSON *catalog, const char *requeste
 
 static cJSON *single_chain(const cJSON *entry) {
     cJSON *chain = cJSON_CreateArray();
-    if (chain == NULL || !routing_push(chain, routing_assignment(
+    if (chain == NULL || !service_push(chain, routing_assignment(
                                                   cJSON_GetObjectItemCaseSensitive(entry, "provider")->valuestring,
                                                   cJSON_GetObjectItemCaseSensitive(entry, "model")->valuestring,
                                                   cJSON_GetObjectItemCaseSensitive(entry, "name")->valuestring, 0))) {
@@ -130,18 +130,18 @@ static int add_notices(cJSON *result, const resolution *resolved) {
     if (notices == NULL) {
         return 0;
     }
-    if ((resolved->switched && !routing_push(notices, cJSON_CreateString(NOTICE_SWITCHED))) ||
-        (resolved->healed && !routing_push(notices, cJSON_CreateString(NOTICE_HEALED)))) {
+    if ((resolved->switched && !service_push(notices, cJSON_CreateString(NOTICE_SWITCHED))) ||
+        (resolved->healed && !service_push(notices, cJSON_CreateString(NOTICE_HEALED)))) {
         cJSON_Delete(notices);
         return 0;
     }
-    return routing_add(result, "notices", notices);
+    return service_add(result, "notices", notices);
 }
 
 static cJSON *answer_for(const resolution *resolved) {
     cJSON *result = cJSON_CreateObject();
     cJSON *chain = resolved->chain == NULL ? cJSON_CreateArray() : cJSON_Duplicate(resolved->chain, 1);
-    if (result == NULL || !routing_add(result, "chain", chain) || !add_notices(result, resolved)) {
+    if (result == NULL || !service_add(result, "chain", chain) || !add_notices(result, resolved)) {
         cJSON_Delete(result);
         return NULL;
     }
@@ -171,16 +171,16 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *map_json, con
         result = answer_for(&resolved);
         cJSON_Delete(resolved.owned_chain);
     }
-    status = routing_answer(result, out, out_len);
+    status = service_answer(result, out, out_len);
     cJSON_Delete(map);
     cJSON_Delete(catalog);
     routing_pattern_free(native);
     return status;
 }
 
-ROUTING_EXPORT int32_t routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
-    int32_t status = routing_open(in, in_len, &call, out, out_len);
+    int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
     }
@@ -188,10 +188,10 @@ ROUTING_EXPORT int32_t routing_resolve(const uint8_t *in, size_t in_len, uint8_t
     const cJSON *map = NULL;
     const cJSON *models = NULL;
     const cJSON *requested = NULL;
-    if (routing_require(&call, "profile", routing_is_object, "an object", &profile, out, out_len, &status) &&
-        routing_require(&call, "map", routing_is_object, "an object", &map, out, out_len, &status) &&
-        routing_require(&call, "models", routing_is_object, "an object", &models, out, out_len, &status) &&
-        routing_require(&call, "requestedModel", routing_is_string, "a string", &requested, out, out_len,
+    if (service_require(&call, "profile", service_is_object, "an object", &profile, out, out_len, &status) &&
+        service_require(&call, "map", service_is_object, "an object", &map, out, out_len, &status) &&
+        service_require(&call, "models", service_is_object, "an object", &models, out, out_len, &status) &&
+        service_require(&call, "requestedModel", service_is_string, "a string", &requested, out, out_len,
                         &status)) {
         status = answer_call(profile, map, models, requested->valuestring, out, out_len);
     }

@@ -1,0 +1,47 @@
+{
+  "source": "Selection.java: only HYBRID falls back to the soonest-free account",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1005000
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 0
+    }
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "lane",
+    "strategy": "sticky"
+  },
+  "result": {
+    "none": true,
+    "nextAvailableAt": 1005000
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1005000
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 0
+    }
+  }
+}

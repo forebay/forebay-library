@@ -19,23 +19,6 @@ static const named_function functions[] = {
     {"environment", routing_environment},
 };
 
-static char *read_text(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (file == NULL) {
-        return NULL;
-    }
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)size + 1);
-    size_t read = text == NULL ? 0 : fread(text, 1, (size_t)size, file);
-    fclose(file);
-    if (text != NULL) {
-        text[read] = '\0';
-    }
-    return text;
-}
-
 static apps_function find_function(const char *name) {
     for (size_t index = 0; index < sizeof(functions) / sizeof(functions[0]); index++) {
         if (strcmp(functions[index].name, name) == 0) {
@@ -60,7 +43,7 @@ static void lay_out_files(cJSON *argument, const cJSON *files) {
 }
 
 static void run_vector(const char *path) {
-    char *text = read_text(path);
+    char *text = support_read_text(path);
     cJSON *vector = text == NULL ? NULL : cJSON_Parse(text);
     free(text);
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(vector, "function");
@@ -86,7 +69,7 @@ static void run_vector(const char *path) {
 }
 
 static int run_every_vector(void) {
-    char *list = read_text(ROUTING_VECTOR_LIST);
+    char *list = support_read_text(ROUTING_VECTOR_LIST);
     if (list == NULL) {
         support_fail("vector list", ROUTING_VECTOR_LIST);
         return 0;

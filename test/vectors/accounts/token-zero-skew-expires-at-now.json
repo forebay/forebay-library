@@ -1,0 +1,12 @@
+{
+  "source": "TokenRefresh.accessTokenExpired with no buffer",
+  "function": "tokenExpired",
+  "argument": {
+    "now": 1000000,
+    "expires": 1000000,
+    "skewMilliseconds": 0
+  },
+  "result": {
+    "expired": true
+  }
+}

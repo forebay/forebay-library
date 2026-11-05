@@ -1,0 +1,11 @@
+{
+  "source": "AccountManagerTest.accessTokenExpired_trueWhenWithinSixtySecondSkewBuffer: beyond the buffer",
+  "function": "tokenExpired",
+  "argument": {
+    "now": 1000000,
+    "expires": 1060001
+  },
+  "result": {
+    "expired": false
+  }
+}

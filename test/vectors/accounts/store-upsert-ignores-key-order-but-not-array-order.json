@@ -1,0 +1,78 @@
+{
+  "source": "AccountStoreTest.upsert_isUnchangedForAReorderedObjectButUpdatedForAReorderedArray",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "meta": {
+        "a": 1,
+        "b": 2
+      },
+      "lanes": [
+        "x",
+        "y"
+      ]
+    }
+  },
+  "result": {
+    "outcome": "added"
+  },
+  "then": [
+    {
+      "function": "upsert",
+      "argument": {
+        "account": {
+          "id": "acc1",
+          "meta": {
+            "b": 2,
+            "a": 1
+          },
+          "lanes": [
+            "x",
+            "y"
+          ]
+        }
+      },
+      "result": {
+        "outcome": "unchanged"
+      }
+    },
+    {
+      "function": "upsert",
+      "argument": {
+        "account": {
+          "id": "acc1",
+          "meta": {
+            "b": 2,
+            "a": 1
+          },
+          "lanes": [
+            "y",
+            "x"
+          ]
+        }
+      },
+      "result": {
+        "outcome": "updated"
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "acc1",
+            "meta": {
+              "a": 1,
+              "b": 2
+            },
+            "lanes": [
+              "y",
+              "x"
+            ]
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {}
+      }
+    }
+  ]
+}

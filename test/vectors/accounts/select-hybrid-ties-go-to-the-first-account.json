@@ -1,0 +1,62 @@
+{
+  "source": "SelectionTest.hybridWithCustomPredicateFloorsSoonestFreeToNow (the strict-less-than tie-break; the predicate itself is not expressible)",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "coolingDownUntil": 1000500
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "coolingDownUntil": 1000500
+      },
+      {
+        "id": "a2",
+        "label": "a2",
+        "enabled": true,
+        "coolingDownUntil": 1000500
+      }
+    ],
+    "activeIndex": 2,
+    "activeIndexByLane": {}
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "strategy": "hybrid"
+  },
+  "result": {
+    "id": "a0"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "coolingDownUntil": 1000500,
+        "lastUsed": 1000000
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "coolingDownUntil": 1000500
+      },
+      {
+        "id": "a2",
+        "label": "a2",
+        "enabled": true,
+        "coolingDownUntil": 1000500
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

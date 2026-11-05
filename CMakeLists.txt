@@ -14,6 +14,16 @@ FetchContent_MakeAvailable(spisor_library)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_library(apps SHARED
+    src/accounts_availability.c
+    src/accounts_backoff.c
+    src/accounts_manage.c
+    src/accounts_quota.c
+    src/accounts_report.c
+    src/accounts_secrets.c
+    src/accounts_select.c
+    src/accounts_store.c
+    src/accounts_support.c
+    src/accounts_token.c
     src/apps.c
     src/current.c
     src/descriptor.c
@@ -28,7 +38,10 @@ add_library(apps SHARED
     src/routing_resolve.c
     src/routing_support.c
     src/routing_tiers.c
-    src/support.c)
+    src/service_support.c
+    src/support.c
+    ${spisor_library_SOURCE_DIR}/runtime/src/hosts_lock.c)
+target_include_directories(apps PRIVATE ${spisor_library_SOURCE_DIR}/runtime/src ${spisor_library_SOURCE_DIR}/src)
 target_link_libraries(apps PRIVATE spisor_library)
 set_target_properties(apps PROPERTIES C_VISIBILITY_PRESET hidden)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

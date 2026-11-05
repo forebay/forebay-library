@@ -611,6 +611,430 @@
           }
         }
       ]
+    },
+    {
+      "id": "accounts",
+      "functions": [
+        {
+          "name": "list",
+          "symbol": "accounts_list",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "string",
+                "minLength": 1,
+                "description": "the provider's accounts.json path"
+              }
+            },
+            "required": [
+              "store"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "accounts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "disabledReason": {
+                      "type": "string"
+                    },
+                    "coolingDownUntil": {
+                      "type": "number"
+                    },
+                    "cooldownReason": {
+                      "type": "string"
+                    },
+                    "rateLimitResetTimes": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "number"
+                      }
+                    },
+                    "lastUsed": {
+                      "type": "number"
+                    },
+                    "expires": {
+                      "type": "number"
+                    },
+                    "quota": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "upsert",
+          "symbol": "accounts_upsert",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "string",
+                "minLength": 1,
+                "description": "the provider's accounts.json path"
+              },
+              "account": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "disabledReason": {
+                    "type": "string"
+                  },
+                  "coolingDownUntil": {
+                    "type": "number"
+                  },
+                  "cooldownReason": {
+                    "type": "string"
+                  },
+                  "rateLimitResetTimes": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "lastUsed": {
+                    "type": "number"
+                  },
+                  "expires": {
+                    "type": "number"
+                  },
+                  "quota": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                },
+                "required": [
+                  "id"
+                ],
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "store",
+              "account"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "added",
+                  "updated",
+                  "unchanged"
+                ]
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "remove",
+          "symbol": "accounts_remove",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "string",
+                "minLength": 1,
+                "description": "the provider's accounts.json path"
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "store",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "removed": {
+                "type": "boolean"
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "acquire",
+          "symbol": "accounts_acquire",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "string",
+                "minLength": 1,
+                "description": "the provider's accounts.json path"
+              },
+              "lane": {
+                "type": "string"
+              },
+              "strategy": {
+                "type": "string",
+                "description": "round-robin, sticky or hybrid; anything else is hybrid"
+              },
+              "now": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "store",
+              "strategy",
+              "now"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "none": {
+                "type": "boolean"
+              },
+              "nextAvailableAt": {
+                "type": "number"
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "report",
+          "symbol": "accounts_report",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "string",
+                "minLength": 1,
+                "description": "the provider's accounts.json path"
+              },
+              "id": {
+                "type": "string"
+              },
+              "lane": {
+                "type": "string"
+              },
+              "outcome": {
+                "enum": [
+                  "success",
+                  "rate-limited",
+                  "error",
+                  "disabled",
+                  "quota"
+                ]
+              },
+              "now": {
+                "type": "number"
+              },
+              "random": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMaximum": 1
+              },
+              "baseMilliseconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "maxMilliseconds": {
+                "type": "number",
+                "minimum": 0
+              },
+              "attempt": {
+                "type": "integer"
+              },
+              "resetAt": {
+                "type": "number"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "quota": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "store",
+              "id",
+              "outcome",
+              "now"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "changed": {
+                "type": "boolean"
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "tokenExpired",
+          "symbol": "accounts_token_expired",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "expires": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "now": {
+                "type": "number"
+              },
+              "skewMilliseconds": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "now"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "expired": {
+                "type": "boolean"
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "hasCapacity",
+          "symbol": "accounts_has_capacity",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "pools": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "object",
+                    "number",
+                    "string",
+                    "null"
+                  ],
+                  "properties": {
+                    "remainingFraction": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "pools"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "capacity": {
+                "type": "boolean"
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
     }
   ]
 }

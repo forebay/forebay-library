@@ -1,0 +1,17 @@
+{
+  "source": "quota-health.test.ts: has no capacity when every pool is exhausted",
+  "function": "hasCapacity",
+  "argument": {
+    "pools": [
+      {
+        "remainingFraction": 0
+      },
+      {
+        "remainingFraction": 0
+      }
+    ]
+  },
+  "result": {
+    "capacity": false
+  }
+}

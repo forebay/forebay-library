@@ -1,0 +1,36 @@
+{
+  "source": "AccountStoreTest.upsert_keepsFieldsOutsideTheDeclaredAccountShape (the incoming member is expires; access and refresh are refused now)",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "vendorOnly": "keep-me"
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "expires": 123456
+    }
+  },
+  "result": {
+    "outcome": "updated"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "vendorOnly": "keep-me",
+        "expires": 123456
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

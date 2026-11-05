@@ -1,0 +1,51 @@
+{
+  "source": "AccountQuota (types.ts): the reading the provider parsed replaces the stored one",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "quota": {
+          "label": "old"
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "acc1",
+    "outcome": "quota",
+    "quota": {
+      "label": "opus",
+      "usedFraction": 0.25,
+      "remainingFraction": 0.75,
+      "resetTime": 5000000
+    }
+  },
+  "result": {
+    "changed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "quota": {
+          "label": "opus",
+          "usedFraction": 0.25,
+          "remainingFraction": 0.75,
+          "resetTime": 5000000
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "source": "a write never replaces a file it could not read",
+  "beforeText": "{ not json",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "label": "acc1",
+      "enabled": true
+    }
+  },
+  "result": {
+    "refused": "the account store is not valid JSON",
+    "fix": "repair or delete the account store file, then retry"
+  },
+  "afterText": "{ not json"
+}

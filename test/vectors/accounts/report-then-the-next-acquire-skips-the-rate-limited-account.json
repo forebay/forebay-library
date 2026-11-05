@@ -1,0 +1,79 @@
+{
+  "source": "AccountManagerTest.reportRateLimit_thenNextAcquireSkipsTheRateLimitedAccount",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc0",
+        "label": "acc0",
+        "enabled": true
+      },
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "messages",
+    "strategy": "round-robin"
+  },
+  "result": {
+    "id": "acc1"
+  },
+  "then": [
+    {
+      "function": "report",
+      "argument": {
+        "now": 1000000,
+        "id": "acc1",
+        "lane": "messages",
+        "outcome": "rate-limited",
+        "resetAt": 1060000
+      },
+      "result": {
+        "changed": true
+      }
+    },
+    {
+      "function": "acquire",
+      "argument": {
+        "now": 1000000,
+        "lane": "messages",
+        "strategy": "round-robin"
+      },
+      "result": {
+        "id": "acc0"
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "acc0",
+            "label": "acc0",
+            "enabled": true,
+            "lastUsed": 1000000
+          },
+          {
+            "id": "acc1",
+            "label": "acc1",
+            "enabled": true,
+            "lastUsed": 1000000,
+            "rateLimitResetTimes": {
+              "messages": 1060000
+            }
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {
+          "messages": 0
+        }
+      }
+    }
+  ]
+}

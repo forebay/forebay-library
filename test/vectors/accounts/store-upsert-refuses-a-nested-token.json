@@ -1,0 +1,21 @@
+{
+  "source": "decision 3: tokens live in ctx.secrets, never in the store",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "meta": {
+        "deep": [
+          {
+            "api_token": "x"
+          }
+        ]
+      }
+    }
+  },
+  "result": {
+    "refused": "the account carries the token member api_token",
+    "fix": "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
+  },
+  "after": null
+}

@@ -1,0 +1,14 @@
+{
+  "source": "a write never replaces a file it could not read",
+  "beforeText": "oops",
+  "function": "acquire",
+  "argument": {
+    "strategy": "hybrid",
+    "now": 1000000
+  },
+  "result": {
+    "refused": "the account store is not valid JSON",
+    "fix": "repair or delete the account store file, then retry"
+  },
+  "afterText": "oops"
+}

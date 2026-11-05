@@ -1,0 +1,15 @@
+{
+  "source": "decision 3: tokens live in ctx.secrets, never in the store",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "refresh": "sk-ant-ort"
+    }
+  },
+  "result": {
+    "refused": "the account carries the token member refresh",
+    "fix": "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
+  },
+  "after": null
+}

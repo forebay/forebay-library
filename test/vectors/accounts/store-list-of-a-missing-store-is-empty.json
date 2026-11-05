@@ -1,0 +1,9 @@
+{
+  "source": "AccountStoreTest.loadRaw_defaultsThePoolFields (a provider with nothing stored); the store is not created by a read",
+  "function": "list",
+  "argument": {},
+  "result": {
+    "accounts": []
+  },
+  "after": null
+}

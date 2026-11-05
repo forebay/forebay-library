@@ -1,0 +1,43 @@
+{
+  "source": "AccountStore.removeRaw changes only the accounts list",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      },
+      {
+        "id": "acc2",
+        "label": "acc2",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 1,
+    "activeIndexByLane": {
+      "chat": 1
+    }
+  },
+  "function": "remove",
+  "argument": {
+    "id": "acc2"
+  },
+  "result": {
+    "removed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 1,
+    "activeIndexByLane": {
+      "chat": 1
+    }
+  }
+}

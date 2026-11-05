@@ -1,0 +1,62 @@
+{
+  "source": "AccountStoreTest.removeDropsAccountById and remove_reportsWhetherAnAccountWasThere",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      },
+      {
+        "id": "acc2",
+        "label": "acc2",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "remove",
+  "argument": {
+    "id": "acc1"
+  },
+  "result": {
+    "removed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc2",
+        "label": "acc2",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "then": [
+    {
+      "function": "remove",
+      "argument": {
+        "id": "acc1"
+      },
+      "result": {
+        "removed": false
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "acc2",
+            "label": "acc2",
+            "enabled": true
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {}
+      }
+    }
+  ]
+}

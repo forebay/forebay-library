@@ -1,0 +1,15 @@
+{
+  "source": "a write never replaces a file it could not read",
+  "beforeText": "[]",
+  "function": "report",
+  "argument": {
+    "id": "acc1",
+    "outcome": "success",
+    "now": 1000000
+  },
+  "result": {
+    "refused": "the account store is not valid JSON",
+    "fix": "repair or delete the account store file, then retry"
+  },
+  "afterText": "[]"
+}

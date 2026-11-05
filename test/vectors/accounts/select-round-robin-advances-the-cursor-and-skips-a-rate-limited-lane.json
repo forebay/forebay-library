@@ -1,0 +1,67 @@
+{
+  "source": "SelectionTest.roundRobinAdvancesCursorAndSkipsLaneRateLimitedAccount",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane1": 1001000
+        }
+      },
+      {
+        "id": "a2",
+        "label": "a2",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane1": 0
+    }
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "lane1",
+    "strategy": "round-robin"
+  },
+  "result": {
+    "id": "a2"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane1": 1001000
+        }
+      },
+      {
+        "id": "a2",
+        "label": "a2",
+        "enabled": true,
+        "lastUsed": 1000000
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane1": 2
+    }
+  }
+}

@@ -53,7 +53,7 @@ static int collect_tier(cJSON *tiers, const routing_pattern *pattern, const char
     }
     memcpy(name, id + start, length);
     name[length] = '\0';
-    int ok = already_listed(tiers, name) || routing_push(tiers, cJSON_CreateString(name));
+    int ok = already_listed(tiers, name) || service_push(tiers, cJSON_CreateString(name));
     free(name);
     return ok;
 }
@@ -76,7 +76,7 @@ static cJSON *sorted_copy(const cJSON *tiers, const cJSON *tier_order) {
     }
     qsort(entries, (size_t)count, sizeof(tier), compare_tiers);
     for (index = 0; index < count; index++) {
-        if (!routing_push(sorted, cJSON_CreateString(entries[index].name))) {
+        if (!service_push(sorted, cJSON_CreateString(entries[index].name))) {
             cJSON_Delete(sorted);
             sorted = NULL;
             break;
@@ -120,24 +120,24 @@ cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models,
     return tiers;
 }
 
-ROUTING_EXPORT int32_t routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
-    int32_t status = routing_open(in, in_len, &call, out, out_len);
+    int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
     }
     const cJSON *profile_json = NULL;
     const cJSON *models = NULL;
     routing_profile profile;
-    if (routing_require(&call, "profile", routing_is_object, "an object", &profile_json, out, out_len, &status) &&
-        routing_require(&call, "models", routing_is_object, "an object", &models, out, out_len, &status) &&
+    if (service_require(&call, "profile", service_is_object, "an object", &profile_json, out, out_len, &status) &&
+        service_require(&call, "models", service_is_object, "an object", &models, out, out_len, &status) &&
         routing_read_profile(profile_json, NEEDS_TIERS, &profile, out, out_len, &status)) {
         routing_refusal refusal = {0, "", NULL};
         cJSON *tiers = routing_detect_tiers(&profile, models, &refusal);
         if (tiers == NULL) {
             status = routing_answer_refusal(&refusal, out, out_len);
         } else {
-            status = routing_answer(routing_wrap("tiers", tiers), out, out_len);
+            status = service_answer(service_wrap("tiers", tiers), out, out_len);
         }
     }
     spisor_discard_call(&call);

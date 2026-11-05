@@ -94,19 +94,19 @@ static cJSON *answer_for(double status, const cJSON *headers, double now) {
     return result;
 }
 
-ROUTING_EXPORT int32_t routing_outcome(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t routing_outcome(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
-    int32_t status = routing_open(in, in_len, &call, out, out_len);
+    int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
     }
     const cJSON *reply_status = NULL;
     const cJSON *headers = NULL;
     const cJSON *now = NULL;
-    if (routing_require(&call, "status", routing_is_number, "a number", &reply_status, out, out_len, &status) &&
-        routing_require(&call, "headers", routing_is_object, "an object", &headers, out, out_len, &status) &&
-        routing_require(&call, "now", routing_is_number, "a number", &now, out, out_len, &status)) {
-        status = routing_answer(answer_for(reply_status->valuedouble, headers, now->valuedouble), out, out_len);
+    if (service_require(&call, "status", service_is_number, "a number", &reply_status, out, out_len, &status) &&
+        service_require(&call, "headers", service_is_object, "an object", &headers, out, out_len, &status) &&
+        service_require(&call, "now", service_is_number, "a number", &now, out, out_len, &status)) {
+        status = service_answer(answer_for(reply_status->valuedouble, headers, now->valuedouble), out, out_len);
     }
     spisor_discard_call(&call);
     return status;

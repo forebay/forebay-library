@@ -1,0 +1,49 @@
+{
+  "source": "AccountManagerTest.reportError_missingLane_treatsItAsNoSameLaneResetKnownAndCoolsDownNormally",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "chat": 1060000
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "acc1",
+    "outcome": "error",
+    "attempt": 0,
+    "reason": "boom",
+    "random": 0.5,
+    "baseMilliseconds": 1000,
+    "maxMilliseconds": 300000
+  },
+  "result": {
+    "changed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "chat": 1060000
+        },
+        "coolingDownUntil": 1000750,
+        "cooldownReason": "boom"
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}
