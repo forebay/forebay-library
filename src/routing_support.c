@@ -165,28 +165,6 @@ int routing_is_auto(const char *model) {
     return length >= 5 && strcmp(model + length - 5, "-auto") == 0;
 }
 
-static char lower_ascii(char value) {
-    return (value >= 'A' && value <= 'Z') ? (char)(value + 32) : value;
-}
-
-int routing_contains_ignoring_case(const char *haystack, const char *needle) {
-    size_t needle_length = strlen(needle);
-    size_t haystack_length = strlen(haystack);
-    if (needle_length > haystack_length) {
-        return 0;
-    }
-    for (size_t start = 0; start + needle_length <= haystack_length; start++) {
-        size_t offset = 0;
-        while (offset < needle_length && lower_ascii(haystack[start + offset]) == lower_ascii(needle[offset])) {
-            offset++;
-        }
-        if (offset == needle_length) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 static const char *display_name(const cJSON *raw, const char *model) {
     if (cJSON_IsObject(raw)) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(raw, "name");

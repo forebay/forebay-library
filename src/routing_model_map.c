@@ -38,7 +38,7 @@ static const cJSON *derive_in(const cJSON *catalog, const char *provider, const 
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, catalog) {
         if ((provider == NULL || strcmp(text_of(entry, "provider"), provider) == 0) &&
-            routing_contains_ignoring_case(text_of(entry, "model"), keyword)) {
+            service_contains_ignoring_case(text_of(entry, "model"), keyword)) {
             return entry;
         }
     }

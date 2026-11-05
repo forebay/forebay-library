@@ -44,7 +44,7 @@ static const cJSON *chain_serving_model(const cJSON *map, const char *requested)
 static const char *slot_for_model(const cJSON *map, const char *requested) {
     const cJSON *chain = NULL;
     cJSON_ArrayForEach(chain, map) {
-        if (strcmp(chain->string, DEFAULT_SLOT) != 0 && routing_contains_ignoring_case(requested, chain->string)) {
+        if (strcmp(chain->string, DEFAULT_SLOT) != 0 && service_contains_ignoring_case(requested, chain->string)) {
             return chain->string;
         }
     }

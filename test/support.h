@@ -104,6 +104,24 @@ static inline void support_write(const char *path, const char *text) {
     support_write_bytes(path, text, strlen(text));
 }
 
+/** The whole file as a NUL terminated string, freed with free, or NULL when it cannot be read. */
+static inline char *support_read_text(const char *path) {
+    FILE *file = fopen(path, "rb");
+    if (file == NULL) {
+        return NULL;
+    }
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *text = malloc((size_t)size + 1);
+    size_t read = text == NULL ? 0 : fread(text, 1, (size_t)size, file);
+    fclose(file);
+    if (text != NULL) {
+        text[read] = '\0';
+    }
+    return text;
+}
+
 /** A call's context: the home, then name and value pairs for the environment, ending in NULL. */
 static inline cJSON *support_context(const char *home, ...) {
     cJSON *context = cJSON_CreateObject();

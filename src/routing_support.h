@@ -51,7 +51,6 @@ cJSON *routing_catalog(const cJSON *models);
 cJSON *routing_ranked_ids(const cJSON *provider_entry);
 
 int routing_is_auto(const char *model);
-int routing_contains_ignoring_case(const char *haystack, const char *needle);
 
 /**
  * Compiles source for a profile member, filling refusal when it uses anything the matcher lacks.

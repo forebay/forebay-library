@@ -39,6 +39,9 @@ cJSON *service_wrap(const char *name, cJSON *item);
 int service_add(cJSON *object, const char *name, cJSON *item);
 int service_push(cJSON *array, cJSON *item);
 
+/** Whether needle occurs in haystack, comparing ASCII letters without regard to case. */
+int service_contains_ignoring_case(const char *haystack, const char *needle);
+
 int service_is_object(const cJSON *value);
 int service_is_array(const cJSON *value);
 int service_is_string(const cJSON *value);
