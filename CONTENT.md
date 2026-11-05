@@ -35,15 +35,16 @@ read nothing of the process: time and the filesystem are arguments. `profile` ha
 | --- | --- |
 | `tiers({ profile, models })` | `{ tiers }`: `tierRegex` group 1 over the tier source's ranking, ordered by `tierOrder`, unknown last |
 | `modelMap({ profile, stored, models })` | `{ map, healed }`: stored entries kept, healed within their provider, or derived |
-| `resolve({ profile, map, models, requestedModel })` | `{ chain, notice? }`: exact id, tier keyword, an offered model, then the default |
+| `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
 | `outcome({ status, headers, now })` | `{ rateLimited, resetAt? }` from 429, `x-hub-rate-limited`, `x-hub-retry-after-ms`, `retry-after` |
 | `environment({ profile, map, port, providersEnabled, environment, userHome })` | `{ environment }`: the base URL, and with providers the model pairs and the placeholder token unless the application has a login of its own |
 
 A refusal is a successful answer `{ "refused", "fix" }`. Windows has no `regcomp`, so one matcher
 serves every platform: `^ $`, literals, `.`, classes, `\d \w \s`, `* + ?` on one atom and at most one
-capture group. A pattern using anything else is refused naming the construct. `notice` is
+capture group. A pattern using anything else is refused naming the construct. `notices` lists
 `model_switched` when the default tier serves a model nothing offers (unless `nativeModelPattern`
-says it is the application's own), else `healed` when the chain's primary is derived.
+says it is the application's own), then `healed` when the chain's primary is derived; both are
+listed when both apply, in that order.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
 `Router.java`.
 
@@ -142,7 +143,8 @@ its `case.json` places), an environment, a home layout, an argument vector and a
 - `parity/typescript` starts `weivel/typescript`'s host with the pinned release and a plugin requiring
   `apps`, and compares what the plugin observes with the expected answers.
 - `parity/java` does the same through `weivel/java`'s `LibraryServices` and the `AppsService`
-  generated from `library.json`, reading each answer through the getters a Java plugin calls.
+  generated from the `library.json` of the pinned release (fetched and held to the digest in
+  `parity/pin.json`), reading each answer through the getters a Java plugin calls.
 - `parity/divergences.json` lists every answer that is not basekit's, with its reason. Each is held
   both ways: the implementation must answer what the table records and basekit must answer something
   else. Beside the library's own divergences above, which include an unpaired surrogate escape

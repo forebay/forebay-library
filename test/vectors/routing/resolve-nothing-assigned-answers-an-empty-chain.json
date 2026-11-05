@@ -25,6 +25,7 @@
     "requestedModel": ""
   },
   "result": {
-    "chain": []
+    "chain": [],
+    "notices": []
   }
 }

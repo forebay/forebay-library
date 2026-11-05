@@ -420,11 +420,14 @@
                   "additionalProperties": false
                 }
               },
-              "notice": {
-                "enum": [
-                  "model_switched",
-                  "healed"
-                ]
+              "notices": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "model_switched",
+                    "healed"
+                  ]
+                }
               },
               "refused": {
                 "type": "string"

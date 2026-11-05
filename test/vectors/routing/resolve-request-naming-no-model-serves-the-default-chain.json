@@ -65,6 +65,8 @@
         "derived": true
       }
     ],
-    "notice": "healed"
+    "notices": [
+      "healed"
+    ]
   }
 }
