@@ -33,8 +33,8 @@ dependencies {
 }
 
 def parityDirectory = file("..")
-def declaration = new File(parityDirectory, "../library.json")
 def generatedTypes = layout.buildDirectory.dir("generated/library-types")
+def pinnedDeclaration = layout.buildDirectory.file("pinned/library.json")
 
 def pinFile = new File(parityDirectory, "pin.json")
 
@@ -42,24 +42,35 @@ def sha256Of = { File file ->
     java.security.MessageDigest.getInstance("SHA-256").digest(file.bytes).collect { String.format("%02x", it & 0xff) }.join()
 }
 
-// The service interface is generated on every build from this repository's library.json, which must
-// be the pinned release's byte for byte, so the test exercises the generator a Java embedder uses on
-// the declaration the library it loads actually carries.
+// The service interface is generated from the declaration the pinned release ships, fetched from the
+// release and held to the digest in pin.json, so the test exercises the generator a Java embedder
+// uses on the declaration of the binary it loads, whatever this working tree declares.
+def fetchPinnedDeclaration = tasks.register("fetchPinnedDeclaration") {
+    inputs.file pinFile
+    outputs.file pinnedDeclaration
+    doLast {
+        def pin = new groovy.json.JsonSlurper().parse(pinFile, "UTF-8")
+        def source = "https://github.com/" + pin.repository + "/releases/download/" + pin.tag + "/library.json"
+        def target = pinnedDeclaration.get().asFile
+        target.parentFile.mkdirs()
+        target.bytes = new URL(source).bytes
+        def actual = sha256Of(target)
+        if (actual != pin.sha256["library.json"]) {
+            target.delete()
+            throw new GradleException(source + " has SHA-256 " + actual + " but parity/pin.json pins " + pin.sha256["library.json"])
+        }
+    }
+}
+
 def generateAppsService = tasks.register("generateAppsService", JavaExec) {
+    dependsOn fetchPinnedDeclaration
     classpath = configurations.libraryTypeGenerator
     mainClass = "io.github.intisy.ai.seam.jvm.library.LibraryTypeGenerator"
     def output = generatedTypes.get().asFile
-    args declaration.absolutePath, output.absolutePath, "io.github.forebay.library.parity"
-    inputs.file declaration
-    inputs.file pinFile
+    args pinnedDeclaration.get().asFile.absolutePath, output.absolutePath, "io.github.forebay.library.parity"
+    inputs.file pinnedDeclaration
     outputs.dir output
     doFirst {
-        def pinned = new groovy.json.JsonSlurper().parse(pinFile, "UTF-8").sha256["library.json"]
-        def actual = sha256Of(declaration)
-        if (actual != pinned) {
-            throw new GradleException("library.json has SHA-256 " + actual + " but parity/pin.json pins " + pinned
-                + ": generate AppsService from the pinned release's declaration, or move the pin to the release this library.json shipped in")
-        }
         project.delete(output)
     }
 }
