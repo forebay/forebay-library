@@ -48,6 +48,36 @@ listed when both apply, in that order.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
 `Router.java`.
 
+## The accounts service
+
+`accounts` holds the account selection, health reporting, backoff and store of basekit's `AccountManager` as
+synchronous `json` functions a provider plugin calls once per attempt; the attempt loop, the network and every
+token stay in the provider. Every store function takes `store`, the path of the provider's `accounts.json`
+(its `ctx.paths.state`). The file is `{ version: 1, accounts, activeIndex, activeIndexByLane }`, one pool per
+provider. Time and randomness are arguments (`now`, `random` in [0, 1)).
+
+| function | answer |
+| --- | --- |
+| `list({ store })` | `{ accounts }`; a missing or unreadable store lists as empty |
+| `upsert({ store, account })` | `{ outcome: "added" or "updated" or "unchanged" }`, matched by `id`, members the store does not know kept, compared with key order ignored and array order kept |
+| `remove({ store, id })` | `{ removed }` |
+| `acquire({ store, lane?, strategy, now })` | `{ id }` after writing the cursor and `lastUsed`, else `{ none: true, nextAvailableAt? }`; `round-robin`, `sticky`, `hybrid`, anything else as `hybrid` |
+| `report({ store, id, lane?, outcome, now, ... })` | `{ changed }` for `success`, `rate-limited` (`resetAt`, else the backoff), `error`, `disabled` (`reason`) or `quota` (`quota`) |
+| `tokenExpired({ expires?, now, skewMilliseconds? })` | `{ expired }`, 60000 ms of skew by default |
+| `hasCapacity({ pools })` | `{ capacity }`: any pool with `remainingFraction` above 0 |
+
+Backoff is `floor(raw / 2 + random * raw / 2)` with `raw = min(maxMilliseconds, baseMilliseconds * 2^attempt)`;
+`random` defaults to 0.5. An `error` on a lane that holds an active reset changes nothing, and a
+`rate-limited` report with no lane becomes an account-wide cooldown, because selection only reads a lane's
+reset for a named lane.
+
+Tokens never reach the store: `upsert` refuses an account carrying `access`, `refresh` or any member whose
+name contains `token`, at any depth, as a successful `{ refused, fix }` answer. Every read-modify-write holds
+`<store>.lock`, the OS file lock the runtime's registry takes, once, and the file is replaced atomically, so
+two processes sharing one store lose no update. A store that is not a JSON object answers a refusal and is
+never overwritten. `test/vectors/accounts/` holds the vectors; `before` and `after` are the store, and `then`
+chains further calls against it.
+
 ## Where basekit answers empty and where it throws
 
 An absent, unreadable or malformed registry, or one that is not an object, answers `{"apps": []}` with

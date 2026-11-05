@@ -1,0 +1,12 @@
+{
+  "source": "TokenRefresh.accessTokenExpired with a provider-chosen buffer: the edge",
+  "function": "tokenExpired",
+  "argument": {
+    "now": 1000000,
+    "expires": 1005000,
+    "skewMilliseconds": 5000
+  },
+  "result": {
+    "expired": true
+  }
+}

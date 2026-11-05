@@ -1,0 +1,38 @@
+{
+  "source": "RateLimitMath.isCoolingDown: the deadline must be strictly after now",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "coolingDownUntil": 1000000
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "strategy": "sticky"
+  },
+  "result": {
+    "id": "a0"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "coolingDownUntil": 1000000,
+        "lastUsed": 1000000
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

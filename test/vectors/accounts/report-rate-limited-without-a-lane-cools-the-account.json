@@ -1,0 +1,39 @@
+{
+  "source": "AccountManager.reportRateLimit: selection only reads a lane reset for a named lane, so a lane-less limit becomes a cooldown",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "acc1",
+    "outcome": "rate-limited",
+    "resetAt": 1030000
+  },
+  "result": {
+    "changed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "coolingDownUntil": 1030000,
+        "cooldownReason": "rate limited"
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

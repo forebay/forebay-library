@@ -1,0 +1,10 @@
+{
+  "source": "AccountStore.parseOrDefault: JsonUtil.asMap of an array is null, so the default pool",
+  "beforeText": "[1, 2]",
+  "function": "list",
+  "argument": {},
+  "result": {
+    "accounts": []
+  },
+  "afterText": "[1, 2]"
+}

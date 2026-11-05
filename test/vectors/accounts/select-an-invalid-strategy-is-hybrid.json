@@ -1,0 +1,47 @@
+{
+  "source": "Strategy.java: a null strategy is HYBRID; the wire value bogus reads as hybrid, which claims the soonest-free account",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1005000
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 0
+    }
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "lane",
+    "strategy": "bogus"
+  },
+  "result": {
+    "id": "a0"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1005000
+        },
+        "lastUsed": 1000000
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 0
+    }
+  }
+}

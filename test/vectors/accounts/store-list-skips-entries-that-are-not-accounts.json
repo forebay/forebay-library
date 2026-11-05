@@ -1,0 +1,29 @@
+{
+  "source": "AccountStore.poolFromEntry skips an entry that is not an object",
+  "before": {
+    "version": 1,
+    "accounts": [
+      7,
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      },
+      "text",
+      null
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "list",
+  "argument": {},
+  "result": {
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ]
+  }
+}

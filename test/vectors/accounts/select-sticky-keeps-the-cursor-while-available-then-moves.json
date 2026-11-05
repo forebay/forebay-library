@@ -1,0 +1,124 @@
+{
+  "source": "SelectionTest.stickyKeepsCursorWhileAvailableThenMovesWhenNot (a0 becomes unavailable through a rate-limited report)",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 0
+    }
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "lane",
+    "strategy": "sticky"
+  },
+  "result": {
+    "id": "a0"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "lastUsed": 1000000
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 0
+    }
+  },
+  "then": [
+    {
+      "function": "report",
+      "argument": {
+        "now": 1000000,
+        "id": "a0",
+        "lane": "lane",
+        "outcome": "rate-limited",
+        "resetAt": 1005000
+      },
+      "result": {
+        "changed": true
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "a0",
+            "label": "a0",
+            "enabled": true,
+            "lastUsed": 1000000,
+            "rateLimitResetTimes": {
+              "lane": 1005000
+            }
+          },
+          {
+            "id": "a1",
+            "label": "a1",
+            "enabled": true
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {
+          "lane": 0
+        }
+      }
+    },
+    {
+      "function": "acquire",
+      "argument": {
+        "now": 1000000,
+        "lane": "lane",
+        "strategy": "sticky"
+      },
+      "result": {
+        "id": "a1"
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "a0",
+            "label": "a0",
+            "enabled": true,
+            "lastUsed": 1000000,
+            "rateLimitResetTimes": {
+              "lane": 1005000
+            }
+          },
+          {
+            "id": "a1",
+            "label": "a1",
+            "enabled": true,
+            "lastUsed": 1000000
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {
+          "lane": 1
+        }
+      }
+    }
+  ]
+}

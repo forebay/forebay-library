@@ -1,0 +1,20 @@
+{
+  "source": "quota-health.test.ts: one nonzero pool among zeros",
+  "function": "hasCapacity",
+  "argument": {
+    "pools": [
+      {
+        "remainingFraction": 0
+      },
+      {
+        "remainingFraction": 0
+      },
+      {
+        "remainingFraction": 0.01
+      }
+    ]
+  },
+  "result": {
+    "capacity": true
+  }
+}

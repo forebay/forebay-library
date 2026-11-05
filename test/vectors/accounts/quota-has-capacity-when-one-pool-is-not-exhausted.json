@@ -1,0 +1,17 @@
+{
+  "source": "quota-health.test.ts: has capacity when at least one pool is not fully utilized",
+  "function": "hasCapacity",
+  "argument": {
+    "pools": [
+      {
+        "remainingFraction": 0.5
+      },
+      {
+        "remainingFraction": 0
+      }
+    ]
+  },
+  "result": {
+    "capacity": true
+  }
+}

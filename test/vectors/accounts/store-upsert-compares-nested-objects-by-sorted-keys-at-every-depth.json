@@ -1,0 +1,43 @@
+{
+  "source": "AccountStore.stableJson sorts keys at every depth",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "meta": {
+        "outer": {
+          "a": 1,
+          "b": {
+            "c": 1,
+            "d": 2
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "outcome": "added"
+  },
+  "then": [
+    {
+      "function": "upsert",
+      "argument": {
+        "account": {
+          "id": "acc1",
+          "meta": {
+            "outer": {
+              "b": {
+                "d": 2,
+                "c": 1
+              },
+              "a": 1
+            }
+          }
+        }
+      },
+      "result": {
+        "outcome": "unchanged"
+      }
+    }
+  ]
+}

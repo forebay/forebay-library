@@ -1,0 +1,79 @@
+{
+  "source": "AccountStoreTest.addListAndUpsertRoundTripExactJsonShape",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "label": "acc1",
+      "enabled": true
+    }
+  },
+  "result": {
+    "outcome": "added"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "then": [
+    {
+      "function": "list",
+      "argument": {},
+      "result": {
+        "accounts": [
+          {
+            "id": "acc1",
+            "label": "acc1",
+            "enabled": true
+          }
+        ]
+      }
+    },
+    {
+      "function": "upsert",
+      "argument": {
+        "account": {
+          "id": "acc1",
+          "label": "renamed",
+          "enabled": true
+        }
+      },
+      "result": {
+        "outcome": "updated"
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "acc1",
+            "label": "renamed",
+            "enabled": true
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {}
+      }
+    },
+    {
+      "function": "list",
+      "argument": {},
+      "result": {
+        "accounts": [
+          {
+            "id": "acc1",
+            "label": "renamed",
+            "enabled": true
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "source": "AccountManager.mutate: a no-op when no account matches",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "ghost",
+    "outcome": "success"
+  },
+  "result": {
+    "changed": false
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

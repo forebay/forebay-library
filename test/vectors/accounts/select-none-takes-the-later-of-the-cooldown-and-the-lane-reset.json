@@ -1,0 +1,71 @@
+{
+  "source": "RateLimitMath.availableAt: max of the cooldown and the lane's reset, floored to now, a disabled account never",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "coolingDownUntil": 1001000,
+        "rateLimitResetTimes": {
+          "chat": 1007000
+        }
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "chat": 1003000
+        }
+      },
+      {
+        "id": "a2",
+        "label": "a2",
+        "enabled": false
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "chat",
+    "strategy": "sticky"
+  },
+  "result": {
+    "none": true,
+    "nextAvailableAt": 1003000
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "coolingDownUntil": 1001000,
+        "rateLimitResetTimes": {
+          "chat": 1007000
+        }
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "chat": 1003000
+        }
+      },
+      {
+        "id": "a2",
+        "label": "a2",
+        "enabled": false
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

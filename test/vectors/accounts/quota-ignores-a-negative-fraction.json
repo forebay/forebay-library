@@ -1,0 +1,14 @@
+{
+  "source": "QuotaHealth.hasCapacity: remainingFraction > 0",
+  "function": "hasCapacity",
+  "argument": {
+    "pools": [
+      {
+        "remainingFraction": -0.5
+      }
+    ]
+  },
+  "result": {
+    "capacity": false
+  }
+}

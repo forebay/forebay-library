@@ -1,0 +1,42 @@
+{
+  "source": "RateLimitMath.isLaneRateLimited: no lane means no lane is limited",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "chat": 1001000
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "strategy": "sticky"
+  },
+  "result": {
+    "id": "a0"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "chat": 1001000
+        },
+        "lastUsed": 1000000
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "source": "selection.test.ts: tracks a separate cursor per lane instead of the pool's default activeIndex",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "x",
+    "strategy": "round-robin"
+  },
+  "result": {
+    "id": "a1"
+  },
+  "then": [
+    {
+      "function": "acquire",
+      "argument": {
+        "now": 1000001,
+        "lane": "y",
+        "strategy": "round-robin"
+      },
+      "result": {
+        "id": "a1"
+      }
+    },
+    {
+      "function": "acquire",
+      "argument": {
+        "now": 1000002,
+        "lane": "x",
+        "strategy": "round-robin"
+      },
+      "result": {
+        "id": "a0"
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "a0",
+            "label": "a0",
+            "enabled": true,
+            "lastUsed": 1000002
+          },
+          {
+            "id": "a1",
+            "label": "a1",
+            "enabled": true,
+            "lastUsed": 1000001
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {
+          "x": 0,
+          "y": 1
+        }
+      }
+    }
+  ]
+}

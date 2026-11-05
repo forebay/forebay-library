@@ -1,0 +1,41 @@
+{
+  "source": "a lane-less rate limit keeps the later of the two deadlines",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "coolingDownUntil": 1090000,
+        "cooldownReason": "boom"
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "acc1",
+    "outcome": "rate-limited",
+    "resetAt": 1030000
+  },
+  "result": {
+    "changed": false
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "coolingDownUntil": 1090000,
+        "cooldownReason": "boom"
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

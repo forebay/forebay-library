@@ -1,0 +1,17 @@
+{
+  "source": "CoreAuthJs.quotaPoolsFromJson: an entry that is not an object is skipped",
+  "function": "hasCapacity",
+  "argument": {
+    "pools": [
+      7,
+      null,
+      "x",
+      {
+        "remainingFraction": 1
+      }
+    ]
+  },
+  "result": {
+    "capacity": true
+  }
+}

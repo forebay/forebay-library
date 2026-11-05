@@ -1,0 +1,11 @@
+{
+  "source": "AccountManagerTest.refresh_forcesRefreshRegardlessOfExpiry: nowhere near expiry",
+  "function": "tokenExpired",
+  "argument": {
+    "now": 1000000,
+    "expires": 999999999999
+  },
+  "result": {
+    "expired": false
+  }
+}

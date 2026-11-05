@@ -1,0 +1,62 @@
+{
+  "source": "AccountStoreTest.upsert_reportsAddedThenUpdatedThenUnchanged",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "label": "acc1"
+    }
+  },
+  "result": {
+    "outcome": "added"
+  },
+  "then": [
+    {
+      "function": "upsert",
+      "argument": {
+        "account": {
+          "id": "acc1",
+          "label": "acc1"
+        }
+      },
+      "result": {
+        "outcome": "unchanged"
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "acc1",
+            "label": "acc1"
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {}
+      }
+    },
+    {
+      "function": "upsert",
+      "argument": {
+        "account": {
+          "id": "acc1",
+          "email": "someone@example.com"
+        }
+      },
+      "result": {
+        "outcome": "updated"
+      },
+      "after": {
+        "version": 1,
+        "accounts": [
+          {
+            "id": "acc1",
+            "label": "acc1",
+            "email": "someone@example.com"
+          }
+        ],
+        "activeIndex": 0,
+        "activeIndexByLane": {}
+      }
+    }
+  ]
+}

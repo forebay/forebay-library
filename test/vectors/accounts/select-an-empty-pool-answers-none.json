@@ -1,0 +1,12 @@
+{
+  "source": "Selection.java: an empty pool selects -1; the missing store is not created",
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "strategy": "hybrid"
+  },
+  "result": {
+    "none": true
+  },
+  "after": null
+}

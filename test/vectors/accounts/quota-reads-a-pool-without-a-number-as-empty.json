@@ -1,0 +1,18 @@
+{
+  "source": "CoreAuthJs.quotaPoolsFromJson: a remainingFraction that is not a number is 0.0",
+  "function": "hasCapacity",
+  "argument": {
+    "pools": [
+      {},
+      {
+        "remainingFraction": "0.5"
+      },
+      {
+        "remainingFraction": null
+      }
+    ]
+  },
+  "result": {
+    "capacity": false
+  }
+}

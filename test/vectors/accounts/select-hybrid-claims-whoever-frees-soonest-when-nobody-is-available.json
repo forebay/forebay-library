@@ -1,0 +1,63 @@
+{
+  "source": "SelectionTest.hybridReturnsSoonestFreeIndexWhenNoneCurrentlyAvailable",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1005000
+        }
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1002000
+        }
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 0
+    }
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "lane": "lane",
+    "strategy": "hybrid"
+  },
+  "result": {
+    "id": "a1"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1005000
+        }
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "rateLimitResetTimes": {
+          "lane": 1002000
+        },
+        "lastUsed": 1000000
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {
+      "lane": 1
+    }
+  }
+}

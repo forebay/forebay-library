@@ -1,0 +1,43 @@
+{
+  "source": "SelectionTest.calculateBackoffMsWithoutJitterIsExactMinFormula (raw 8000; the jitter-free overload is never reached by a report, so the random 0 floor is the nearest)",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "report",
+  "argument": {
+    "now": 1000000,
+    "id": "acc1",
+    "outcome": "error",
+    "reason": "x",
+    "baseMilliseconds": 1000,
+    "maxMilliseconds": 60000,
+    "attempt": 3,
+    "random": 0
+  },
+  "result": {
+    "changed": true
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "label": "acc1",
+        "enabled": true,
+        "coolingDownUntil": 1004000,
+        "cooldownReason": "x"
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

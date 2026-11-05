@@ -1,0 +1,43 @@
+{
+  "source": "AccountStore.normalizedPool: the three pool fields are present after any write",
+  "before": {
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true
+      }
+    ]
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "strategy": "sticky"
+  },
+  "result": {
+    "id": "a0"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "a0",
+        "label": "a0",
+        "enabled": true,
+        "lastUsed": 1000000
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

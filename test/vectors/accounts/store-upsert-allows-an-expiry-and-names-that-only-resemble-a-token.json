@@ -1,0 +1,28 @@
+{
+  "source": "decision 3: expires is non-secret state; only access and refresh exactly, or a name containing token, are refused",
+  "function": "upsert",
+  "argument": {
+    "account": {
+      "id": "acc1",
+      "expires": 9,
+      "accessedAt": 4,
+      "refreshedAt": 5
+    }
+  },
+  "result": {
+    "outcome": "added"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "id": "acc1",
+        "expires": 9,
+        "accessedAt": 4,
+        "refreshedAt": 5
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  }
+}

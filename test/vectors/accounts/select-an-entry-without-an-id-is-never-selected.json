@@ -1,0 +1,44 @@
+{
+  "source": "AccountManager.selectAndClaim returns null for an account that has no id",
+  "before": {
+    "version": 1,
+    "accounts": [
+      {
+        "label": "anonymous",
+        "enabled": true
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true
+      }
+    ],
+    "activeIndex": 0,
+    "activeIndexByLane": {}
+  },
+  "function": "acquire",
+  "argument": {
+    "now": 1000000,
+    "strategy": "sticky"
+  },
+  "result": {
+    "id": "a1"
+  },
+  "after": {
+    "version": 1,
+    "accounts": [
+      {
+        "label": "anonymous",
+        "enabled": true
+      },
+      {
+        "id": "a1",
+        "label": "a1",
+        "enabled": true,
+        "lastUsed": 1000000
+      }
+    ],
+    "activeIndex": 1,
+    "activeIndexByLane": {}
+  }
+}

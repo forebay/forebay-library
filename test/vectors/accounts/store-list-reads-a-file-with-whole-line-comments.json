@@ -1,0 +1,13 @@
+{
+  "source": "basekit readJson strips whole-line comments before parsing",
+  "beforeText": "// kept by hand\n{\"version\":1,\"accounts\":[{\"id\":\"acc1\"}],\"activeIndex\":0,\"activeIndexByLane\":{}}\n",
+  "function": "list",
+  "argument": {},
+  "result": {
+    "accounts": [
+      {
+        "id": "acc1"
+      }
+    ]
+  }
+}
