@@ -1,0 +1,63 @@
+{
+  "source": "decision 7: own login, as Claude Code reads it",
+  "function": "environment",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": true
+        }
+      ]
+    },
+    "port": 40001,
+    "providersEnabled": true,
+    "environment": {
+      "CLAUDE_CODE_OAUTH_TOKEN": "  "
+    },
+    "userHome": "/routing-test-home-that-does-not-exist"
+  },
+  "result": {
+    "environment": {
+      "ANTHROPIC_BASE_URL": "http://127.0.0.1:40001",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL": "m-opus",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "M Opus",
+      "ANTHROPIC_MODEL": "m-opus",
+      "ANTHROPIC_AUTH_TOKEN": "sk-ant-loader-proxy"
+    }
+  }
+}
