@@ -8,7 +8,6 @@
 #include "spisor/json_file.h"
 #include "spisor/path.h"
 
-#define LOADER_PLACEHOLDER_TOKEN "sk-ant-loader-proxy"
 #define DEFAULT_SLOT "default"
 
 static int equals_ignoring_case(const char *left, const char *right) {
@@ -47,7 +46,7 @@ static int has_text(const char *value) {
     return 0;
 }
 
-static int is_own_token(const char *token) {
+static int is_own_token(const char *token, const char *placeholder) {
     if (!has_text(token)) {
         return 0;
     }
@@ -58,7 +57,7 @@ static int is_own_token(const char *token) {
     while (length > 0 && isspace((unsigned char)token[length - 1])) {
         length--;
     }
-    return !(length == strlen(LOADER_PLACEHOLDER_TOKEN) && strncmp(token, LOADER_PLACEHOLDER_TOKEN, length) == 0);
+    return !(length == strlen(placeholder) && strncmp(token, placeholder, length) == 0);
 }
 
 static int is_truthy(const cJSON *value) {
@@ -74,19 +73,28 @@ static int is_truthy(const cJSON *value) {
     return 1;
 }
 
+static const char *text_member(const cJSON *object, const char *name) {
+    const cJSON *found = cJSON_GetObjectItemCaseSensitive(object, name);
+    return cJSON_IsString(found) ? found->valuestring : NULL;
+}
+
 /**
- * Whether the application's own state file records a signed-in account.
+ * Whether the application's declared state file records a signed-in account.
  *
- * @implNote Claude Code reads its state from join(CLAUDE_CONFIG_DIR || homedir(), ".claude.json"), so a set
- * CLAUDE_CONFIG_DIR replaces the user's home rather than adding a second place.
+ * @implNote A set directoryVariable replaces the user's home rather than adding a second place to look.
  */
-static int has_account_on_disk(const cJSON *environment, const char *user_home, int *out_of_memory) {
-    const char *config_directory = variable(environment, "CLAUDE_CONFIG_DIR");
+static int has_account_on_disk(const cJSON *environment, const char *user_home, const cJSON *state_file_facts,
+                               int *out_of_memory) {
+    if (state_file_facts == NULL) {
+        return 0;
+    }
+    const char *directory_variable = text_member(state_file_facts, "directoryVariable");
+    const char *config_directory = directory_variable == NULL ? NULL : variable(environment, directory_variable);
     const char *directory = has_text(config_directory) ? config_directory : user_home;
     if (directory == NULL || directory[0] == '\0') {
         return 0;
     }
-    const char *segments[] = {directory, ".claude.json"};
+    const char *segments[] = {directory, text_member(state_file_facts, "name")};
     char *path = spisor_path_join(SERVICE_WINDOWS, segments, 2);
     if (path == NULL) {
         *out_of_memory = 1;
@@ -95,16 +103,27 @@ static int has_account_on_disk(const cJSON *environment, const char *user_home, 
     spisor_json_file_state state = SPISOR_JSON_FILE_UNREADABLE;
     cJSON *state_file = spisor_read_json_file(path, &state);
     free(path);
-    int signed_in = state_file != NULL && is_truthy(cJSON_GetObjectItemCaseSensitive(state_file, "oauthAccount"));
+    int signed_in = state_file != NULL && is_truthy(cJSON_GetObjectItemCaseSensitive(state_file, text_member(state_file_facts, "member")));
     cJSON_Delete(state_file);
     return signed_in;
 }
 
-static int has_own_login(const cJSON *environment, const char *user_home, int *out_of_memory) {
-    return has_text(variable(environment, "ANTHROPIC_API_KEY")) ||
-           is_own_token(variable(environment, "ANTHROPIC_AUTH_TOKEN")) ||
-           has_text(variable(environment, "CLAUDE_CODE_OAUTH_TOKEN")) ||
-           has_account_on_disk(environment, user_home, out_of_memory);
+static int any_variable_has_text(const cJSON *environment, const cJSON *names) {
+    const cJSON *name;
+    cJSON_ArrayForEach(name, names) {
+        if (has_text(variable(environment, name->valuestring))) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int has_own_login(const cJSON *environment, const char *user_home, const cJSON *application, int *out_of_memory) {
+    const cJSON *placeholder = cJSON_GetObjectItemCaseSensitive(application, "placeholder");
+    const cJSON *own_login = cJSON_GetObjectItemCaseSensitive(application, "ownLogin");
+    return any_variable_has_text(environment, cJSON_GetObjectItemCaseSensitive(own_login, "variables")) ||
+           is_own_token(variable(environment, text_member(placeholder, "variable")), text_member(placeholder, "value")) ||
+           has_account_on_disk(environment, user_home, cJSON_GetObjectItemCaseSensitive(own_login, "stateFile"), out_of_memory);
 }
 
 static int add_variable(cJSON *environment, const char *name, const char *value) {
@@ -173,18 +192,20 @@ typedef struct request {
     int providers_enabled;
     const cJSON *environment;
     const char *user_home;
+    const cJSON *application;
 } request;
 
 static cJSON *build_environment(const request *asked) {
     cJSON *built = cJSON_CreateObject();
     char base_url[64];
     snprintf(base_url, sizeof(base_url), "http://127.0.0.1:%d", asked->port);
-    int ok = built != NULL && add_variable(built, "ANTHROPIC_BASE_URL", base_url);
+    const cJSON *placeholder = cJSON_GetObjectItemCaseSensitive(asked->application, "placeholder");
+    int ok = built != NULL && add_variable(built, text_member(asked->application, "baseUrlVariable"), base_url);
     if (ok && asked->providers_enabled) {
         int out_of_memory = 0;
-        int own_login = has_own_login(asked->environment, asked->user_home, &out_of_memory);
+        int own_login = has_own_login(asked->environment, asked->user_home, asked->application, &out_of_memory);
         ok = !out_of_memory && add_model_pairs(built, asked->profile.env_prefix, asked->map) &&
-             (own_login || add_variable(built, "ANTHROPIC_AUTH_TOKEN", LOADER_PLACEHOLDER_TOKEN));
+             (own_login || add_variable(built, text_member(placeholder, "variable"), text_member(placeholder, "value")));
     }
     if (!ok) {
         cJSON_Delete(built);
@@ -196,6 +217,32 @@ static cJSON *build_environment(const request *asked) {
 static int is_port(const cJSON *value) {
     return cJSON_IsNumber(value) && value->valuedouble >= 1 && value->valuedouble <= 65535 &&
            value->valuedouble == (double)(int)value->valuedouble;
+}
+
+static int is_text_list(const cJSON *value) {
+    if (!cJSON_IsArray(value)) {
+        return 0;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, value) {
+        if (!cJSON_IsString(item)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static int is_state_file(const cJSON *state_file) {
+    return state_file == NULL || (cJSON_IsObject(state_file) && text_member(state_file, "name") != NULL &&
+                                  text_member(state_file, "member") != NULL);
+}
+
+static int is_application_proxy(const cJSON *value) {
+    const cJSON *placeholder = cJSON_GetObjectItemCaseSensitive(value, "placeholder");
+    const cJSON *own_login = cJSON_GetObjectItemCaseSensitive(value, "ownLogin");
+    return cJSON_IsObject(value) && text_member(value, "baseUrlVariable") != NULL && text_member(placeholder, "variable") != NULL &&
+           text_member(placeholder, "value") != NULL && is_text_list(cJSON_GetObjectItemCaseSensitive(own_login, "variables")) &&
+           is_state_file(cJSON_GetObjectItemCaseSensitive(own_login, "stateFile"));
 }
 
 static int read_request(const spisor_call *call, request *asked, uint8_t **out, size_t *out_len, int32_t *status) {
@@ -212,6 +259,8 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
         !service_require(call, "environment", service_is_object, "an object", &asked->environment, out, out_len,
                          status) ||
         !service_require(call, "userHome", service_is_string, "a string", &home, out, out_len, status) ||
+        !service_require(call, "application", is_application_proxy,
+                         "an object with baseUrlVariable, placeholder and ownLogin", &asked->application, out, out_len, status) ||
         !routing_read_profile(profile, NEEDS_ENV_PREFIX, &asked->profile, out, out_len, status)) {
         return 0;
     }

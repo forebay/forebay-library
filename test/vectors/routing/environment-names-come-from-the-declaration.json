@@ -1,0 +1,59 @@
+{
+  "function": "environment",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^acme-([a-z]+)-\\d",
+      "envPrefix": "ZED",
+      "nativeModelPattern": null
+    },
+    "map": {
+      "default": [
+        {
+          "provider": "p",
+          "model": "m",
+          "derived": false
+        }
+      ]
+    },
+    "port": 4000,
+    "providersEnabled": true,
+    "userHome": "/nowhere",
+    "application": {
+      "baseUrlVariable": "WHERE",
+      "placeholder": {
+        "variable": "TICKET",
+        "value": "nothing"
+      },
+      "ownLogin": {
+        "variables": [
+          "LOGIN_ONE",
+          "LOGIN_TWO"
+        ]
+      }
+    },
+    "environment": {}
+  },
+  "result": {
+    "environment": {
+      "WHERE": "http://127.0.0.1:4000",
+      "ZED_MODEL": "m",
+      "TICKET": "nothing"
+    }
+  }
+}
