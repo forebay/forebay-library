@@ -1,0 +1,7 @@
+{
+  "function": "limits",
+  "argument": {},
+  "result": {
+    "maxRequestBytes": 67108864
+  }
+}

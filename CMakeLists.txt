@@ -32,6 +32,7 @@ add_library(apps SHARED
     src/javascript.c
     src/registry.c
     src/routing_environment.c
+    src/routing_limits.c
     src/routing_model_map.c
     src/routing_outcome.c
     src/routing_pattern.c
