@@ -5,6 +5,7 @@ int32_t routing_model_map(const uint8_t *in, size_t in_len, uint8_t **out, size_
 int32_t routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 int32_t routing_outcome(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 int32_t routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
 typedef struct named_function {
     const char *name;
@@ -17,6 +18,7 @@ static const named_function functions[] = {
     {"resolve", routing_resolve},
     {"outcome", routing_outcome},
     {"environment", routing_environment},
+    {"limits", routing_limits},
 };
 
 static apps_function find_function(const char *name) {

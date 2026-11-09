@@ -483,6 +483,27 @@
           }
         },
         {
+          "name": "limits",
+          "symbol": "routing_limits",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "maxRequestBytes": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "maxRequestBytes"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
           "name": "environment",
           "symbol": "routing_environment",
           "kind": "json",
