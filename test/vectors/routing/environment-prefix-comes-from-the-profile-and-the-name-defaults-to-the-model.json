@@ -19,7 +19,7 @@
         "haiku",
         "fable"
       ],
-      "tierRegex": "^claude-([a-z]+)-\\d",
+      "tierRegex": "^acme-([a-z]+)-\\d",
       "envPrefix": "OPENCODE",
       "nativeModelPattern": null
     },
@@ -36,14 +36,32 @@
     "port": 40001,
     "providersEnabled": true,
     "environment": {},
-    "userHome": "/routing-test-home-that-does-not-exist"
+    "userHome": "/routing-test-home-that-does-not-exist",
+    "application": {
+      "baseUrlVariable": "ACME_BASE_URL",
+      "placeholder": {
+        "variable": "ACME_AUTH_TOKEN",
+        "value": "acme-placeholder"
+      },
+      "ownLogin": {
+        "variables": [
+          "ACME_API_KEY",
+          "ACME_OAUTH_TOKEN"
+        ],
+        "stateFile": {
+          "directoryVariable": "ACME_CONFIG_DIR",
+          "name": ".acme.json",
+          "member": "account"
+        }
+      }
+    }
   },
   "result": {
     "environment": {
-      "ANTHROPIC_BASE_URL": "http://127.0.0.1:40001",
+      "ACME_BASE_URL": "http://127.0.0.1:40001",
       "OPENCODE_DEFAULT_SONNET_MODEL": "s-1",
       "OPENCODE_DEFAULT_SONNET_MODEL_NAME": "s-1",
-      "ANTHROPIC_AUTH_TOKEN": "sk-ant-loader-proxy"
+      "ACME_AUTH_TOKEN": "acme-placeholder"
     }
   }
 }

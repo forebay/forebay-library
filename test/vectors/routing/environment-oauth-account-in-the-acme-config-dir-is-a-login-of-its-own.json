@@ -1,5 +1,5 @@
 {
-  "source": "decision 7: own login, as Claude Code reads it",
+  "source": "decision 7: own login, as Acme Code reads it",
   "function": "environment",
   "argument": {
     "profile": {
@@ -19,8 +19,8 @@
         "haiku",
         "fable"
       ],
-      "tierRegex": "^claude-([a-z]+)-\\d",
-      "envPrefix": "ANTHROPIC",
+      "tierRegex": "^acme-([a-z]+)-\\d",
+      "envPrefix": "ACME",
       "nativeModelPattern": null
     },
     "map": {
@@ -46,18 +46,37 @@
     },
     "port": 40001,
     "providersEnabled": true,
-    "environment": {
-      "CLAUDE_CODE_OAUTH_TOKEN": "  "
-    },
-    "userHome": "/routing-test-home-that-does-not-exist"
+    "environment": {},
+    "userHome": "/routing-test-home-that-does-not-exist",
+    "application": {
+      "baseUrlVariable": "ACME_BASE_URL",
+      "placeholder": {
+        "variable": "ACME_AUTH_TOKEN",
+        "value": "acme-placeholder"
+      },
+      "ownLogin": {
+        "variables": [
+          "ACME_API_KEY",
+          "ACME_OAUTH_TOKEN"
+        ],
+        "stateFile": {
+          "directoryVariable": "ACME_CONFIG_DIR",
+          "name": ".acme.json",
+          "member": "account"
+        }
+      }
+    }
   },
   "result": {
     "environment": {
-      "ANTHROPIC_BASE_URL": "http://127.0.0.1:40001",
-      "ANTHROPIC_DEFAULT_OPUS_MODEL": "m-opus",
-      "ANTHROPIC_DEFAULT_OPUS_MODEL_NAME": "M Opus",
-      "ANTHROPIC_MODEL": "m-opus",
-      "ANTHROPIC_AUTH_TOKEN": "sk-ant-loader-proxy"
+      "ACME_BASE_URL": "http://127.0.0.1:40001",
+      "ACME_DEFAULT_OPUS_MODEL": "m-opus",
+      "ACME_DEFAULT_OPUS_MODEL_NAME": "M Opus",
+      "ACME_MODEL": "m-opus"
     }
-  }
+  },
+  "files": {
+    ".acme.json": "{\"account\":{\"emailAddress\":\"someone@example.test\"}}"
+  },
+  "filesUnder": "ACME_CONFIG_DIR"
 }

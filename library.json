@@ -603,6 +603,34 @@
               },
               "userHome": {
                 "type": "string"
+              },
+              "application": {
+                "type": "object",
+                "properties": {
+                  "baseUrlVariable": { "type": "string" },
+                  "placeholder": {
+                    "type": "object",
+                    "properties": { "variable": { "type": "string" }, "value": { "type": "string" } },
+                    "required": ["variable", "value"]
+                  },
+                  "ownLogin": {
+                    "type": "object",
+                    "properties": {
+                      "variables": { "type": "array", "items": { "type": "string" } },
+                      "stateFile": {
+                        "type": "object",
+                        "properties": {
+                          "directoryVariable": { "type": "string" },
+                          "name": { "type": "string" },
+                          "member": { "type": "string" }
+                        },
+                        "required": ["name", "member"]
+                      }
+                    },
+                    "required": ["variables"]
+                  }
+                },
+                "required": ["baseUrlVariable", "placeholder", "ownLogin"]
               }
             },
             "required": [
@@ -611,7 +639,8 @@
               "port",
               "providersEnabled",
               "environment",
-              "userHome"
+              "userHome",
+              "application"
             ],
             "additionalProperties": false
           },

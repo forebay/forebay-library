@@ -101,6 +101,11 @@ static void refuses_a_malformed_call(void) {
         routing_tiers,
         "{\"profile\":{\"tierSourceProvider\":\"p\",\"tierOrder\":[],\"tierFallback\":[]},\"models\":{}}");
     expect_failure(&no_regex, "tiers with a profile lacking tierRegex");
+    support_answer no_application = support_call_raw(
+        routing_environment,
+        "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":1,\"providersEnabled\":true,\"environment\":{},"
+        "\"userHome\":\"/h\"}");
+    expect_failure(&no_application, "environment without the application's declaration");
     support_answer bad_port = support_call_raw(
         routing_environment,
         "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":0,\"providersEnabled\":true,\"environment\":{},"
