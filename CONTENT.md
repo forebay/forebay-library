@@ -233,4 +233,4 @@ and declares version `0.1.2`.
 `forebay_library`. The answers are those of `v0.1.2`. `v0.1.3` was tagged and never released.
 
 A consumer pins the latest digests: <https://github.com/forebay/forebay-library/releases/tag/v0.1.4>. The
-parity suite pins the same release, in `parity/pin.json`.
+parity suite stays on `v0.1.2` (`parity/pin.json`), the last release the Java library-type generator can read.
