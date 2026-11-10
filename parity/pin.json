@@ -1,9 +1,9 @@
 {
   "repository": "forebay/forebay-library",
-  "tag": "v0.1.4",
+  "tag": "v0.1.2",
   "sha256": {
-    "library.json": "59cc77a03c601c3333d87cb3e683ea196577aad83c8e4314dc08ac9f263b4d14",
-    "linux-x64": "30c822779d3a0333d49c47872c8adeefc427a84cdb1acec7da1aa70281bd4fcd",
-    "win32-x64": "cfd9becfb5201a60012de5980d254f686c13f4576e5cfca3d2e726a2f5735274"
+    "library.json": "7f08130d8b600a6e77260e5817c1338dc8707bcbec9003753b790806b7430264",
+    "linux-x64": "ca9b8138b25db256f28324549b677fa920e700b09d948728a8ed94bb1bc868d5",
+    "win32-x64": "f2d5554b3f232271bbb5ade94d4af5bd4f320748484a3cf9915b3c4975d974c9"
   }
 }
