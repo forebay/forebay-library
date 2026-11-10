@@ -45,7 +45,7 @@ static cJSON *account_entries(const cJSON *accounts) {
 }
 
 /** An unreadable store lists as empty, as AccountStore.parseOrDefault degrades a corrupted one. */
-SERVICE_EXPORT int32_t accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t forebay_library_accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
@@ -132,7 +132,7 @@ static int read_account(const spisor_call *call, upsert_request *request, uint8_
     return 1;
 }
 
-SERVICE_EXPORT int32_t accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t forebay_library_accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
@@ -161,7 +161,7 @@ static void remove_from(accounts_store *store, const void *given, accounts_outco
     outcome->changed = found;
 }
 
-SERVICE_EXPORT int32_t accounts_remove(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t forebay_library_accounts_remove(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {

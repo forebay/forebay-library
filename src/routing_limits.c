@@ -12,7 +12,7 @@ static cJSON *limits_answer(void) {
     return result;
 }
 
-SERVICE_EXPORT int32_t routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t forebay_library_routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {

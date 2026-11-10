@@ -8,9 +8,9 @@
 #include <sys/wait.h>
 #endif
 
-int32_t accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_report(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_report(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
 #define REPORTS_PER_KIND 200
 #define WORKER_ARGUMENT "worker"
@@ -47,7 +47,7 @@ static const cJSON *stored_account(const support_answer *listed, const char *id)
 static int shows_member(const char *store, const char *id, const char *name, int expected, const char *lane) {
     cJSON *call = cJSON_CreateObject();
     cJSON_AddStringToObject(call, "store", store);
-    support_answer listed = call_with(accounts_list, call);
+    support_answer listed = call_with(forebay_library_accounts_list, call);
     const cJSON *account = stored_account(&listed, id);
     const cJSON *holder = lane == NULL ? account : cJSON_GetObjectItemCaseSensitive(account, "rateLimitResetTimes");
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(holder, lane == NULL ? name : lane);
@@ -58,7 +58,7 @@ static int shows_member(const char *store, const char *id, const char *name, int
 
 static int report_and_confirm(const char *store, const char *id, int step) {
     int failures = 0;
-    support_answer success = call_with(accounts_report, report_call(store, id, "success", 1000 + step));
+    support_answer success = call_with(forebay_library_accounts_report, report_call(store, id, "success", 1000 + step));
     support_discard(&success);
     if (!shows_member(store, id, "lastUsed", 1000 + step, NULL)) {
         fprintf(stderr, "%s: success %d was lost\n", id, step);
@@ -69,7 +69,7 @@ static int report_and_confirm(const char *store, const char *id, int step) {
     cJSON *limited = report_call(store, id, "rate-limited", 1000 + step);
     cJSON_AddStringToObject(limited, "lane", lane);
     cJSON_AddNumberToObject(limited, "resetAt", 5000 + step);
-    support_answer limit = call_with(accounts_report, limited);
+    support_answer limit = call_with(forebay_library_accounts_report, limited);
     support_discard(&limit);
     if (!shows_member(store, id, NULL, 5000 + step, lane)) {
         fprintf(stderr, "%s: rate limit %d was lost\n", id, step);
@@ -94,7 +94,7 @@ static void add_account(const char *store, const char *id) {
     cJSON *call = cJSON_CreateObject();
     cJSON_AddStringToObject(call, "store", store);
     cJSON_AddItemToObject(call, "account", account);
-    support_answer added = call_with(accounts_upsert, call);
+    support_answer added = call_with(forebay_library_accounts_upsert, call);
     expect_json(&added, 0, "{\"outcome\":\"added\"}", id);
 }
 
@@ -138,7 +138,7 @@ static int finish_worker(void *started) {
 static void expect_account_effects(const char *store, const char *id) {
     cJSON *call = cJSON_CreateObject();
     cJSON_AddStringToObject(call, "store", store);
-    support_answer listed = call_with(accounts_list, call);
+    support_answer listed = call_with(forebay_library_accounts_list, call);
     const cJSON *account = stored_account(&listed, id);
     const cJSON *limits = cJSON_GetObjectItemCaseSensitive(account, "rateLimitResetTimes");
     const cJSON *last_used = cJSON_GetObjectItemCaseSensitive(account, "lastUsed");

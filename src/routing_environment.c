@@ -270,7 +270,7 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
     return 1;
 }
 
-SERVICE_EXPORT int32_t routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t forebay_library_routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {

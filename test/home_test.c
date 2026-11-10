@@ -14,7 +14,7 @@ static support_answer home_of(const registry_case *open, const char *id, const c
     snprintf(argument, sizeof(argument), "{\"id\":\"%s\"}", id);
     cJSON *context = name == NULL ? registry_context(open)
                                   : support_context(open->home, "HUB_APPS_FILE", open->file, name, value, NULL);
-    return support_call(apps_home, argument, context);
+    return support_call(forebay_library_apps_home, argument, context);
 }
 
 static void honors_the_override_then_the_native_variable_then_xdg(void) {
@@ -40,11 +40,11 @@ static void ranks_the_override_above_the_native_variable(void) {
     support_write(open.file, "{\"beta\":" BETA "}");
     cJSON *context = support_context(open.home, "HUB_APPS_FILE", open.file, "HUB_BETA_DIR", " /b ", "BETA_CONFIG_DIR",
                                      "/bc", "XDG_CONFIG_HOME", "/xdg", NULL);
-    support_answer answer = support_call(apps_home, "{\"id\":\"beta\"}", context);
+    support_answer answer = support_call(forebay_library_apps_home, "{\"id\":\"beta\"}", context);
     expect_home(&answer, "/b", "override first, trimmed");
     cJSON *blank = support_context(open.home, "HUB_APPS_FILE", open.file, "HUB_BETA_DIR", "  ", "BETA_CONFIG_DIR",
                                    "/bc", NULL);
-    support_answer skipped = support_call(apps_home, "{\"id\":\"beta\"}", blank);
+    support_answer skipped = support_call(forebay_library_apps_home, "{\"id\":\"beta\"}", blank);
     expect_home(&skipped, "/bc", "a blank override is skipped");
     registry_case_close(&open);
 }

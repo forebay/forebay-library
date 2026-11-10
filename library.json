@@ -1,16 +1,16 @@
 {
   "$schema": "https://weivel.github.io/model/library.schema.json",
-  "id": "apps",
-  "version": "0.1.2",
-  "binary": "apps",
-  "release": "apps_release",
+  "id": "forebay-library",
+  "version": "0.1.3",
+  "binary": "forebay_library",
+  "release": "forebay_library_release",
   "services": [
     {
       "id": "apps",
       "functions": [
         {
           "name": "list",
-          "symbol": "apps_list",
+          "symbol": "forebay_library_apps_list",
           "kind": "json",
           "context": ["environment", "home"],
           "argument": { "type": "object" },
@@ -28,7 +28,7 @@
         },
         {
           "name": "get",
-          "symbol": "apps_get",
+          "symbol": "forebay_library_apps_get",
           "kind": "json",
           "context": ["environment", "home"],
           "argument": {
@@ -46,7 +46,7 @@
         },
         {
           "name": "home",
-          "symbol": "apps_home",
+          "symbol": "forebay_library_apps_home",
           "kind": "json",
           "context": ["environment", "home"],
           "argument": {
@@ -62,7 +62,7 @@
         },
         {
           "name": "current",
-          "symbol": "apps_current",
+          "symbol": "forebay_library_apps_current",
           "kind": "json",
           "context": ["environment", "home", "arguments"],
           "argument": { "type": "object" },
@@ -80,7 +80,7 @@
       "functions": [
         {
           "name": "tiers",
-          "symbol": "routing_tiers",
+          "symbol": "forebay_library_routing_tiers",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -169,7 +169,7 @@
         },
         {
           "name": "modelMap",
-          "symbol": "routing_model_map",
+          "symbol": "forebay_library_routing_model_map",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -292,7 +292,7 @@
         },
         {
           "name": "resolve",
-          "symbol": "routing_resolve",
+          "symbol": "forebay_library_routing_resolve",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -441,7 +441,7 @@
         },
         {
           "name": "outcome",
-          "symbol": "routing_outcome",
+          "symbol": "forebay_library_routing_outcome",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -484,7 +484,7 @@
         },
         {
           "name": "limits",
-          "symbol": "routing_limits",
+          "symbol": "forebay_library_routing_limits",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -505,7 +505,7 @@
         },
         {
           "name": "environment",
-          "symbol": "routing_environment",
+          "symbol": "forebay_library_routing_environment",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -667,7 +667,7 @@
       "functions": [
         {
           "name": "list",
-          "symbol": "accounts_list",
+          "symbol": "forebay_library_accounts_list",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -745,7 +745,7 @@
         },
         {
           "name": "upsert",
-          "symbol": "accounts_upsert",
+          "symbol": "forebay_library_accounts_upsert",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -828,7 +828,7 @@
         },
         {
           "name": "remove",
-          "symbol": "accounts_remove",
+          "symbol": "forebay_library_accounts_remove",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -866,7 +866,7 @@
         },
         {
           "name": "acquire",
-          "symbol": "accounts_acquire",
+          "symbol": "forebay_library_accounts_acquire",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -924,7 +924,7 @@
         },
         {
           "name": "report",
-          "symbol": "accounts_report",
+          "symbol": "forebay_library_accounts_report",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -1005,7 +1005,7 @@
         },
         {
           "name": "tokenExpired",
-          "symbol": "accounts_token_expired",
+          "symbol": "forebay_library_accounts_token_expired",
           "kind": "json",
           "argument": {
             "type": "object",
@@ -1047,7 +1047,7 @@
         },
         {
           "name": "hasCapacity",
-          "symbol": "accounts_has_capacity",
+          "symbol": "forebay_library_accounts_has_capacity",
           "kind": "json",
           "argument": {
             "type": "object",

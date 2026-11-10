@@ -109,7 +109,7 @@ static void takes_a_path_name_from_the_environment_after_the_declared_one(void) 
     cJSON *context = support_context(open.home, "HUB_APPS_FILE", open.file, "HUB_REPOS_SUBDIR", "env-repos",
                                      "HUB_PLUGIN_SUBDIR", " env-plugin ", "HUB_CACHE_SUBDIR", "env-cache",
                                      "HUB_CONFIG_SUBDIR", "bad/name", NULL);
-    support_answer answer = support_call(apps_list, "{}", context);
+    support_answer answer = support_call(forebay_library_apps_list, "{}", context);
     expect_at(&answer, "apps.0.paths",
               "{\"repos\":\"mine\",\"plugin\":\"env-plugin\",\"cache\":\"env-cache\",\"config\":\"config\"}",
               "environment names");
