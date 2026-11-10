@@ -217,6 +217,9 @@ A `v*` tag runs `intisy/workflows`' `library.yml`, which builds `forebay_library
 | `v0.1.2` | `3f5c10b5b3cf932237e9612ace76440b7e894a1d` | `apps-linux-x64.so` | `ca9b8138b25db256f28324549b677fa920e700b09d948728a8ed94bb1bc868d5` |
 | | | `apps-win32-x64.dll` | `f2d5554b3f232271bbb5ade94d4af5bd4f320748484a3cf9915b3c4975d974c9` |
 | | | `library.json` | `7f08130d8b600a6e77260e5817c1338dc8707bcbec9003753b790806b7430264` |
+| `v0.1.4` | `6fd0245f7bfbca794fe8b832b48c1eeb043f32fb` | `forebay_library-linux-x64.so` | `30c822779d3a0333d49c47872c8adeefc427a84cdb1acec7da1aa70281bd4fcd` |
+| | | `forebay_library-win32-x64.dll` | `cfd9becfb5201a60012de5980d254f686c13f4576e5cfca3d2e726a2f5735274` |
+| | | `library.json` | `59cc77a03c601c3333d87cb3e683ea196577aad83c8e4314dc08ac9f263b4d14` |
 
 `v0.1.1` takes the JSON grammar, the UTF-8 decoding and JavaScript's string rules from `spisor/library`
 (`e048e09`) instead of carrying its own copies, raises out of memory where `v0.1.0` answered an empty
@@ -226,5 +229,8 @@ registry, and declares version `0.1.1`. The answers are otherwise those of `v0.1
 a native variable spelled in another case is found, taking that from `spisor/library` (`21ce6f1`),
 and declares version `0.1.2`.
 
-A consumer pins the latest digests: <https://github.com/forebay/library/releases/tag/v0.1.2>. The
+`v0.1.4` renames the library: its id is `forebay-library`, and its binary and exported symbols begin
+`forebay_library`. The answers are those of `v0.1.2`. `v0.1.3` was tagged and never released.
+
+A consumer pins the latest digests: <https://github.com/forebay/forebay-library/releases/tag/v0.1.4>. The
 parity suite pins the same release, in `parity/pin.json`.
