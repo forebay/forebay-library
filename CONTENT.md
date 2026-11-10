@@ -1,6 +1,6 @@
 ## What this is
 
-The forebay ecosystem's C libraries. Today it holds one, **`apps`**: basekit's app detection
+The forebay ecosystem's C library, `forebay-library`. Its first service, **`apps`**, is basekit's app detection
 (`getApps`, `getApp`, `resolveHome`, `currentAppId`) as a shared library a plugin reaches through the
 `apps` service, so every weivel implementation answers exactly what basekit answers.
 
@@ -10,10 +10,10 @@ each function declares in `library.json`.
 
 | function | symbol | context | argument | answer |
 | --- | --- | --- | --- | --- |
-| `list` | `apps_list` | environment, home | `{}` | `{ "apps": [appDescriptor, ...] }` |
-| `get` | `apps_get` | environment, home | `{ "id": string }` | `{ "app": appDescriptor }`, or `{}` for an unknown id |
-| `home` | `apps_home` | environment, home | `{ "id": string }` | `{ "home": string }`, or `{}` for an unknown id |
-| `current` | `apps_current` | environment, home, arguments | `{}` | `{ "id": string }`, `""` when no app owns the process |
+| `list` | `forebay_library_apps_list` | environment, home | `{}` | `{ "apps": [appDescriptor, ...] }` |
+| `get` | `forebay_library_apps_get` | environment, home | `{ "id": string }` | `{ "app": appDescriptor }`, or `{}` for an unknown id |
+| `home` | `forebay_library_apps_home` | environment, home | `{ "id": string }` | `{ "home": string }`, or `{}` for an unknown id |
+| `current` | `forebay_library_apps_current` | environment, home, arguments | `{}` | `{ "id": string }`, `""` when no app owns the process |
 
 `appDescriptor` is the resolved descriptor the model publishes at
 `https://weivel.github.io/model/plugin.schema.json#/definitions/appDescriptor`.
@@ -201,8 +201,8 @@ cd parity/java && ./gradlew test
 
 ## Releasing
 
-A `v*` tag runs `intisy/workflows`' `library.yml`, which builds `apps-linux-x64.so` and
-`apps-win32-x64.dll`, and publishes them with `library.json` and `SHA256SUMS` as a GitHub release.
+A `v*` tag runs `intisy/workflows`' `library.yml`, which builds `forebay_library-linux-x64.so` and
+`forebay_library-win32-x64.dll`, and publishes them with `library.json` and `SHA256SUMS` as a GitHub release.
 
 ### Released
 

@@ -18,7 +18,7 @@ static int any_pool_has_capacity(const cJSON *pools) {
     return 0;
 }
 
-SERVICE_EXPORT int32_t accounts_has_capacity(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t forebay_library_accounts_has_capacity(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {

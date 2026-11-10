@@ -161,22 +161,22 @@ static int32_t serve(const uint8_t *in, size_t in_len, fact_need need, int takes
     return status;
 }
 
-APPS_EXPORT int32_t apps_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+APPS_EXPORT int32_t forebay_library_apps_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     return serve(in, in_len, NEEDS_HOME_AND_ENVIRONMENT, 0, list, out, out_len);
 }
 
-APPS_EXPORT int32_t apps_get(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+APPS_EXPORT int32_t forebay_library_apps_get(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     return serve(in, in_len, NEEDS_HOME_AND_ENVIRONMENT, 1, get, out, out_len);
 }
 
-APPS_EXPORT int32_t apps_home(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+APPS_EXPORT int32_t forebay_library_apps_home(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     return serve(in, in_len, NEEDS_HOME_AND_ENVIRONMENT, 1, home, out, out_len);
 }
 
-APPS_EXPORT int32_t apps_current(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+APPS_EXPORT int32_t forebay_library_apps_current(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     return serve(in, in_len, NEEDS_ARGUMENTS_TOO, 0, current, out, out_len);
 }
 
-APPS_EXPORT void apps_release(uint8_t *buffer) {
+APPS_EXPORT void forebay_library_release(uint8_t *buffer) {
     spisor_release(buffer);
 }

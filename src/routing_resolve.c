@@ -178,7 +178,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *map_json, con
     return status;
 }
 
-SERVICE_EXPORT int32_t routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+SERVICE_EXPORT int32_t forebay_library_routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {

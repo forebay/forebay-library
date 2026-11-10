@@ -2,7 +2,7 @@
 
 static void answers_an_empty_list_when_the_registry_is_absent(void) {
     registry_case open = registry_case_open();
-    support_answer answer = support_call(apps_list, "{}", registry_context(&open));
+    support_answer answer = support_call(forebay_library_apps_list, "{}", registry_context(&open));
     expect_json(&answer, 0, "{\"apps\":[]}", "absent registry");
     registry_case_close(&open);
 }
@@ -22,7 +22,7 @@ static void reads_descriptors_solely_from_the_registry(void) {
 static void resolves_a_whole_descriptor_with_its_defaults(void) {
     registry_case open = registry_case_open();
     support_write(open.file, "{\"alpha\":" ALPHA "}");
-    support_answer answer = support_call(apps_get, "{\"id\":\"alpha\"}", registry_context(&open));
+    support_answer answer = support_call(forebay_library_apps_get, "{\"id\":\"alpha\"}", registry_context(&open));
     expect_json(&answer, 0,
                 "{\"app\":{\"id\":\"alpha\",\"label\":\"Alpha CLI\",\"home\":{\"envOverride\":\"HUB_ALPHA_DIR\","
                 "\"nativeEnv\":\"ALPHA_CONFIG_DIR\",\"candidates\":[\"~/.alpha\",\"~/.config/alpha\"]},"
@@ -65,7 +65,7 @@ static void answers_an_empty_list_when_the_registry_is_not_an_object(void) {
 static void answers_an_empty_list_when_the_registry_is_a_directory(void) {
     registry_case open = registry_case_open();
     support_make_directory(open.file);
-    support_answer answer = support_call(apps_list, "{}", registry_context(&open));
+    support_answer answer = support_call(forebay_library_apps_list, "{}", registry_context(&open));
     expect_json(&answer, 0, "{\"apps\":[]}", "directory registry");
     registry_case_close(&open);
 }
@@ -98,10 +98,10 @@ static void fails_on_a_null_entry_as_basekit_throws(void) {
 static void reads_the_registry_afresh_at_every_call(void) {
     registry_case open = registry_case_open();
     support_write(open.file, "{\"alpha\":" ALPHA "}");
-    support_answer first = support_call(apps_list, "{}", registry_context(&open));
+    support_answer first = support_call(forebay_library_apps_list, "{}", registry_context(&open));
     expect_ids(&first, "alpha", "first read");
     support_write(open.file, "{\"alpha\":" ALPHA ",\"beta\":" BETA "}");
-    support_answer second = support_call(apps_list, "{}", registry_context(&open));
+    support_answer second = support_call(forebay_library_apps_list, "{}", registry_context(&open));
     expect_ids(&second, "alpha,beta", "second read");
     registry_case_close(&open);
 }
@@ -112,7 +112,7 @@ static void reads_the_ecosystem_registry_under_the_home_without_an_override(void
     support_make_directories(directory);
     char *file = support_join(directory, "apps.json");
     support_write(file, "{\"beta\":" BETA "}");
-    support_answer answer = support_call(apps_list, "{}", support_context(home, NULL));
+    support_answer answer = support_call(forebay_library_apps_list, "{}", support_context(home, NULL));
     expect_ids(&answer, "beta", "ecosystem registry");
     free(file);
     free(directory);
@@ -126,13 +126,13 @@ static void prefers_the_override_even_when_it_is_absent(void) {
     char *file = support_join(directory, "apps.json");
     support_write(file, "{\"beta\":" BETA "}");
     char *missing = support_join(home, "missing.json");
-    support_answer answer = support_call(apps_list, "{}", support_context(home, "HUB_APPS_FILE", missing, NULL));
+    support_answer answer = support_call(forebay_library_apps_list, "{}", support_context(home, "HUB_APPS_FILE", missing, NULL));
     expect_json(&answer, 0, "{\"apps\":[]}", "absent override wins");
     char *padded = malloc(strlen(file) + 5);
     sprintf(padded, "  %s  ", file);
-    support_answer trimmed = support_call(apps_list, "{}", support_context(home, "HUB_APPS_FILE", padded, NULL));
+    support_answer trimmed = support_call(forebay_library_apps_list, "{}", support_context(home, "HUB_APPS_FILE", padded, NULL));
     expect_ids(&trimmed, "beta", "override is trimmed");
-    support_answer blank = support_call(apps_list, "{}", support_context(home, "HUB_APPS_FILE", " \t ", NULL));
+    support_answer blank = support_call(forebay_library_apps_list, "{}", support_context(home, "HUB_APPS_FILE", " \t ", NULL));
     expect_ids(&blank, "beta", "a blank override is no override");
     free(padded);
     free(missing);
@@ -147,7 +147,7 @@ static void reads_the_legacy_registry_when_the_ecosystem_one_is_absent(void) {
     support_make_directories(legacy);
     char *legacy_file = support_join(legacy, "apps.json");
     support_write(legacy_file, "{\"alpha\":" ALPHA "}");
-    support_answer answer = support_call(apps_get, "{\"id\":\"alpha\"}", support_context(home, NULL));
+    support_answer answer = support_call(forebay_library_apps_get, "{\"id\":\"alpha\"}", support_context(home, NULL));
     expect_at(&answer, "app.label", "\"Alpha CLI\"", "legacy registry");
     support_discard(&answer);
 
@@ -155,7 +155,7 @@ static void reads_the_legacy_registry_when_the_ecosystem_one_is_absent(void) {
     support_make_directories(canonical);
     char *canonical_file = support_join(canonical, "apps.json");
     support_write(canonical_file, "{\"beta\":" BETA "}");
-    support_answer preferred = support_call(apps_list, "{}", support_context(home, NULL));
+    support_answer preferred = support_call(forebay_library_apps_list, "{}", support_context(home, NULL));
     expect_ids(&preferred, "beta", "the ecosystem registry wins once present");
     free(canonical_file);
     free(canonical);
@@ -167,10 +167,10 @@ static void reads_the_legacy_registry_when_the_ecosystem_one_is_absent(void) {
 static void gets_one_app_and_nothing_for_an_unknown_id(void) {
     registry_case open = registry_case_open();
     support_write(open.file, "{\"alpha\":" ALPHA ",\"beta\":" BETA "}");
-    support_answer known = support_call(apps_get, "{\"id\":\"beta\"}", registry_context(&open));
+    support_answer known = support_call(forebay_library_apps_get, "{\"id\":\"beta\"}", registry_context(&open));
     expect_at(&known, "app.commandsSubdir", "\"command\"", "known id");
     support_discard(&known);
-    support_answer unknown = support_call(apps_get, "{\"id\":\"zeta\"}", registry_context(&open));
+    support_answer unknown = support_call(forebay_library_apps_get, "{\"id\":\"zeta\"}", registry_context(&open));
     expect_json(&unknown, 0, "{}", "unknown id");
     registry_case_close(&open);
 }
@@ -180,7 +180,7 @@ static void gets_the_first_of_two_entries_sharing_an_id(void) {
     support_write(open.file,
                   "{\"one\":{\"id\":\"same\",\"label\":\"First\",\"home\":{\"candidates\":[\"/a\"]}},"
                   "\"two\":{\"id\":\"same\",\"label\":\"Second\",\"home\":{\"candidates\":[\"/b\"]}}}");
-    support_answer answer = support_call(apps_get, "{\"id\":\"same\"}", registry_context(&open));
+    support_answer answer = support_call(forebay_library_apps_get, "{\"id\":\"same\"}", registry_context(&open));
     expect_at(&answer, "app.label", "\"First\"", "first of a shared id");
     support_discard(&answer);
     registry_case_close(&open);

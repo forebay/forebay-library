@@ -10,6 +10,6 @@
  */
 cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models, routing_refusal *refusal);
 
-SERVICE_EXPORT int32_t routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+SERVICE_EXPORT int32_t forebay_library_routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
 #endif

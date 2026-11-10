@@ -27,11 +27,11 @@
 
 typedef int32_t (*apps_function)(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
-int32_t apps_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t apps_get(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t apps_home(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t apps_current(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-void apps_release(uint8_t *buffer);
+int32_t forebay_library_apps_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_apps_get(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_apps_home(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_apps_current(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+void forebay_library_release(uint8_t *buffer);
 
 static int support_failures = 0;
 static int support_case_count = 0;
@@ -163,7 +163,7 @@ static inline support_answer support_call_raw(apps_function function, const char
     }
     answer.text[kept] = '\0';
     answer.result = out == NULL ? NULL : cJSON_ParseWithLength((const char *)out, out_len);
-    apps_release(out);
+    forebay_library_release(out);
     return answer;
 }
 

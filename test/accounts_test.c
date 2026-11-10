@@ -1,12 +1,12 @@
 #include "support.h"
 
-int32_t accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_remove(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_acquire(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_report(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_token_expired(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t accounts_has_capacity(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_remove(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_acquire(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_report(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_token_expired(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_accounts_has_capacity(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
 typedef struct named_function {
     const char *name;
@@ -15,13 +15,13 @@ typedef struct named_function {
 } named_function;
 
 static const named_function functions[] = {
-    {"list", accounts_list, 1},
-    {"upsert", accounts_upsert, 1},
-    {"remove", accounts_remove, 1},
-    {"acquire", accounts_acquire, 1},
-    {"report", accounts_report, 1},
-    {"tokenExpired", accounts_token_expired, 0},
-    {"hasCapacity", accounts_has_capacity, 0},
+    {"list", forebay_library_accounts_list, 1},
+    {"upsert", forebay_library_accounts_upsert, 1},
+    {"remove", forebay_library_accounts_remove, 1},
+    {"acquire", forebay_library_accounts_acquire, 1},
+    {"report", forebay_library_accounts_report, 1},
+    {"tokenExpired", forebay_library_accounts_token_expired, 0},
+    {"hasCapacity", forebay_library_accounts_has_capacity, 0},
 };
 
 static const named_function *find_function(const char *name) {
@@ -160,56 +160,56 @@ typedef struct malformed_call {
 } malformed_call;
 
 static const malformed_call malformed_calls[] = {
-    {"list without a store", accounts_list, 0, "{}"},
-    {"list with a store that is a number", accounts_list, 0, "{\"store\":5}"},
-    {"list with an empty store", accounts_list, 0, "{\"store\":\"\"}"},
-    {"upsert without an account", accounts_upsert, 1, "{}"},
-    {"upsert of an account that is a list", accounts_upsert, 1, "{\"account\":[]}"},
-    {"upsert of an account without an id", accounts_upsert, 1, "{\"account\":{\"label\":\"x\"}}"},
-    {"upsert of an account whose id is a number", accounts_upsert, 1, "{\"account\":{\"id\":4}}"},
-    {"upsert of an account whose id is empty", accounts_upsert, 1, "{\"account\":{\"id\":\"\"}}"},
-    {"remove without an id", accounts_remove, 1, "{}"},
-    {"remove with an id that is a number", accounts_remove, 1, "{\"id\":3}"},
-    {"acquire without a strategy", accounts_acquire, 1, "{\"now\":5}"},
-    {"acquire with a strategy that is a number", accounts_acquire, 1, "{\"strategy\":1,\"now\":5}"},
-    {"acquire without now", accounts_acquire, 1, "{\"strategy\":\"hybrid\"}"},
-    {"acquire with now as text", accounts_acquire, 1, "{\"strategy\":\"hybrid\",\"now\":\"5\"}"},
-    {"acquire with a lane that is a number", accounts_acquire, 1, "{\"strategy\":\"hybrid\",\"now\":5,\"lane\":2}"},
-    {"report without an id", accounts_report, 1, "{\"outcome\":\"success\",\"now\":5}"},
-    {"report without an outcome", accounts_report, 1, "{\"id\":\"a\",\"now\":5}"},
-    {"report with an unknown outcome", accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"explode\",\"now\":5}"},
-    {"report without now", accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"success\"}"},
-    {"report with a lane that is a number", accounts_report, 1,
+    {"list without a store", forebay_library_accounts_list, 0, "{}"},
+    {"list with a store that is a number", forebay_library_accounts_list, 0, "{\"store\":5}"},
+    {"list with an empty store", forebay_library_accounts_list, 0, "{\"store\":\"\"}"},
+    {"upsert without an account", forebay_library_accounts_upsert, 1, "{}"},
+    {"upsert of an account that is a list", forebay_library_accounts_upsert, 1, "{\"account\":[]}"},
+    {"upsert of an account without an id", forebay_library_accounts_upsert, 1, "{\"account\":{\"label\":\"x\"}}"},
+    {"upsert of an account whose id is a number", forebay_library_accounts_upsert, 1, "{\"account\":{\"id\":4}}"},
+    {"upsert of an account whose id is empty", forebay_library_accounts_upsert, 1, "{\"account\":{\"id\":\"\"}}"},
+    {"remove without an id", forebay_library_accounts_remove, 1, "{}"},
+    {"remove with an id that is a number", forebay_library_accounts_remove, 1, "{\"id\":3}"},
+    {"acquire without a strategy", forebay_library_accounts_acquire, 1, "{\"now\":5}"},
+    {"acquire with a strategy that is a number", forebay_library_accounts_acquire, 1, "{\"strategy\":1,\"now\":5}"},
+    {"acquire without now", forebay_library_accounts_acquire, 1, "{\"strategy\":\"hybrid\"}"},
+    {"acquire with now as text", forebay_library_accounts_acquire, 1, "{\"strategy\":\"hybrid\",\"now\":\"5\"}"},
+    {"acquire with a lane that is a number", forebay_library_accounts_acquire, 1, "{\"strategy\":\"hybrid\",\"now\":5,\"lane\":2}"},
+    {"report without an id", forebay_library_accounts_report, 1, "{\"outcome\":\"success\",\"now\":5}"},
+    {"report without an outcome", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"now\":5}"},
+    {"report with an unknown outcome", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"explode\",\"now\":5}"},
+    {"report without now", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"success\"}"},
+    {"report with a lane that is a number", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"success\",\"now\":5,\"lane\":1}"},
-    {"report with a reason that is a number", accounts_report, 1,
+    {"report with a reason that is a number", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"disabled\",\"now\":5,\"reason\":1}"},
-    {"report error with random 1", accounts_report, 1,
+    {"report error with random 1", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"random\":1,\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report error with a negative random", accounts_report, 1,
+    {"report error with a negative random", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"random\":-0.1,\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report error with random as text", accounts_report, 1,
+    {"report error with random as text", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"random\":\"0.5\",\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report error without a base", accounts_report, 1,
+    {"report error without a base", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"maxMilliseconds\":2}"},
-    {"report error without a maximum", accounts_report, 1,
+    {"report error without a maximum", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"baseMilliseconds\":2}"},
-    {"report error with a negative base", accounts_report, 1,
+    {"report error with a negative base", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"baseMilliseconds\":-1,\"maxMilliseconds\":2}"},
-    {"report error with an attempt as text", accounts_report, 1,
+    {"report error with an attempt as text", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"attempt\":\"1\",\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report rate-limited with neither a reset nor a backoff", accounts_report, 1,
+    {"report rate-limited with neither a reset nor a backoff", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"rate-limited\",\"now\":5}"},
-    {"report rate-limited with a reset as text", accounts_report, 1,
+    {"report rate-limited with a reset as text", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"rate-limited\",\"now\":5,\"resetAt\":\"9\"}"},
-    {"report quota without a reading", accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"quota\",\"now\":5}"},
-    {"report quota with a reading that is a number", accounts_report, 1,
+    {"report quota without a reading", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"quota\",\"now\":5}"},
+    {"report quota with a reading that is a number", forebay_library_accounts_report, 1,
      "{\"id\":\"a\",\"outcome\":\"quota\",\"now\":5,\"quota\":7}"},
-    {"tokenExpired without now", accounts_token_expired, 0, "{\"expires\":5}"},
-    {"tokenExpired with expires as text", accounts_token_expired, 0, "{\"expires\":\"5\",\"now\":5}"},
-    {"tokenExpired with a skew as text", accounts_token_expired, 0, "{\"expires\":5,\"now\":5,\"skewMilliseconds\":\"1\"}"},
-    {"tokenExpired with a negative skew", accounts_token_expired, 0, "{\"expires\":5,\"now\":5,\"skewMilliseconds\":-1}"},
-    {"hasCapacity without pools", accounts_has_capacity, 0, "{}"},
-    {"hasCapacity with pools as an object", accounts_has_capacity, 0, "{\"pools\":{}}"},
+    {"tokenExpired without now", forebay_library_accounts_token_expired, 0, "{\"expires\":5}"},
+    {"tokenExpired with expires as text", forebay_library_accounts_token_expired, 0, "{\"expires\":\"5\",\"now\":5}"},
+    {"tokenExpired with a skew as text", forebay_library_accounts_token_expired, 0, "{\"expires\":5,\"now\":5,\"skewMilliseconds\":\"1\"}"},
+    {"tokenExpired with a negative skew", forebay_library_accounts_token_expired, 0, "{\"expires\":5,\"now\":5,\"skewMilliseconds\":-1}"},
+    {"hasCapacity without pools", forebay_library_accounts_has_capacity, 0, "{}"},
+    {"hasCapacity with pools as an object", forebay_library_accounts_has_capacity, 0, "{\"pools\":{}}"},
 };
 
 static void refuses_a_malformed_call(void) {
@@ -223,9 +223,9 @@ static void refuses_a_malformed_call(void) {
     if (file_exists(store)) {
         support_fail("malformed calls", "a malformed call created the store");
     }
-    support_answer not_object = support_call_raw(accounts_list, "[]");
+    support_answer not_object = support_call_raw(forebay_library_accounts_list, "[]");
     expect_failure(&not_object, "list with an array argument");
-    support_answer not_json = support_call_raw(accounts_list, "{\"store\":");
+    support_answer not_json = support_call_raw(forebay_library_accounts_list, "{\"store\":");
     expect_failure(&not_json, "list with broken json");
     free(store);
     free(directory);
@@ -236,7 +236,7 @@ static void creates_the_missing_parent_directories_and_the_lock_file(void) {
     char *inner = support_join3(directory, "one", "two");
     char *store = support_join(inner, "accounts.json");
     char *lock = support_join(inner, "accounts.json.lock");
-    support_answer answer = call_with(accounts_upsert, store, "{\"account\":{\"id\":\"acc1\",\"label\":\"acc1\"}}");
+    support_answer answer = call_with(forebay_library_accounts_upsert, store, "{\"account\":{\"id\":\"acc1\",\"label\":\"acc1\"}}");
     expect_json(&answer, 0, "{\"outcome\":\"added\"}", "upsert into missing directories");
     if (!file_exists(store)) {
         support_fail("missing directories", "the store was not created");
@@ -258,7 +258,7 @@ static void token_members_are_refused(void) {
     for (size_t index = 0; index < sizeof(token_names) / sizeof(token_names[0]); index++) {
         char members[256];
         snprintf(members, sizeof(members), "{\"account\":{\"id\":\"acc1\",\"%s\":\"secret-value\"}}", token_names[index]);
-        support_answer answer = call_with(accounts_upsert, store, members);
+        support_answer answer = call_with(forebay_library_accounts_upsert, store, members);
         const cJSON *refused = support_at(answer.result, "refused");
         if (answer.status != 0 || !cJSON_IsString(refused) || strstr(refused->valuestring, token_names[index]) == NULL) {
             support_failf(token_names[index], "expected a refusal naming the member: %s", answer.text);
@@ -275,9 +275,9 @@ static void token_members_are_refused(void) {
 static void no_operation_writes_a_secret_looking_member(void) {
     char *directory = support_scratch();
     char *store = support_join(directory, "accounts.json");
-    support_answer added = call_with(accounts_upsert, store, "{\"account\":{\"id\":\"acc1\",\"label\":\"acc1\",\"expires\":9}}");
+    support_answer added = call_with(forebay_library_accounts_upsert, store, "{\"account\":{\"id\":\"acc1\",\"label\":\"acc1\",\"expires\":9}}");
     support_discard(&added);
-    support_answer claimed = call_with(accounts_acquire, store, "{\"strategy\":\"hybrid\",\"now\":5,\"lane\":\"chat\"}");
+    support_answer claimed = call_with(forebay_library_accounts_acquire, store, "{\"strategy\":\"hybrid\",\"now\":5,\"lane\":\"chat\"}");
     support_discard(&claimed);
     const char *outcomes[] = {"success", "error", "rate-limited", "disabled"};
     for (size_t index = 0; index < 4; index++) {
@@ -286,7 +286,7 @@ static void no_operation_writes_a_secret_looking_member(void) {
                  "{\"id\":\"acc1\",\"lane\":\"chat\",\"outcome\":\"%s\",\"now\":5,\"resetAt\":9,\"baseMilliseconds\":1,"
                  "\"maxMilliseconds\":2}",
                  outcomes[index]);
-        support_answer reported = call_with(accounts_report, store, members);
+        support_answer reported = call_with(forebay_library_accounts_report, store, members);
         support_discard(&reported);
     }
     char *text = support_read_text(store);
@@ -303,7 +303,7 @@ static void whole_numbers_keep_their_text(void) {
     char *directory = support_scratch();
     char *store = support_join(directory, "accounts.json");
     support_answer answer = call_with(
-        accounts_upsert, store,
+        forebay_library_accounts_upsert, store,
         "{\"account\":{\"id\":\"acc-meta\",\"meta\":{\"count\":5,\"remainingFraction\":0.5}}}");
     support_discard(&answer);
     char *text = support_read_text(store);

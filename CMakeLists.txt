@@ -13,7 +13,7 @@ FetchContent_MakeAvailable(spisor_library)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_library(apps SHARED
+add_library(forebay_library SHARED
     src/accounts_availability.c
     src/accounts_backoff.c
     src/accounts_manage.c
@@ -41,12 +41,12 @@ add_library(apps SHARED
     src/routing_tiers.c
     src/service_support.c
     src/support.c)
-target_link_libraries(apps PRIVATE spisor_library)
-set_target_properties(apps PROPERTIES C_VISIBILITY_PRESET hidden)
+target_link_libraries(forebay_library PRIVATE spisor_library)
+set_target_properties(forebay_library PROPERTIES C_VISIBILITY_PRESET hidden)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_link_options(apps PRIVATE -Wl,--exclude-libs,ALL)
+    target_link_options(forebay_library PRIVATE -Wl,--exclude-libs,ALL)
 endif()
-spisor_strict_warnings(apps)
+spisor_strict_warnings(forebay_library)
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     enable_testing()

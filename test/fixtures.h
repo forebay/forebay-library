@@ -42,7 +42,7 @@ static inline cJSON *registry_context(const registry_case *open) {
 static inline support_answer list_text(const char *registry) {
     registry_case open = registry_case_open();
     support_write(open.file, registry);
-    support_answer answer = support_call(apps_list, "{}", registry_context(&open));
+    support_answer answer = support_call(forebay_library_apps_list, "{}", registry_context(&open));
     registry_case_close(&open);
     return answer;
 }
@@ -50,7 +50,7 @@ static inline support_answer list_text(const char *registry) {
 static inline support_answer list_bytes(const char *bytes, size_t length) {
     registry_case open = registry_case_open();
     support_write_bytes(open.file, bytes, length);
-    support_answer answer = support_call(apps_list, "{}", registry_context(&open));
+    support_answer answer = support_call(forebay_library_apps_list, "{}", registry_context(&open));
     registry_case_close(&open);
     return answer;
 }

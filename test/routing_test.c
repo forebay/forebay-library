@@ -1,11 +1,11 @@
 #include "support.h"
 
-int32_t routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t routing_model_map(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t routing_outcome(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_model_map(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_outcome(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
 typedef struct named_function {
     const char *name;
@@ -13,12 +13,12 @@ typedef struct named_function {
 } named_function;
 
 static const named_function functions[] = {
-    {"tiers", routing_tiers},
-    {"modelMap", routing_model_map},
-    {"resolve", routing_resolve},
-    {"outcome", routing_outcome},
-    {"environment", routing_environment},
-    {"limits", routing_limits},
+    {"tiers", forebay_library_routing_tiers},
+    {"modelMap", forebay_library_routing_model_map},
+    {"resolve", forebay_library_routing_resolve},
+    {"outcome", forebay_library_routing_outcome},
+    {"environment", forebay_library_routing_environment},
+    {"limits", forebay_library_routing_limits},
 };
 
 static apps_function find_function(const char *name) {
@@ -93,25 +93,25 @@ static int run_every_vector(void) {
 }
 
 static void refuses_a_malformed_call(void) {
-    support_answer not_object = support_call_raw(routing_tiers, "[]");
+    support_answer not_object = support_call_raw(forebay_library_routing_tiers, "[]");
     expect_failure(&not_object, "tiers with an array argument");
-    support_answer no_models = support_call_raw(routing_tiers, "{\"profile\":{}}");
+    support_answer no_models = support_call_raw(forebay_library_routing_tiers, "{\"profile\":{}}");
     expect_failure(&no_models, "tiers without models");
     support_answer no_regex = support_call_raw(
-        routing_tiers,
+        forebay_library_routing_tiers,
         "{\"profile\":{\"tierSourceProvider\":\"p\",\"tierOrder\":[],\"tierFallback\":[]},\"models\":{}}");
     expect_failure(&no_regex, "tiers with a profile lacking tierRegex");
     support_answer no_application = support_call_raw(
-        routing_environment,
+        forebay_library_routing_environment,
         "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":1,\"providersEnabled\":true,\"environment\":{},"
         "\"userHome\":\"/h\"}");
     expect_failure(&no_application, "environment without the application's declaration");
     support_answer bad_port = support_call_raw(
-        routing_environment,
+        forebay_library_routing_environment,
         "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":0,\"providersEnabled\":true,\"environment\":{},"
         "\"userHome\":\"\"}");
     expect_failure(&bad_port, "environment with port 0");
-    support_answer not_json = support_call_raw(routing_outcome, "{\"status\":");
+    support_answer not_json = support_call_raw(forebay_library_routing_outcome, "{\"status\":");
     expect_failure(&not_json, "outcome with broken json");
 }
 
