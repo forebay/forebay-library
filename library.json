@@ -115,6 +115,12 @@
                       "null"
                     ]
                   },
+                  "unservedModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "defaultContext": {
                     "type": "integer",
                     "minimum": 1
@@ -199,6 +205,12 @@
                     "type": "string"
                   },
                   "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "unservedModelPattern": {
                     "type": [
                       "string",
                       "null"
@@ -322,6 +334,12 @@
                     "type": "string"
                   },
                   "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "unservedModelPattern": {
                     "type": [
                       "string",
                       "null"
@@ -539,6 +557,12 @@
                     "type": "string"
                   },
                   "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "unservedModelPattern": {
                     "type": [
                       "string",
                       "null"

@@ -206,7 +206,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *stored, const
                            size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     routing_profile profile;
-    if (!routing_read_profile(profile_json, NEEDS_TIERS, &profile, out, out_len, &status)) {
+    if (!routing_read_profile(profile_json, NEEDS_TIERS | NEEDS_UNSERVED_PATTERN, &profile, out, out_len, &status)) {
         return status;
     }
     routing_refusal refusal = {0, "", NULL};
@@ -214,7 +214,13 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *stored, const
     if (tiers == NULL) {
         return routing_answer_refusal(&refusal, out, out_len);
     }
-    cJSON *catalog = routing_catalog(models);
+    routing_pattern *unserved = NULL;
+    if (!routing_compile_unserved_pattern(&profile, &unserved, &refusal)) {
+        cJSON_Delete(tiers);
+        return refusal.refused ? routing_answer_refusal(&refusal, out, out_len)
+                               : service_answer(NULL, out, out_len);
+    }
+    cJSON *catalog = routing_catalog(models, unserved);
     cJSON *empty = cJSON_CreateObject();
     const cJSON *declared = cJSON_GetObjectItemCaseSensitive(stored, "modelMap");
     const cJSON *stored_map = cJSON_IsObject(declared) ? declared : empty;
@@ -223,6 +229,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *stored, const
     cJSON_Delete(tiers);
     cJSON_Delete(catalog);
     cJSON_Delete(empty);
+    routing_pattern_free(unserved);
     return status;
 }
 

@@ -1,0 +1,72 @@
+{
+  "source": "the profile's own unservedModelPattern decides which provider models are left out",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null,
+      "unservedModelPattern": "^zz-"
+    },
+    "stored": {},
+    "models": {
+      "antigravity": {
+        "ranking": [
+          "zz-opus-hidden",
+          "m-plain-opus"
+        ],
+        "models": {
+          "zz-opus-hidden": {
+            "name": "Hidden"
+          },
+          "m-plain-opus": {
+            "name": "Plain"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "m-plain-opus",
+          "name": "Plain",
+          "derived": true
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-plain-opus",
+          "name": "Plain",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "opus",
+      "default"
+    ]
+  }
+}

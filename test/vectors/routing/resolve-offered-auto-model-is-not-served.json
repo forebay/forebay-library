@@ -15,7 +15,8 @@
       ],
       "tierRegex": "^claude-([a-z]+)-\\d",
       "envPrefix": "ANTHROPIC",
-      "nativeModelPattern": null
+      "nativeModelPattern": null,
+      "unservedModelPattern": "-auto$"
     },
     "map": {
       "opus": [

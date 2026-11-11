@@ -17,6 +17,7 @@
         "tierOrder": { "type": "array", "items": { "type": "string" } },
         "tierRegex": { "type": "string" },
         "tierSourceProvider": { "type": "string" },
+        "unservedModelPattern": { "type": ["string", "null"] },
         "upstream": { "type": "string", "minLength": 1 }
       }
     },

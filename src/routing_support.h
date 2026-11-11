@@ -24,12 +24,14 @@ typedef struct routing_profile {
     const char *tier_regex;
     const char *env_prefix;
     const char *native_model_pattern;
+    const char *unserved_model_pattern;
 } routing_profile;
 
 typedef enum routing_profile_need {
     NEEDS_TIERS = 1,
     NEEDS_ENV_PREFIX = 2,
-    NEEDS_NATIVE_PATTERN = 4
+    NEEDS_NATIVE_PATTERN = 4,
+    NEEDS_UNSERVED_PATTERN = 8
 } routing_profile_need;
 
 int32_t routing_answer_refusal(const routing_refusal *refusal, uint8_t **out, size_t *out_len);
@@ -44,13 +46,11 @@ cJSON *routing_assignment(const char *provider, const char *model, const char *n
 /** basekit's normalizeChain: one assignment becomes a chain of one, a list keeps its valid entries. */
 cJSON *routing_normalize_chain(const cJSON *raw);
 
-/** Every model of every provider in models.json shape, best first, without "-auto" ids. */
-cJSON *routing_catalog(const cJSON *models);
+/** Every model of every provider in models.json shape, best first, without the ids the unserved pattern matches (NULL serves all). */
+cJSON *routing_catalog(const cJSON *models, const routing_pattern *unserved);
 
 /** The ranking of one provider when it has one, else its model ids in catalog order. */
 cJSON *routing_ranked_ids(const cJSON *provider_entry);
-
-int routing_is_auto(const char *model);
 
 /**
  * Compiles source for a profile member, filling refusal when it uses anything the matcher lacks.
@@ -58,5 +58,12 @@ int routing_is_auto(const char *model);
  */
 routing_pattern *routing_compile_profile_pattern(const char *member, const char *source, int group_required,
                                                  routing_refusal *refusal);
+
+/**
+ * Compiles the profile's unservedModelPattern into *pattern, which stays NULL when the profile declares none.
+ * Answers 0 with refusal filled, or with it clear when memory runs out.
+ */
+int routing_compile_unserved_pattern(const routing_profile *profile, routing_pattern **pattern,
+                                     routing_refusal *refusal);
 
 #endif

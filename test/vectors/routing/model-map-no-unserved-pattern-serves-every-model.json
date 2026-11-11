@@ -1,0 +1,71 @@
+{
+  "source": "a profile without unservedModelPattern serves every model",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierFallback": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "envPrefix": "ANTHROPIC",
+      "nativeModelPattern": null
+    },
+    "stored": {},
+    "models": {
+      "antigravity": {
+        "ranking": [
+          "zz-opus-hidden",
+          "m-plain-opus"
+        ],
+        "models": {
+          "zz-opus-hidden": {
+            "name": "Hidden"
+          },
+          "m-plain-opus": {
+            "name": "Plain"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "zz-opus-hidden",
+          "name": "Hidden",
+          "derived": true
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "zz-opus-hidden",
+          "name": "Hidden",
+          "derived": true
+        }
+      ]
+    },
+    "healed": [
+      "opus",
+      "default"
+    ]
+  }
+}
