@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "importName": "forebay-library",
+  "description": "The C library of the proxy's decisions: model routing and the account store.",
+  "topics": [
+    "ai",
+    "ai-proxy",
+    "c",
+    "core-library",
+    "ffi",
+    "forebay",
+    "llm"
+  ],
+  "dependencies": [
+    {
+      "id": "github:1427176225",
+      "importName": "model",
+      "commit": "0a2e3321c08afc04848c92ee4fc42dc8d9047a87"
+    },
+    {
+      "id": "github:1427561829",
+      "importName": "typescript",
+      "commit": "d6ee45223a49e1af6bb6322eb2b1d33196a40076"
+    },
+    {
+      "id": "github:1350572676",
+      "importName": "java",
+      "commit": "5fe864634274afe5acc76706d570df3010d62432"
+    },
+    {
+      "id": "github:1350572648",
+      "importName": "basekit",
+      "commit": "aa782b7b9e7c8ad7eadc0b79018b7d966af640cf"
+    }
+  ]
+}
