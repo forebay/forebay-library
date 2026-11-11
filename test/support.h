@@ -1,5 +1,5 @@
-#ifndef APPS_TEST_SUPPORT_H
-#define APPS_TEST_SUPPORT_H
+#ifndef LIBRARY_TEST_SUPPORT_H
+#define LIBRARY_TEST_SUPPORT_H
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -25,12 +25,8 @@
 #define support_process_id() getpid()
 #endif
 
-typedef int32_t (*apps_function)(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+typedef int32_t (*library_function)(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
-int32_t forebay_library_apps_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_apps_get(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_apps_home(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_apps_current(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 void forebay_library_release(uint8_t *buffer);
 
 static int support_failures = 0;
@@ -64,7 +60,7 @@ static inline char *support_join3(const char *first, const char *second, const c
 /** A fresh directory per case, under a root unique to this run, so a re-run never sees old state. */
 static inline char *support_scratch(void) {
     if (support_run_root[0] == '\0') {
-        snprintf(support_run_root, sizeof(support_run_root), "%s/run-%ld-%d", APPS_SCRATCH_PATH,
+        snprintf(support_run_root, sizeof(support_run_root), "%s/run-%ld-%d", LIBRARY_SCRATCH_PATH,
                  (long)time(NULL), (int)support_process_id());
         support_make_directory(support_run_root);
     }
@@ -75,33 +71,14 @@ static inline char *support_scratch(void) {
     return directory;
 }
 
-static inline void support_make_directories(const char *path) {
-    char *copy = malloc(strlen(path) + 1);
-    strcpy(copy, path);
-    for (char *cursor = copy + 1; *cursor != '\0'; cursor++) {
-        if ((*cursor == '/' || *cursor == '\\') && cursor[-1] != ':') {
-            char saved = *cursor;
-            *cursor = '\0';
-            support_make_directory(copy);
-            *cursor = saved;
-        }
-    }
-    support_make_directory(copy);
-    free(copy);
-}
-
-static inline void support_write_bytes(const char *path, const char *bytes, size_t length) {
+static inline void support_write(const char *path, const char *text) {
     FILE *file = fopen(path, "wb");
     if (file == NULL) {
         support_fail("write", path);
         return;
     }
-    fwrite(bytes, 1, length, file);
+    fwrite(text, 1, strlen(text), file);
     fclose(file);
-}
-
-static inline void support_write(const char *path, const char *text) {
-    support_write_bytes(path, text, strlen(text));
 }
 
 /** The whole file as a NUL terminated string, freed with free, or NULL when it cannot be read. */
@@ -122,37 +99,13 @@ static inline char *support_read_text(const char *path) {
     return text;
 }
 
-/** A call's context: the home, then name and value pairs for the environment, ending in NULL. */
-static inline cJSON *support_context(const char *home, ...) {
-    cJSON *context = cJSON_CreateObject();
-    cJSON *environment = cJSON_AddObjectToObject(context, "environment");
-    cJSON_AddStringToObject(context, "home", home);
-    va_list pairs;
-    va_start(pairs, home);
-    for (const char *name = va_arg(pairs, const char *); name != NULL; name = va_arg(pairs, const char *)) {
-        cJSON_AddStringToObject(environment, name, va_arg(pairs, const char *));
-    }
-    va_end(pairs);
-    return context;
-}
-
-static inline void support_arguments(cJSON *context, ...) {
-    cJSON *arguments = cJSON_AddArrayToObject(context, "arguments");
-    va_list values;
-    va_start(values, context);
-    for (const char *value = va_arg(values, const char *); value != NULL; value = va_arg(values, const char *)) {
-        cJSON_AddItemToArray(arguments, cJSON_CreateString(value));
-    }
-    va_end(values);
-}
-
 typedef struct support_answer {
     int32_t status;
     cJSON *result;
     char text[8192];
 } support_answer;
 
-static inline support_answer support_call_raw(apps_function function, const char *input) {
+static inline support_answer support_call_raw(library_function function, const char *input) {
     support_answer answer;
     uint8_t *out = NULL;
     size_t out_len = 0;
@@ -164,18 +117,6 @@ static inline support_answer support_call_raw(apps_function function, const char
     answer.text[kept] = '\0';
     answer.result = out == NULL ? NULL : cJSON_ParseWithLength((const char *)out, out_len);
     forebay_library_release(out);
-    return answer;
-}
-
-/** Calls with the envelope {argument, context} and consumes the context. */
-static inline support_answer support_call(apps_function function, const char *argument, cJSON *context) {
-    cJSON *envelope = cJSON_CreateObject();
-    cJSON_AddItemToObject(envelope, "argument", cJSON_Parse(argument));
-    cJSON_AddItemToObject(envelope, "context", context);
-    char *input = cJSON_PrintUnformatted(envelope);
-    support_answer answer = support_call_raw(function, input);
-    free(input);
-    cJSON_Delete(envelope);
     return answer;
 }
 
@@ -208,7 +149,7 @@ static inline void expect_failure(support_answer *answer, const char *label) {
     support_discard(answer);
 }
 
-/** The value at a dotted path such as "apps.0.detect.binary", for asserting one field. */
+/** The value at a dotted path such as "accounts.0.id", for asserting one field. */
 static inline const cJSON *support_at(const cJSON *value, const char *path) {
     char key[256];
     while (value != NULL && *path != '\0') {
@@ -223,42 +164,6 @@ static inline const cJSON *support_at(const cJSON *value, const char *path) {
         path += length + (path[length] == '.' ? 1 : 0);
     }
     return value;
-}
-
-static inline void expect_at(support_answer *answer, const char *path, const char *expected, const char *label) {
-    const cJSON *actual = support_at(answer->result, path);
-    cJSON *wanted = cJSON_Parse(expected);
-    if (answer->status != 0 || actual == NULL || !cJSON_Compare(actual, wanted, 1)) {
-        char *printed = actual == NULL ? NULL : cJSON_PrintUnformatted(actual);
-        support_failf(label, "%s: expected %s, got %s (status %d, whole answer %s)", path, expected,
-                 printed == NULL ? "(absent)" : printed, (int)answer->status, answer->text);
-        free(printed);
-    }
-    cJSON_Delete(wanted);
-}
-
-static inline void expect_absent(support_answer *answer, const char *path, const char *label) {
-    if (support_at(answer->result, path) != NULL) {
-        support_failf(label, "%s should be absent: %s", path, answer->text);
-    }
-}
-
-/** The ids of a list answer, comma-joined, for asserting order. */
-static inline void expect_ids(support_answer *answer, const char *expected, const char *label) {
-    char ids[2048] = "";
-    const cJSON *app = NULL;
-    cJSON_ArrayForEach(app, support_at(answer->result, "apps")) {
-        const cJSON *id = cJSON_GetObjectItemCaseSensitive(app, "id");
-        if (ids[0] != '\0') {
-            strcat(ids, ",");
-        }
-        strcat(ids, cJSON_IsString(id) ? id->valuestring : "?");
-    }
-    if (answer->status != 0 || strcmp(ids, expected) != 0) {
-        support_failf(label, "expected ids [%s], got [%s] (status %d: %s)", expected, ids,
-                 (int)answer->status, answer->text);
-    }
-    support_discard(answer);
 }
 
 static inline int support_summary(const char *suite) {

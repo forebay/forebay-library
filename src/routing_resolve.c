@@ -152,7 +152,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *map_json, con
                            const char *requested, uint8_t **out, size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     routing_profile profile;
-    if (!routing_read_profile(profile_json, NEEDS_NATIVE_PATTERN, &profile, out, out_len, &status)) {
+    if (!routing_read_profile(profile_json, NEEDS_NATIVE_PATTERN | NEEDS_UNSERVED_PATTERN, &profile, out, out_len, &status)) {
         return status;
     }
     routing_refusal refusal = {0, "", NULL};
@@ -163,8 +163,14 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *map_json, con
             return routing_answer_refusal(&refusal, out, out_len);
         }
     }
+    routing_pattern *unserved = NULL;
+    if (!routing_compile_unserved_pattern(&profile, &unserved, &refusal)) {
+        routing_pattern_free(native);
+        return refusal.refused ? routing_answer_refusal(&refusal, out, out_len)
+                               : service_answer(NULL, out, out_len);
+    }
     cJSON *map = normalized_map(map_json);
-    cJSON *catalog = routing_catalog(models);
+    cJSON *catalog = routing_catalog(models, unserved);
     resolution resolved;
     cJSON *result = NULL;
     if (map != NULL && catalog != NULL && resolve_chain(map, catalog, requested, native, &resolved)) {
@@ -175,6 +181,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *map_json, con
     cJSON_Delete(map);
     cJSON_Delete(catalog);
     routing_pattern_free(native);
+    routing_pattern_free(unserved);
     return status;
 }
 

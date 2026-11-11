@@ -63,18 +63,22 @@ static int read_native_pattern(const cJSON *profile, routing_profile *read, uint
     return profile_string(profile, "nativeModelPattern", &read->native_model_pattern, out, out_len, status);
 }
 
+static int read_unserved_pattern(const cJSON *profile, routing_profile *read, uint8_t **out, size_t *out_len,
+                                 int32_t *status) {
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, "unservedModelPattern");
+    if (member == NULL || cJSON_IsNull(member)) {
+        read->unserved_model_pattern = NULL;
+        return 1;
+    }
+    return profile_string(profile, "unservedModelPattern", &read->unserved_model_pattern, out, out_len, status);
+}
+
 int routing_read_profile(const cJSON *profile, int need, routing_profile *read, uint8_t **out, size_t *out_len,
                          int32_t *status) {
     memset(read, 0, sizeof(*read));
-    if (!(need & NEEDS_TIERS) || read_tier_members(profile, read, out, out_len, status)) {
-        if (!(need & NEEDS_ENV_PREFIX) ||
-            profile_string(profile, "envPrefix", &read->env_prefix, out, out_len, status)) {
-            if (!(need & NEEDS_NATIVE_PATTERN) || read_native_pattern(profile, read, out, out_len, status)) {
-                return 1;
-            }
-        }
-    }
-    return 0;
+    return (!(need & NEEDS_TIERS) || read_tier_members(profile, read, out, out_len, status)) &&
+           (!(need & NEEDS_NATIVE_PATTERN) || read_native_pattern(profile, read, out, out_len, status)) &&
+           (!(need & NEEDS_UNSERVED_PATTERN) || read_unserved_pattern(profile, read, out, out_len, status));
 }
 
 cJSON *routing_assignment(const char *provider, const char *model, const char *name, int derived) {
@@ -160,11 +164,6 @@ cJSON *routing_ranked_ids(const cJSON *provider_entry) {
     return ids;
 }
 
-int routing_is_auto(const char *model) {
-    size_t length = strlen(model);
-    return length >= 5 && strcmp(model + length - 5, "-auto") == 0;
-}
-
 static const char *display_name(const cJSON *raw, const char *model) {
     if (cJSON_IsObject(raw)) {
         const cJSON *name = cJSON_GetObjectItemCaseSensitive(raw, "name");
@@ -175,7 +174,8 @@ static const char *display_name(const cJSON *raw, const char *model) {
     return model;
 }
 
-static int add_provider_models(cJSON *catalog, const cJSON *provider_entry, const char *provider) {
+static int add_provider_models(cJSON *catalog, const cJSON *provider_entry, const char *provider,
+                               const routing_pattern *unserved) {
     const cJSON *models = cJSON_GetObjectItemCaseSensitive(provider_entry, "models");
     if (!cJSON_IsObject(provider_entry) || !cJSON_IsObject(models)) {
         return 1;
@@ -187,7 +187,7 @@ static int add_provider_models(cJSON *catalog, const cJSON *provider_entry, cons
     const cJSON *id = NULL;
     cJSON_ArrayForEach(id, ids) {
         const cJSON *raw = cJSON_GetObjectItemCaseSensitive(models, id->valuestring);
-        if (raw == NULL || cJSON_IsNull(raw) || routing_is_auto(id->valuestring)) {
+        if (raw == NULL || cJSON_IsNull(raw) || (unserved != NULL && routing_pattern_find(unserved, id->valuestring, NULL, NULL))) {
             continue;
         }
         if (!service_push(catalog, routing_assignment(provider, id->valuestring,
@@ -200,14 +200,14 @@ static int add_provider_models(cJSON *catalog, const cJSON *provider_entry, cons
     return 1;
 }
 
-cJSON *routing_catalog(const cJSON *models) {
+cJSON *routing_catalog(const cJSON *models, const routing_pattern *unserved) {
     cJSON *catalog = cJSON_CreateArray();
     if (catalog == NULL) {
         return NULL;
     }
     const cJSON *provider_entry = NULL;
     cJSON_ArrayForEach(provider_entry, models) {
-        if (!add_provider_models(catalog, provider_entry, provider_entry->string)) {
+        if (!add_provider_models(catalog, provider_entry, provider_entry->string, unserved)) {
             cJSON_Delete(catalog);
             return NULL;
         }
@@ -237,4 +237,15 @@ routing_pattern *routing_compile_profile_pattern(const char *member, const char 
     }
     refusal->refused = 0;
     return pattern;
+}
+
+int routing_compile_unserved_pattern(const routing_profile *profile, routing_pattern **pattern,
+                                     routing_refusal *refusal) {
+    *pattern = NULL;
+    refusal->refused = 0;
+    if (profile->unserved_model_pattern == NULL || profile->unserved_model_pattern[0] == '\0') {
+        return 1;
+    }
+    *pattern = routing_compile_profile_pattern("unservedModelPattern", profile->unserved_model_pattern, 0, refusal);
+    return *pattern != NULL;
 }

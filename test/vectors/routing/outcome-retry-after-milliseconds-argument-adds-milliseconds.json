@@ -1,0 +1,14 @@
+{
+  "source": "RateLimitTest.rateLimitResetMs_hubRetryAfterMs_addsMillis: the hint is an argument",
+  "function": "outcome",
+  "argument": {
+    "status": 200,
+    "headers": {},
+    "now": 1000000,
+    "retryAfterMilliseconds": 5000
+  },
+  "result": {
+    "rateLimited": false,
+    "resetAt": 1005000
+  }
+}

@@ -23,13 +23,7 @@ add_library(forebay_library SHARED
     src/accounts_store.c
     src/accounts_support.c
     src/accounts_token.c
-    src/apps.c
-    src/current.c
-    src/descriptor.c
-    src/environment.c
-    src/home.c
-    src/javascript.c
-    src/registry.c
+    src/release.c
     src/routing_environment.c
     src/routing_limits.c
     src/routing_model_map.c
@@ -38,8 +32,7 @@ add_library(forebay_library SHARED
     src/routing_resolve.c
     src/routing_support.c
     src/routing_tiers.c
-    src/service_support.c
-    src/support.c)
+    src/service_support.c)
 target_link_libraries(forebay_library PRIVATE spisor_library)
 set_target_properties(forebay_library PROPERTIES C_VISIBILITY_PRESET hidden)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

@@ -9,7 +9,7 @@ int32_t forebay_library_routing_limits(const uint8_t *in, size_t in_len, uint8_t
 
 typedef struct named_function {
     const char *name;
-    apps_function function;
+    library_function function;
 } named_function;
 
 static const named_function functions[] = {
@@ -21,7 +21,7 @@ static const named_function functions[] = {
     {"limits", forebay_library_routing_limits},
 };
 
-static apps_function find_function(const char *name) {
+static library_function find_function(const char *name) {
     for (size_t index = 0; index < sizeof(functions) / sizeof(functions[0]); index++) {
         if (strcmp(functions[index].name, name) == 0) {
             return functions[index].function;
@@ -56,7 +56,7 @@ static void run_vector(const char *path) {
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(vector, "function");
     cJSON *argument = cJSON_DetachItemFromObjectCaseSensitive(vector, "argument");
     const cJSON *result = cJSON_GetObjectItemCaseSensitive(vector, "result");
-    apps_function function = cJSON_IsString(name) ? find_function(name->valuestring) : NULL;
+    library_function function = cJSON_IsString(name) ? find_function(name->valuestring) : NULL;
     if (function == NULL || argument == NULL || result == NULL) {
         support_fail(path, "not a vector: needs a known function, an argument and a result");
     } else {
@@ -103,12 +103,12 @@ static void refuses_a_malformed_call(void) {
     expect_failure(&no_regex, "tiers with a profile lacking tierRegex");
     support_answer no_application = support_call_raw(
         forebay_library_routing_environment,
-        "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":1,\"providersEnabled\":true,\"environment\":{},"
+        "{\"map\":{},\"port\":1,\"providersEnabled\":true,\"environment\":{},"
         "\"userHome\":\"/h\"}");
     expect_failure(&no_application, "environment without the application's declaration");
     support_answer bad_port = support_call_raw(
         forebay_library_routing_environment,
-        "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":0,\"providersEnabled\":true,\"environment\":{},"
+        "{\"map\":{},\"port\":0,\"providersEnabled\":true,\"environment\":{},"
         "\"userHome\":\"\"}");
     expect_failure(&bad_port, "environment with port 0");
     support_answer not_json = support_call_raw(forebay_library_routing_outcome, "{\"status\":");

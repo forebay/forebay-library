@@ -6,76 +6,6 @@
   "release": "forebay_library_release",
   "services": [
     {
-      "id": "apps",
-      "functions": [
-        {
-          "name": "list",
-          "symbol": "forebay_library_apps_list",
-          "kind": "json",
-          "context": ["environment", "home"],
-          "argument": { "type": "object" },
-          "result": {
-            "type": "object",
-            "properties": {
-              "apps": {
-                "type": "array",
-                "items": { "$ref": "https://weivel.github.io/model/plugin.schema.json#/definitions/appDescriptor" }
-              }
-            },
-            "required": ["apps"],
-            "additionalProperties": false
-          }
-        },
-        {
-          "name": "get",
-          "symbol": "forebay_library_apps_get",
-          "kind": "json",
-          "context": ["environment", "home"],
-          "argument": {
-            "type": "object",
-            "properties": { "id": { "type": "string" } },
-            "required": ["id"]
-          },
-          "result": {
-            "type": "object",
-            "properties": {
-              "app": { "$ref": "https://weivel.github.io/model/plugin.schema.json#/definitions/appDescriptor" }
-            },
-            "additionalProperties": false
-          }
-        },
-        {
-          "name": "home",
-          "symbol": "forebay_library_apps_home",
-          "kind": "json",
-          "context": ["environment", "home"],
-          "argument": {
-            "type": "object",
-            "properties": { "id": { "type": "string" } },
-            "required": ["id"]
-          },
-          "result": {
-            "type": "object",
-            "properties": { "home": { "type": "string" } },
-            "additionalProperties": false
-          }
-        },
-        {
-          "name": "current",
-          "symbol": "forebay_library_apps_current",
-          "kind": "json",
-          "context": ["environment", "home", "arguments"],
-          "argument": { "type": "object" },
-          "result": {
-            "type": "object",
-            "properties": { "id": { "type": "string" } },
-            "required": ["id"],
-            "additionalProperties": false
-          }
-        }
-      ]
-    },
-    {
       "id": "routing",
       "functions": [
         {
@@ -110,6 +40,12 @@
                     "type": "string"
                   },
                   "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "unservedModelPattern": {
                     "type": [
                       "string",
                       "null"
@@ -199,6 +135,12 @@
                     "type": "string"
                   },
                   "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "unservedModelPattern": {
                     "type": [
                       "string",
                       "null"
@@ -322,6 +264,12 @@
                     "type": "string"
                   },
                   "nativeModelPattern": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "unservedModelPattern": {
                     "type": [
                       "string",
                       "null"
@@ -457,6 +405,10 @@
               },
               "now": {
                 "type": "number"
+              },
+              "retryAfterMilliseconds": {
+                "type": "integer",
+                "minimum": 0
               }
             },
             "required": [
@@ -510,53 +462,6 @@
           "argument": {
             "type": "object",
             "properties": {
-              "profile": {
-                "type": "object",
-                "properties": {
-                  "tierSourceProvider": {
-                    "type": "string"
-                  },
-                  "tierOrder": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "tierFallback": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "tierRegex": {
-                    "type": "string"
-                  },
-                  "envPrefix": {
-                    "type": "string"
-                  },
-                  "nativeModelPattern": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "defaultContext": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "defaultOutput": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "upstream": {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                },
-                "required": [
-                  "envPrefix"
-                ]
-              },
               "map": {
                 "type": "object",
                 "additionalProperties": {
@@ -628,13 +533,20 @@
                       }
                     },
                     "required": ["variables"]
+                  },
+                  "modelVariables": {
+                    "type": "object",
+                    "properties": {
+                      "tierModel": { "type": "string" },
+                      "tierModelName": { "type": "string" },
+                      "model": { "type": "string" }
+                    }
                   }
                 },
                 "required": ["baseUrlVariable", "placeholder", "ownLogin"]
               }
             },
             "required": [
-              "profile",
               "map",
               "port",
               "providersEnabled",

@@ -2,7 +2,6 @@
 
 #include <ctype.h>
 #include <stdint.h>
-#include <string.h>
 
 #define RATE_LIMITED_STATUS 429
 #define MAX_JAVA_INT INT64_C(2147483647)
@@ -62,16 +61,15 @@ static int64_t lenient_integer(const char *text) {
     return negative ? -value : value;
 }
 
-static int is_rate_limited(double status, const cJSON *headers) {
-    const char *marker = header(headers, "x-hub-rate-limited");
-    return status == RATE_LIMITED_STATUS || (marker != NULL && strcmp(marker, "1") == 0);
+static int is_rate_limited(double status) {
+    return status == RATE_LIMITED_STATUS;
 }
 
 /** Epoch milliseconds the response says it is usable again, or 0 when it names none. */
-static double reset_at(const cJSON *headers, double now) {
-    int64_t milliseconds = lenient_integer(header(headers, "x-hub-retry-after-ms"));
-    if (milliseconds > 0) {
-        return now + (double)milliseconds;
+static double reset_at(const cJSON *argument, const cJSON *headers, double now) {
+    const cJSON *milliseconds = cJSON_GetObjectItemCaseSensitive(argument, "retryAfterMilliseconds");
+    if (cJSON_IsNumber(milliseconds) && milliseconds->valuedouble > 0) {
+        return now + milliseconds->valuedouble;
     }
     int64_t seconds = lenient_integer(header(headers, "retry-after"));
     if (seconds > 0) {
@@ -80,13 +78,13 @@ static double reset_at(const cJSON *headers, double now) {
     return 0;
 }
 
-static cJSON *answer_for(double status, const cJSON *headers, double now) {
+static cJSON *answer_for(const cJSON *argument, double status, const cJSON *headers, double now) {
     cJSON *result = cJSON_CreateObject();
-    if (result == NULL || cJSON_AddBoolToObject(result, "rateLimited", is_rate_limited(status, headers)) == NULL) {
+    if (result == NULL || cJSON_AddBoolToObject(result, "rateLimited", is_rate_limited(status)) == NULL) {
         cJSON_Delete(result);
         return NULL;
     }
-    double reset = reset_at(headers, now);
+    double reset = reset_at(argument, headers, now);
     if (reset > 0 && cJSON_AddNumberToObject(result, "resetAt", reset) == NULL) {
         cJSON_Delete(result);
         return NULL;
@@ -106,7 +104,7 @@ SERVICE_EXPORT int32_t forebay_library_routing_outcome(const uint8_t *in, size_t
     if (service_require(&call, "status", service_is_number, "a number", &reply_status, out, out_len, &status) &&
         service_require(&call, "headers", service_is_object, "an object", &headers, out, out_len, &status) &&
         service_require(&call, "now", service_is_number, "a number", &now, out, out_len, &status)) {
-        status = service_answer(answer_for(reply_status->valuedouble, headers, now->valuedouble), out, out_len);
+        status = service_answer(answer_for(call.argument, reply_status->valuedouble, headers, now->valuedouble), out, out_len);
     }
     spisor_discard_call(&call);
     return status;

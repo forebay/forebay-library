@@ -9,10 +9,8 @@ jobs:
   parity:
     uses: intisy/workflows/.github/workflows/test.yml@main
     with:
-      toolchains: node gradle
+      toolchains: node
       runners: '["ubuntu-latest","windows-latest"]'
-      node_install: npm ci --prefix siblings/typescript && npm ci --prefix parity/typescript
-      node_build: npm run build --prefix siblings/typescript && node parity/oracle.mjs
+      node_install: npm ci --prefix parity/typescript
+      node_build: ''
       node_test: npm test --prefix parity/typescript
-      gradle_root: parity/java
-      gradle_test: test

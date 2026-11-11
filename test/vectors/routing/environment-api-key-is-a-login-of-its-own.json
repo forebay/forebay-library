@@ -2,27 +2,6 @@
   "source": "decision 7: own login",
   "function": "environment",
   "argument": {
-    "profile": {
-      "defaultContext": 200000,
-      "defaultOutput": 64000,
-      "upstream": "http://127.0.0.1:1",
-      "tierSourceProvider": "antigravity",
-      "tierOrder": [
-        "opus",
-        "sonnet",
-        "haiku",
-        "fable"
-      ],
-      "tierFallback": [
-        "opus",
-        "sonnet",
-        "haiku",
-        "fable"
-      ],
-      "tierRegex": "^acme-([a-z]+)-\\d",
-      "envPrefix": "ACME",
-      "nativeModelPattern": null
-    },
     "map": {
       "opus": [
         {
@@ -66,6 +45,11 @@
           "name": ".acme.json",
           "member": "account"
         }
+      },
+      "modelVariables": {
+        "tierModel": "ACME_DEFAULT_{{TIER}}_MODEL",
+        "tierModelName": "ACME_DEFAULT_{{TIER}}_MODEL_NAME",
+        "model": "ACME_MODEL"
       }
     }
   },

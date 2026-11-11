@@ -1,27 +1,6 @@
 {
   "function": "environment",
   "argument": {
-    "profile": {
-      "defaultContext": 200000,
-      "defaultOutput": 64000,
-      "upstream": "http://127.0.0.1:1",
-      "tierSourceProvider": "antigravity",
-      "tierOrder": [
-        "opus",
-        "sonnet",
-        "haiku",
-        "fable"
-      ],
-      "tierFallback": [
-        "opus",
-        "sonnet",
-        "haiku",
-        "fable"
-      ],
-      "tierRegex": "^acme-([a-z]+)-\\d",
-      "envPrefix": "ZED",
-      "nativeModelPattern": null
-    },
     "map": {
       "default": [
         {
@@ -45,6 +24,11 @@
           "LOGIN_ONE",
           "LOGIN_TWO"
         ]
+      },
+      "modelVariables": {
+        "tierModel": "ZED_DEFAULT_{{TIER}}_MODEL",
+        "tierModelName": "ZED_DEFAULT_{{TIER}}_MODEL_NAME",
+        "model": "ZED_MODEL"
       }
     },
     "environment": {}

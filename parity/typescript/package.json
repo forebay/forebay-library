@@ -1,16 +1,13 @@
 {
-  "name": "apps-parity-typescript",
+  "name": "forebay-library-contracts",
   "version": "0.0.0",
   "private": true,
-  "description": "Holds the apps library to basekit's answers through the weivel TypeScript host.",
+  "description": "Validates the IR, front-door and provider contract schemas against their vectors.",
   "type": "module",
   "license": "MIT",
   "author": "intisy",
   "scripts": {
     "test": "tsc --noEmit -p tsconfig.json && vitest run"
-  },
-  "dependencies": {
-    "@weivel/typescript": "file:../../siblings/typescript"
   },
   "devDependencies": {
     "@types/node": "22.10.2",

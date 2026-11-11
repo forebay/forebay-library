@@ -1,0 +1,55 @@
+{
+  "source": "ModelMapTest.modelEnvPairs_containsDefaultOpusModel",
+  "function": "environment",
+  "argument": {
+    "map": {
+      "opus": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": false
+        }
+      ],
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": true
+        }
+      ]
+    },
+    "port": 40001,
+    "providersEnabled": true,
+    "environment": {},
+    "userHome": "/routing-test-home-that-does-not-exist",
+    "application": {
+      "baseUrlVariable": "ACME_BASE_URL",
+      "placeholder": {
+        "variable": "ACME_AUTH_TOKEN",
+        "value": "acme-placeholder"
+      },
+      "ownLogin": {
+        "variables": [
+          "ACME_API_KEY",
+          "ACME_OAUTH_TOKEN"
+        ],
+        "stateFile": {
+          "directoryVariable": "ACME_CONFIG_DIR",
+          "name": ".acme.json",
+          "member": "account"
+        }
+      }
+    }
+  },
+  "result": {
+    "environment": {
+      "ACME_BASE_URL": "http://127.0.0.1:40001",
+      "ACME_AUTH_TOKEN": "acme-placeholder"
+    }
+  }
+}
