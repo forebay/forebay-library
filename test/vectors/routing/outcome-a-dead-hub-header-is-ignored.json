@@ -1,15 +1,15 @@
 {
-  "source": "RateLimitTest.rateLimitResetMs_hubRetryAfterMs_addsMillis",
+  "source": "the retired x-hub-* header protocol names nothing",
   "function": "outcome",
   "argument": {
     "status": 200,
     "headers": {
+      "x-hub-rate-limited": "1",
       "x-hub-retry-after-ms": "5000"
     },
     "now": 1000000
   },
   "result": {
-    "rateLimited": false,
-    "resetAt": 1005000
+    "rateLimited": false
   }
 }
