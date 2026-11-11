@@ -64,6 +64,11 @@
           "name": ".acme.json",
           "member": "account"
         }
+      },
+      "modelVariables": {
+        "tierModel": "ACME_DEFAULT_{{TIER}}_MODEL",
+        "tierModelName": "ACME_DEFAULT_{{TIER}}_MODEL_NAME",
+        "model": "ACME_MODEL"
       }
     }
   },

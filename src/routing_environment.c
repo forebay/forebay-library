@@ -130,18 +130,30 @@ static int add_variable(cJSON *environment, const char *name, const char *value)
     return service_add(environment, name, cJSON_CreateString(value));
 }
 
-static int add_pair(cJSON *environment, const char *prefix, const char *upper_tier, const cJSON *primary) {
+#define TIER_PLACEHOLDER "{{TIER}}"
+
+static int expand_tier(const char *name_template, const char *upper_tier, char *name, size_t capacity) {
+    const char *at = strstr(name_template, TIER_PLACEHOLDER);
+    if (at == NULL) {
+        return (size_t)snprintf(name, capacity, "%s", name_template) < capacity;
+    }
+    int written = snprintf(name, capacity, "%.*s%s%s", (int)(at - name_template), name_template, upper_tier,
+                           at + strlen(TIER_PLACEHOLDER));
+    return written >= 0 && (size_t)written < capacity;
+}
+
+static int add_tier_variable(cJSON *environment, const char *name_template, const char *upper_tier, const char *value) {
     char name[512];
+    return name_template == NULL ||
+           (expand_tier(name_template, upper_tier, name, sizeof(name)) && add_variable(environment, name, value));
+}
+
+static int add_pair(cJSON *environment, const cJSON *variables, const char *upper_tier, const cJSON *primary) {
     const char *model = cJSON_GetObjectItemCaseSensitive(primary, "model")->valuestring;
     const cJSON *display = cJSON_GetObjectItemCaseSensitive(primary, "name");
-    snprintf(name, sizeof(name), "%s_DEFAULT_%s_MODEL", prefix, upper_tier);
-    if (!add_variable(environment, name, model)) {
-        return 0;
-    }
-    snprintf(name, sizeof(name), "%s_DEFAULT_%s_MODEL_NAME", prefix, upper_tier);
-    return add_variable(environment, name, cJSON_IsString(display) && display->valuestring[0] != '\0'
-                                               ? display->valuestring
-                                               : model);
+    const char *label = cJSON_IsString(display) && display->valuestring[0] != '\0' ? display->valuestring : model;
+    return add_tier_variable(environment, text_member(variables, "tierModel"), upper_tier, model) &&
+           add_tier_variable(environment, text_member(variables, "tierModelName"), upper_tier, label);
 }
 
 static const cJSON *usable_primary(const cJSON *chain) {
@@ -152,7 +164,7 @@ static const cJSON *usable_primary(const cJSON *chain) {
     return cJSON_IsString(model) && model->valuestring[0] != '\0' ? chain->child : NULL;
 }
 
-static int add_tier_pair(cJSON *environment, const char *prefix, const cJSON *chain) {
+static int add_tier_pair(cJSON *environment, const cJSON *variables, const cJSON *chain) {
     const cJSON *primary = usable_primary(chain);
     if (primary == NULL || strcmp(chain->string, DEFAULT_SLOT) == 0) {
         return 1;
@@ -166,23 +178,22 @@ static int add_tier_pair(cJSON *environment, const char *prefix, const cJSON *ch
         upper[index] = (char)toupper((unsigned char)chain->string[index]);
     }
     upper[length] = '\0';
-    return add_pair(environment, prefix, upper, primary);
+    return add_pair(environment, variables, upper, primary);
 }
 
-static int add_model_pairs(cJSON *environment, const char *prefix, const cJSON *map) {
+static int add_model_pairs(cJSON *environment, const cJSON *variables, const cJSON *map) {
     const cJSON *chain = NULL;
     cJSON_ArrayForEach(chain, map) {
-        if (!add_tier_pair(environment, prefix, chain)) {
+        if (!add_tier_pair(environment, variables, chain)) {
             return 0;
         }
     }
+    const char *default_variable = text_member(variables, "model");
     const cJSON *primary = usable_primary(cJSON_GetObjectItemCaseSensitive(map, DEFAULT_SLOT));
-    if (primary == NULL) {
+    if (primary == NULL || default_variable == NULL) {
         return 1;
     }
-    char name[300];
-    snprintf(name, sizeof(name), "%s_MODEL", prefix);
-    return add_variable(environment, name, cJSON_GetObjectItemCaseSensitive(primary, "model")->valuestring);
+    return add_variable(environment, default_variable, cJSON_GetObjectItemCaseSensitive(primary, "model")->valuestring);
 }
 
 typedef struct request {
@@ -204,7 +215,7 @@ static cJSON *build_environment(const request *asked) {
     if (ok && asked->providers_enabled) {
         int out_of_memory = 0;
         int own_login = has_own_login(asked->environment, asked->user_home, asked->application, &out_of_memory);
-        ok = !out_of_memory && add_model_pairs(built, asked->profile.env_prefix, asked->map) &&
+        ok = !out_of_memory && add_model_pairs(built, cJSON_GetObjectItemCaseSensitive(asked->application, "modelVariables"), asked->map) &&
              (own_login || add_variable(built, text_member(placeholder, "variable"), text_member(placeholder, "value")));
     }
     if (!ok) {
@@ -261,7 +272,7 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
         !service_require(call, "userHome", service_is_string, "a string", &home, out, out_len, status) ||
         !service_require(call, "application", is_application_proxy,
                          "an object with baseUrlVariable, placeholder and ownLogin", &asked->application, out, out_len, status) ||
-        !routing_read_profile(profile, NEEDS_ENV_PREFIX, &asked->profile, out, out_len, status)) {
+        !routing_read_profile(profile, 0, &asked->profile, out, out_len, status)) {
         return 0;
     }
     asked->port = (int)port->valuedouble;

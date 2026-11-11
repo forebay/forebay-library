@@ -45,6 +45,11 @@
           "LOGIN_ONE",
           "LOGIN_TWO"
         ]
+      },
+      "modelVariables": {
+        "tierModel": "ZED_DEFAULT_{{TIER}}_MODEL",
+        "tierModelName": "ZED_DEFAULT_{{TIER}}_MODEL_NAME",
+        "model": "ZED_MODEL"
       }
     },
     "environment": {}

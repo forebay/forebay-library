@@ -1,5 +1,5 @@
 {
-  "source": "ModelMap.modelEnvPairs",
+  "source": "ModelMapTest.modelEnvPairs_containsDefaultOpusModel",
   "function": "environment",
   "argument": {
     "profile": {
@@ -20,18 +20,28 @@
         "fable"
       ],
       "tierRegex": "^acme-([a-z]+)-\\d",
-      "envPrefix": "OPENCODE",
       "nativeModelPattern": null
     },
     "map": {
-      "sonnet": [
+      "opus": [
         {
-          "provider": "p",
-          "model": "s-1",
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
           "derived": false
         }
       ],
-      "default": []
+      "sonnet": [],
+      "haiku": [],
+      "fable": [],
+      "default": [
+        {
+          "provider": "antigravity",
+          "model": "m-opus",
+          "name": "M Opus",
+          "derived": true
+        }
+      ]
     },
     "port": 40001,
     "providersEnabled": true,
@@ -53,14 +63,20 @@
           "name": ".acme.json",
           "member": "account"
         }
+      },
+      "modelVariables": {
+        "tierModel": "ZED_{{TIER}}_PICK",
+        "tierModelName": "ZED_{{TIER}}_LABEL",
+        "model": "ZED_CHOSEN"
       }
     }
   },
   "result": {
     "environment": {
       "ACME_BASE_URL": "http://127.0.0.1:40001",
-      "OPENCODE_DEFAULT_SONNET_MODEL": "s-1",
-      "OPENCODE_DEFAULT_SONNET_MODEL_NAME": "s-1",
+      "ZED_OPUS_PICK": "m-opus",
+      "ZED_OPUS_LABEL": "M Opus",
+      "ZED_CHOSEN": "m-opus",
       "ACME_AUTH_TOKEN": "acme-placeholder"
     }
   }

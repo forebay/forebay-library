@@ -580,10 +580,7 @@
                     "type": "string",
                     "minLength": 1
                   }
-                },
-                "required": [
-                  "envPrefix"
-                ]
+                }
               },
               "map": {
                 "type": "object",
@@ -656,6 +653,14 @@
                       }
                     },
                     "required": ["variables"]
+                  },
+                  "modelVariables": {
+                    "type": "object",
+                    "properties": {
+                      "tierModel": { "type": "string" },
+                      "tierModelName": { "type": "string" },
+                      "model": { "type": "string" }
+                    }
                   }
                 },
                 "required": ["baseUrlVariable", "placeholder", "ownLogin"]
