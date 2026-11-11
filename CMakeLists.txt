@@ -5,11 +5,10 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-include(FetchContent)
-FetchContent_Declare(spisor_library
-    GIT_REPOSITORY https://github.com/spisor/library.git
-    GIT_TAG 004a16b0e601327732dee63fea8f76fdfcc5d3a9)
-FetchContent_MakeAvailable(spisor_library)
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/siblings/library/CMakeLists.txt)
+    message(FATAL_ERROR "siblings/library is missing: check out the dependency .weivel/repo.json declares")
+endif()
+add_subdirectory(siblings/library)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 

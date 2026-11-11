@@ -31,6 +31,11 @@
       "id": "github:1350572648",
       "importName": "basekit",
       "commit": "aa782b7b9e7c8ad7eadc0b79018b7d966af640cf"
+    },
+    {
+      "id": "github:1434914426",
+      "importName": "library",
+      "commit": "004a16b0e601327732dee63fea8f76fdfcc5d3a9"
     }
   ]
 }
