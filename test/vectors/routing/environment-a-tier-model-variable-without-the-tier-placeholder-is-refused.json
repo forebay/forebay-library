@@ -1,0 +1,49 @@
+{
+  "source": "a tier model template without {{TIER}} would write every tier to one variable, so it is refused",
+  "function": "environment",
+  "argument": {
+    "map": {
+      "opus": [
+        {
+          "provider": "p",
+          "model": "m-opus",
+          "name": "Opus",
+          "derived": false
+        }
+      ],
+      "default": [
+        {
+          "provider": "p",
+          "model": "m-opus",
+          "name": "Opus",
+          "derived": false
+        }
+      ]
+    },
+    "port": 4000,
+    "providersEnabled": true,
+    "userHome": "/nowhere",
+    "application": {
+      "baseUrlVariable": "WHERE",
+      "placeholder": {
+        "variable": "TICKET",
+        "value": "nothing"
+      },
+      "ownLogin": {
+        "variables": [
+          "LOGIN_ONE"
+        ]
+      },
+      "modelVariables": {
+        "tierModel": "ZED_TIER_MODEL",
+        "tierModelName": "ZED_{{TIER}}_MODEL_NAME",
+        "model": "ZED_MODEL"
+      }
+    },
+    "environment": {}
+  },
+  "result": {
+    "refused": "modelVariables.tierModel lacks the {{TIER}} placeholder",
+    "fix": "include {{TIER}} in modelVariables.tierModel where the upper-cased tier goes"
+  }
+}

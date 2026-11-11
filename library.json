@@ -462,56 +462,6 @@
           "argument": {
             "type": "object",
             "properties": {
-              "profile": {
-                "type": "object",
-                "properties": {
-                  "tierSourceProvider": {
-                    "type": "string"
-                  },
-                  "tierOrder": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "tierFallback": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "tierRegex": {
-                    "type": "string"
-                  },
-                  "envPrefix": {
-                    "type": "string"
-                  },
-                  "nativeModelPattern": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "unservedModelPattern": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "defaultContext": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "defaultOutput": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "upstream": {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                }
-              },
               "map": {
                 "type": "object",
                 "additionalProperties": {
@@ -597,7 +547,6 @@
               }
             },
             "required": [
-              "profile",
               "map",
               "port",
               "providersEnabled",

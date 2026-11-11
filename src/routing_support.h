@@ -22,14 +22,12 @@ typedef struct routing_profile {
     const cJSON *tier_order;
     const cJSON *tier_fallback;
     const char *tier_regex;
-    const char *env_prefix;
     const char *native_model_pattern;
     const char *unserved_model_pattern;
 } routing_profile;
 
 typedef enum routing_profile_need {
     NEEDS_TIERS = 1,
-    NEEDS_ENV_PREFIX = 2,
     NEEDS_NATIVE_PATTERN = 4,
     NEEDS_UNSERVED_PATTERN = 8
 } routing_profile_need;

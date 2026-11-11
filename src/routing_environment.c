@@ -133,13 +133,17 @@ static int add_variable(cJSON *environment, const char *name, const char *value)
 #define TIER_PLACEHOLDER "{{TIER}}"
 
 static int expand_tier(const char *name_template, const char *upper_tier, char *name, size_t capacity) {
-    const char *at = strstr(name_template, TIER_PLACEHOLDER);
-    if (at == NULL) {
-        return (size_t)snprintf(name, capacity, "%s", name_template) < capacity;
+    size_t written = 0;
+    const char *rest = name_template;
+    for (const char *at = strstr(rest, TIER_PLACEHOLDER); at != NULL; at = strstr(rest, TIER_PLACEHOLDER)) {
+        int length = snprintf(name + written, capacity - written, "%.*s%s", (int)(at - rest), rest, upper_tier);
+        if (length < 0 || (size_t)length >= capacity - written) {
+            return 0;
+        }
+        written += (size_t)length;
+        rest = at + strlen(TIER_PLACEHOLDER);
     }
-    int written = snprintf(name, capacity, "%.*s%s%s", (int)(at - name_template), name_template, upper_tier,
-                           at + strlen(TIER_PLACEHOLDER));
-    return written >= 0 && (size_t)written < capacity;
+    return (size_t)snprintf(name + written, capacity - written, "%s", rest) < capacity - written;
 }
 
 static int add_tier_variable(cJSON *environment, const char *name_template, const char *upper_tier, const char *value) {
@@ -197,7 +201,6 @@ static int add_model_pairs(cJSON *environment, const cJSON *variables, const cJS
 }
 
 typedef struct request {
-    routing_profile profile;
     const cJSON *map;
     int port;
     int providers_enabled;
@@ -256,14 +259,26 @@ static int is_application_proxy(const cJSON *value) {
            is_state_file(cJSON_GetObjectItemCaseSensitive(own_login, "stateFile"));
 }
 
+static int refuses_tier_template(const cJSON *variables, const char *member, uint8_t **out, size_t *out_len,
+                                  int32_t *status) {
+    const char *name_template = text_member(variables, member);
+    if (name_template == NULL || strstr(name_template, TIER_PLACEHOLDER) != NULL) {
+        return 0;
+    }
+    char cause[96];
+    char fix[128];
+    snprintf(cause, sizeof(cause), "modelVariables.%s lacks the " TIER_PLACEHOLDER " placeholder", member);
+    snprintf(fix, sizeof(fix), "include " TIER_PLACEHOLDER " in modelVariables.%s where the upper-cased tier goes", member);
+    *status = service_refuse(cause, fix, out, out_len);
+    return 1;
+}
+
 static int read_request(const spisor_call *call, request *asked, uint8_t **out, size_t *out_len, int32_t *status) {
-    const cJSON *profile = NULL;
     const cJSON *port = NULL;
     const cJSON *enabled = NULL;
     const cJSON *home = NULL;
     memset(asked, 0, sizeof(*asked));
-    if (!service_require(call, "profile", service_is_object, "an object", &profile, out, out_len, status) ||
-        !service_require(call, "map", service_is_object, "an object", &asked->map, out, out_len, status) ||
+    if (!service_require(call, "map", service_is_object, "an object", &asked->map, out, out_len, status) ||
         !service_require(call, "port", is_port, "a port number from 1 to 65535", &port, out, out_len, status) ||
         !service_require(call, "providersEnabled", service_is_boolean, "a boolean", &enabled, out, out_len,
                          status) ||
@@ -271,8 +286,12 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
                          status) ||
         !service_require(call, "userHome", service_is_string, "a string", &home, out, out_len, status) ||
         !service_require(call, "application", is_application_proxy,
-                         "an object with baseUrlVariable, placeholder and ownLogin", &asked->application, out, out_len, status) ||
-        !routing_read_profile(profile, 0, &asked->profile, out, out_len, status)) {
+                         "an object with baseUrlVariable, placeholder and ownLogin", &asked->application, out, out_len, status)) {
+        return 0;
+    }
+    const cJSON *variables = cJSON_GetObjectItemCaseSensitive(asked->application, "modelVariables");
+    if (refuses_tier_template(variables, "tierModel", out, out_len, status) ||
+        refuses_tier_template(variables, "tierModelName", out, out_len, status)) {
         return 0;
     }
     asked->port = (int)port->valuedouble;

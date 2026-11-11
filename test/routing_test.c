@@ -103,12 +103,12 @@ static void refuses_a_malformed_call(void) {
     expect_failure(&no_regex, "tiers with a profile lacking tierRegex");
     support_answer no_application = support_call_raw(
         forebay_library_routing_environment,
-        "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":1,\"providersEnabled\":true,\"environment\":{},"
+        "{\"map\":{},\"port\":1,\"providersEnabled\":true,\"environment\":{},"
         "\"userHome\":\"/h\"}");
     expect_failure(&no_application, "environment without the application's declaration");
     support_answer bad_port = support_call_raw(
         forebay_library_routing_environment,
-        "{\"profile\":{\"envPrefix\":\"A\"},\"map\":{},\"port\":0,\"providersEnabled\":true,\"environment\":{},"
+        "{\"map\":{},\"port\":0,\"providersEnabled\":true,\"environment\":{},"
         "\"userHome\":\"\"}");
     expect_failure(&bad_port, "environment with port 0");
     support_answer not_json = support_call_raw(forebay_library_routing_outcome, "{\"status\":");

@@ -1,5 +1,5 @@
 {
-  "source": "model-map.test.ts: fully-stored tier kept; stale tier heals within its own provider; unset tier derives from the tier source; stale -auto id heals; no -auto id resolves; unset default copies the first non-empty tier",
+  "source": "model-map.test.ts: fully-stored tier kept; stale tier heals within its own provider; unset tier derives from the tier source; a stored id the catalog no longer offers heals; unset default copies the first non-empty tier",
   "function": "modelMap",
   "argument": {
     "profile": {
@@ -20,7 +20,8 @@
       ],
       "tierRegex": "^claude-([a-z]+)-\\d",
       "envPrefix": "ANTHROPIC",
-      "nativeModelPattern": "^claude-"
+      "nativeModelPattern": "^claude-",
+      "unservedModelPattern": "-auto$"
     },
     "stored": {
       "modelMap": {

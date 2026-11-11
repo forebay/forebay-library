@@ -19,18 +19,19 @@ read nothing of the process: time and the filesystem are arguments. `profile` ha
 | `modelMap({ profile, stored, models })` | `{ map, healed }`: stored entries kept, healed within their provider, or derived |
 | `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
 | `outcome({ status, headers, now, retryAfterMilliseconds? })` | `{ rateLimited, resetAt? }`: rate limited on 429; the reset is `retryAfterMilliseconds` when given, else the `retry-after` header in seconds |
-| `environment({ profile, map, port, providersEnabled, environment, userHome })` | `{ environment }`: the base URL, and with providers the model pairs named by the application's `modelVariables` and the placeholder token unless the application has a login of its own |
+| `environment({ map, port, providersEnabled, environment, userHome, application })` | `{ environment }`: the base URL, and with providers the model pairs named by the application's `modelVariables` and the placeholder token unless the application has a login of its own |
 
 A refusal is a successful answer `{ "refused", "fix" }`. Windows has no `regcomp`, so one matcher
 serves every platform: `^ $`, literals, `.`, classes, `\d \w \s`, `* + ?` on one atom and at most one
 capture group. A pattern using anything else is refused naming the construct. `notices` lists
 `model_switched` when the default tier serves a model nothing offers (unless `nativeModelPattern`
-says it is the application's own or `unservedModelPattern` says the profile never serves it), then `healed` when the chain's primary is derived; both are
-listed when both apply, in that order.
+says it is the application's own), then `healed` when the chain's primary is derived; both are
+listed when both apply, in that order. A model `unservedModelPattern` matches counts as not offered, since the
+profile never serves it.
 The application is described to the library as data, and the library names no application: its `placeholder`
 (variable and value), `ownLogin` (the variables that mean a login of its own and the state file that records
-one) and `modelVariables` (`model` for the default, and `tierModel` and `tierModelName` templates in which `{{TIER}}`
-stands for the upper-cased tier) arrive in the call.
+one) and `modelVariables` (`model` for the default, and `tierModel` and `tierModelName` templates in which every `{{TIER}}`
+stands for the upper-cased tier, and a template without one is refused) arrive in the call.
 It has a login of its own when one of those variables is non-blank, the placeholder variable holds anything
 but the placeholder value, or the state file records an account.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or

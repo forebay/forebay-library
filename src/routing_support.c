@@ -76,16 +76,9 @@ static int read_unserved_pattern(const cJSON *profile, routing_profile *read, ui
 int routing_read_profile(const cJSON *profile, int need, routing_profile *read, uint8_t **out, size_t *out_len,
                          int32_t *status) {
     memset(read, 0, sizeof(*read));
-    if (!(need & NEEDS_TIERS) || read_tier_members(profile, read, out, out_len, status)) {
-        if (!(need & NEEDS_ENV_PREFIX) ||
-            profile_string(profile, "envPrefix", &read->env_prefix, out, out_len, status)) {
-            if ((!(need & NEEDS_NATIVE_PATTERN) || read_native_pattern(profile, read, out, out_len, status)) &&
-                (!(need & NEEDS_UNSERVED_PATTERN) || read_unserved_pattern(profile, read, out, out_len, status))) {
-                return 1;
-            }
-        }
-    }
-    return 0;
+    return (!(need & NEEDS_TIERS) || read_tier_members(profile, read, out, out_len, status)) &&
+           (!(need & NEEDS_NATIVE_PATTERN) || read_native_pattern(profile, read, out, out_len, status)) &&
+           (!(need & NEEDS_UNSERVED_PATTERN) || read_unserved_pattern(profile, read, out, out_len, status));
 }
 
 cJSON *routing_assignment(const char *provider, const char *model, const char *name, int derived) {
