@@ -43,7 +43,7 @@ int routing_read_profile(const cJSON *profile, int need, routing_profile *read, 
 /** {provider, model, name, derived}, or NULL when memory runs out. */
 cJSON *routing_assignment(const char *provider, const char *model, const char *name, int derived);
 
-/** basekit's normalizeChain: one assignment becomes a chain of one, a list keeps its valid entries. */
+/** One assignment becomes a chain of one, a list keeps its valid entries. */
 cJSON *routing_normalize_chain(const cJSON *raw);
 
 /** Every model of every provider in models.json shape, best first, without the ids the unserved pattern matches (NULL serves all). */

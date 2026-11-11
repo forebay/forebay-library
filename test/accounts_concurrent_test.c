@@ -15,7 +15,7 @@ int32_t forebay_library_accounts_report(const uint8_t *in, size_t in_len, uint8_
 #define REPORTS_PER_KIND 200
 #define WORKER_ARGUMENT "worker"
 
-static support_answer call_with(apps_function function, cJSON *call) {
+static support_answer call_with(library_function function, cJSON *call) {
     char *input = cJSON_PrintUnformatted(call);
     support_answer answer = support_call_raw(function, input);
     free(input);

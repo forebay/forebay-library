@@ -4,8 +4,5 @@ docs/
 
 # Generated on the default branch by the readme job.
 README.md
-.gradle/
 node_modules/
 siblings/
-parity/expected/
-parity/work/

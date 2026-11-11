@@ -10,7 +10,7 @@ int32_t forebay_library_accounts_has_capacity(const uint8_t *in, size_t in_len, 
 
 typedef struct named_function {
     const char *name;
-    apps_function function;
+    library_function function;
     int takes_store;
 } named_function;
 
@@ -140,7 +140,7 @@ static int run_every_vector(void) {
 }
 
 /** Calls function with members_json's members, plus store when one is given. */
-static support_answer call_with(apps_function function, const char *store, const char *members_json) {
+static support_answer call_with(library_function function, const char *store, const char *members_json) {
     cJSON *call = cJSON_Parse(members_json);
     if (store != NULL) {
         cJSON_AddStringToObject(call, "store", store);
@@ -154,7 +154,7 @@ static support_answer call_with(apps_function function, const char *store, const
 
 typedef struct malformed_call {
     const char *label;
-    apps_function function;
+    library_function function;
     int sends_store;
     const char *members;
 } malformed_call;
