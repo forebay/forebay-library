@@ -1,6 +1,7 @@
 #ifndef ROUTING_SUPPORT_H
 #define ROUTING_SUPPORT_H
 
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -75,5 +76,11 @@ const char *routing_header(const cJSON *headers, const char *name);
 
 /** Whether value is an integer from 1 to 65535. */
 int routing_is_port(const cJSON *value);
+
+/** The printf formatting of format, as a new string, or NULL when memory runs out. */
+char *routing_formatted(const char *format, ...);
+
+/** routing_formatted over a va_list, which it leaves for the caller to end. */
+char *routing_formatted_list(const char *format, va_list values);
 
 #endif

@@ -1,6 +1,7 @@
 #include "routing_support.h"
 
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -290,4 +291,24 @@ const char *routing_header(const cJSON *headers, const char *name) {
 int routing_is_port(const cJSON *value) {
     return cJSON_IsNumber(value) && value->valuedouble >= 1 && value->valuedouble <= 65535 &&
            value->valuedouble == (double)(int)value->valuedouble;
+}
+
+char *routing_formatted_list(const char *format, va_list values) {
+    va_list copy;
+    va_copy(copy, values);
+    int length = vsnprintf(NULL, 0, format, values);
+    char *text = length < 0 ? NULL : malloc((size_t)length + 1);
+    if (text != NULL) {
+        vsnprintf(text, (size_t)length + 1, format, copy);
+    }
+    va_end(copy);
+    return text;
+}
+
+char *routing_formatted(const char *format, ...) {
+    va_list values;
+    va_start(values, format);
+    char *text = routing_formatted_list(format, values);
+    va_end(values);
+    return text;
 }

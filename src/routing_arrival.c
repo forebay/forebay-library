@@ -1,7 +1,5 @@
 #include "routing_arrival.h"
 
-#include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,25 +8,10 @@
 #define LOOPBACK_ADDRESS "127.0.0.1"
 #define LOOPBACK_NAME "localhost"
 
-static char *format_text(const char *format, ...) {
-    va_list sizing;
-    va_list writing;
-    va_start(sizing, format);
-    va_copy(writing, sizing);
-    int length = vsnprintf(NULL, 0, format, sizing);
-    va_end(sizing);
-    char *text = length < 0 ? NULL : malloc((size_t)length + 1);
-    if (text != NULL) {
-        vsnprintf(text, (size_t)length + 1, format, writing);
-    }
-    va_end(writing);
-    return text;
-}
-
 static int is_addressed_to_the_port(const cJSON *headers, int port) {
     const char *host = routing_header(headers, "host");
-    char *address = format_text(LOOPBACK_ADDRESS ":%d", port);
-    char *name = format_text(LOOPBACK_NAME ":%d", port);
+    char *address = routing_formatted(LOOPBACK_ADDRESS ":%d", port);
+    char *name = routing_formatted(LOOPBACK_NAME ":%d", port);
     int admitted = host != NULL && address != NULL && name != NULL &&
                    (routing_equals_ignoring_case(host, address) || routing_equals_ignoring_case(host, name));
     free(address);
@@ -36,8 +19,19 @@ static int is_addressed_to_the_port(const cJSON *headers, int port) {
     return admitted;
 }
 
+/** @implNote Any value counts, since a header the caller could not read as a string was still sent. */
+static int carries_an_origin(const cJSON *headers) {
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, headers) {
+        if (routing_equals_ignoring_case(entry->string, "origin")) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static int is_admitted(const cJSON *headers, int port) {
-    return routing_header(headers, "origin") == NULL && is_addressed_to_the_port(headers, port);
+    return !carries_an_origin(headers) && is_addressed_to_the_port(headers, port);
 }
 
 static int is_health_probe(const char *path) {
@@ -46,7 +40,7 @@ static int is_health_probe(const char *path) {
 }
 
 static cJSON *refusal_answer(int port) {
-    char *message = format_text("the proxy answers only requests to " LOOPBACK_ADDRESS ":%d or " LOOPBACK_NAME
+    char *message = routing_formatted("the proxy answers only requests to " LOOPBACK_ADDRESS ":%d or " LOOPBACK_NAME
                                 ":%d that carry no Origin",
                                 port, port);
     cJSON *answer = cJSON_CreateObject();
@@ -120,8 +114,8 @@ static int is_anything(const cJSON *value) {
 
 static int32_t refuse_the_setting(const cJSON *value, const char *settings_file, uint8_t **out, size_t *out_len) {
     char *printed = cJSON_PrintUnformatted(value);
-    char *cause = printed == NULL ? NULL : format_text("proxy.port is %s, which is no port", printed);
-    char *fix = format_text("set proxy.port in %s to a port from 1 to 65535", settings_file);
+    char *cause = printed == NULL ? NULL : routing_formatted("proxy.port is %s, which is no port", printed);
+    char *fix = routing_formatted("set proxy.port in %s to a port from 1 to 65535", settings_file);
     int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(out, out_len) : service_refuse(cause, fix, out, out_len);
     free(printed);
     free(cause);
@@ -132,12 +126,13 @@ static int32_t refuse_the_setting(const cJSON *value, const char *settings_file,
 static int32_t refuse_the_listen(int port, const cJSON *failure, const char *settings_file, uint8_t **out, size_t *out_len) {
     const char *detail = cJSON_GetObjectItemCaseSensitive(failure, "detail")->valuestring;
     int in_use = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(failure, "inUse"));
-    char *number = format_text("%d", port);
-    char *reason = in_use ? format_text("is already in use") : format_text("cannot be listened on (%s)", detail);
-    char *cause = format_text("port %s on " LOOPBACK_ADDRESS " %s, so the proxy cannot listen", number, reason);
-    char *fix = format_text("stop what listens on port %s, or set proxy.port in %s to a free port", number, settings_file);
+    char *reason = in_use ? routing_formatted("is already in use") : routing_formatted("cannot be listened on (%s)", detail);
+    if (reason == NULL) {
+        return service_out_of_memory(out, out_len);
+    }
+    char *cause = routing_formatted("port %d on " LOOPBACK_ADDRESS " %s, so the proxy cannot listen", port, reason);
+    char *fix = routing_formatted("stop what listens on port %d, or set proxy.port in %s to a free port", port, settings_file);
     int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(out, out_len) : service_refuse(cause, fix, out, out_len);
-    free(number);
     free(reason);
     free(cause);
     free(fix);

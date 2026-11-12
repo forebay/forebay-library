@@ -943,7 +943,7 @@
                     "type": "object",
                     "properties": {
                       "kind": {
-                        "type": "string"
+                        "const": "proxyError"
                       },
                       "status": {
                         "type": "integer"

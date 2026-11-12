@@ -6,30 +6,10 @@
 
 #define WALK_FIX "hand back the walk the previous step answered, unchanged"
 
-static char *formatted_list(const char *format, va_list values) {
-    va_list copy;
-    va_copy(copy, values);
-    int length = vsnprintf(NULL, 0, format, values);
-    char *text = length < 0 ? NULL : malloc((size_t)length + 1);
-    if (text != NULL) {
-        vsnprintf(text, (size_t)length + 1, format, copy);
-    }
-    va_end(copy);
-    return text;
-}
-
-char *routing_formatted(const char *format, ...) {
-    va_list values;
-    va_start(values, format);
-    char *text = formatted_list(format, values);
-    va_end(values);
-    return text;
-}
-
 int routing_walk_log(step_walk *walk, const char *level, const char *format, ...) {
     va_list values;
     va_start(values, format);
-    char *message = formatted_list(format, values);
+    char *message = routing_formatted_list(format, values);
     va_end(values);
     cJSON *line = cJSON_CreateObject();
     int added = message != NULL && line != NULL && cJSON_AddStringToObject(line, "level", level) != NULL &&

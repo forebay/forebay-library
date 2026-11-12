@@ -19,9 +19,6 @@ typedef struct step_walk {
     cJSON *log;
 } step_walk;
 
-/** The printf formatting of format, as a new string, or NULL when memory runs out. */
-char *routing_formatted(const char *format, ...);
-
 /** Appends a {level, message} line to the walk's log; answers 0 when memory runs out. */
 int routing_walk_log(step_walk *walk, const char *level, const char *format, ...);
 
