@@ -1,5 +1,6 @@
 #include "routing_support.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -248,4 +249,40 @@ int routing_compile_unserved_pattern(const routing_profile *profile, routing_pat
     }
     *pattern = routing_compile_profile_pattern("unservedModelPattern", profile->unserved_model_pattern, 0, refusal);
     return *pattern != NULL;
+}
+
+int routing_equals_ignoring_case(const char *left, const char *right) {
+    while (*left != '\0' && *right != '\0') {
+        if (tolower((unsigned char)*left) != tolower((unsigned char)*right)) {
+            return 0;
+        }
+        left++;
+        right++;
+    }
+    return *left == *right;
+}
+
+int routing_starts_with_ignoring_case(const char *text, const char *prefix) {
+    while (*prefix != '\0') {
+        if (*text == '\0' || tolower((unsigned char)*text) != tolower((unsigned char)*prefix)) {
+            return 0;
+        }
+        text++;
+        prefix++;
+    }
+    return 1;
+}
+
+const char *routing_header(const cJSON *headers, const char *name) {
+    const cJSON *direct = cJSON_GetObjectItemCaseSensitive(headers, name);
+    if (cJSON_IsString(direct)) {
+        return direct->valuestring;
+    }
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, headers) {
+        if (cJSON_IsString(entry) && routing_equals_ignoring_case(entry->string, name)) {
+            return entry->valuestring;
+        }
+    }
+    return NULL;
 }

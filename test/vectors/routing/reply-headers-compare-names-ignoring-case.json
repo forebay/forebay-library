@@ -1,0 +1,19 @@
+{
+  "function": "replyHeaders",
+  "argument": {
+    "headers": {
+      "TRANSFER-ENCODING": "chunked",
+      "Upgrade": "h2c",
+      "TE": "x",
+      "Trailer": "t",
+      "PROXY-Connection": "k",
+      "X-Ok": "1"
+    },
+    "rewritten": false
+  },
+  "result": {
+    "headers": {
+      "X-Ok": "1"
+    }
+  }
+}

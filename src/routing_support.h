@@ -64,4 +64,13 @@ routing_pattern *routing_compile_profile_pattern(const char *member, const char 
 int routing_compile_unserved_pattern(const routing_profile *profile, routing_pattern **pattern,
                                      routing_refusal *refusal);
 
+/** Whether left and right are equal comparing ASCII letters without regard to case. */
+int routing_equals_ignoring_case(const char *left, const char *right);
+
+/** Whether text begins with prefix, comparing ASCII letters without regard to case. */
+int routing_starts_with_ignoring_case(const char *text, const char *prefix);
+
+/** The exact key first, then the first key matching ignoring case, as the JavaScript Headers API reads; NULL when absent or not a string. */
+const char *routing_header(const cJSON *headers, const char *name);
+
 #endif

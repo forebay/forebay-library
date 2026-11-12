@@ -1,0 +1,17 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "http://127.0.0.1:8080",
+    "url": "/v1/x",
+    "headers": {},
+    "bodyLength": 0,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "target": "http://127.0.0.1:8080/v1/x",
+    "headers": {
+      "host": "127.0.0.1:8080",
+      "content-length": "0"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "https://api.example.test/v1/",
+    "url": "/messages?beta=1",
+    "headers": {
+      "authorization": "Bearer placeholder "
+    },
+    "bodyLength": 12,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "target": "https://api.example.test/v1/messages?beta=1",
+    "headers": {
+      "authorization": "Bearer placeholder ",
+      "host": "api.example.test",
+      "content-length": "12"
+    }
+  }
+}

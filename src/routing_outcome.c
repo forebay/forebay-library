@@ -6,32 +6,6 @@
 #define RATE_LIMITED_STATUS 429
 #define MAX_JAVA_INT INT64_C(2147483647)
 
-static int equals_ignoring_case(const char *left, const char *right) {
-    while (*left != '\0' && *right != '\0') {
-        if (tolower((unsigned char)*left) != tolower((unsigned char)*right)) {
-            return 0;
-        }
-        left++;
-        right++;
-    }
-    return *left == *right;
-}
-
-/** The exact key first, then the first key matching ignoring case, as the JavaScript Headers API reads. */
-static const char *header(const cJSON *headers, const char *name) {
-    const cJSON *direct = cJSON_GetObjectItemCaseSensitive(headers, name);
-    if (cJSON_IsString(direct)) {
-        return direct->valuestring;
-    }
-    const cJSON *entry = NULL;
-    cJSON_ArrayForEach(entry, headers) {
-        if (cJSON_IsString(entry) && equals_ignoring_case(entry->string, name)) {
-            return entry->valuestring;
-        }
-    }
-    return NULL;
-}
-
 /**
  * Java's lenient integer read: trimmed, an optional sign, then a run of digits with trailing text
  * ignored. Anything unreadable, or beyond a 32-bit int, answers 0, which callers treat as absent.
@@ -71,7 +45,7 @@ static double reset_at(const cJSON *argument, const cJSON *headers, double now) 
     if (cJSON_IsNumber(milliseconds) && milliseconds->valuedouble > 0) {
         return now + milliseconds->valuedouble;
     }
-    int64_t seconds = lenient_integer(header(headers, "retry-after"));
+    int64_t seconds = lenient_integer(routing_header(headers, "retry-after"));
     if (seconds > 0) {
         return now + (double)seconds * 1000.0;
     }

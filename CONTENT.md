@@ -20,6 +20,8 @@ read nothing of the process: time and the filesystem are arguments. `profile` ha
 | `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
 | `outcome({ status, headers, now, retryAfterMilliseconds? })` | `{ rateLimited, resetAt? }`: rate limited on 429; the reset is `retryAfterMilliseconds` when given, else the `retry-after` header in seconds |
 | `step({ profile, map, models, providers, request, refreshed?, wording })`, then `step({ walk, providers, report })` | `{ step, walk?, log }`: the next thing a proxy plugin does for one request, and the log lines to write |
+| `passThrough({ upstream, url, headers, bodyLength, placeholderAuthorization })` | `{ target, headers }`: `url` appended to the upstream's origin and path (trailing slashes dropped); the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to `placeholderAuthorization`, then `host` (with the port only when the upstream names one) and `content-length` set; a relative or non-http(s) `upstream` is refused |
+| `replyHeaders({ headers, rewritten })` | `{ headers }`: the reply headers without the hop-by-hop set, and with `rewritten` also without `content-encoding` and `content-length` |
 | `environment({ map, port, providersEnabled, environment, userHome, application })` | `{ environment }`: the base URL, and with providers the model pairs named by the application's `modelVariables` and the placeholder token unless the application has a login of its own |
 
 A refusal is a successful answer `{ "refused", "fix" }`. Windows has no `regcomp`, so one matcher
@@ -45,6 +47,9 @@ expected. A step is `passThrough` (no provider runs, or the request decoded as a
 (`afterBytes`, `message`) or `thrown` (`message`); a stream failing before its first byte, or a thrown call,
 falls to the next entry. An entry whose provider is not in `providers` is skipped and logged, never called.
 `wording` gives the login command and settings file the 503 names. A walk handed back altered is refused.
+The hop-by-hop set is one policy for both directions: `connection`, `keep-alive`, `proxy-connection`,
+`transfer-encoding`, `upgrade`, `te`, `trailer`, every name starting `proxy-` and every name the `connection`
+header lists, all compared ignoring case.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
 `Router.java`; `routing_step_test` drives `step` call by call. A vector's `files` are laid out in a fresh
 directory that becomes its `userHome`, or with `filesUnder` the value of the environment variable it names.

@@ -1,0 +1,16 @@
+{
+  "function": "replyHeaders",
+  "argument": {
+    "headers": {
+      "Content-Length": "5",
+      "content-encoding": "gzip",
+      "etag": "e"
+    },
+    "rewritten": true
+  },
+  "result": {
+    "headers": {
+      "etag": "e"
+    }
+  }
+}

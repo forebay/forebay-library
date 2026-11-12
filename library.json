@@ -688,6 +688,122 @@
           }
         },
         {
+          "name": "passThrough",
+          "symbol": "forebay_library_routing_pass_through",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "upstream": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "bodyLength": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "placeholderAuthorization": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "upstream",
+              "url",
+              "headers",
+              "bodyLength",
+              "placeholderAuthorization"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "target",
+                  "headers"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "refused": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refused",
+                  "fix"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "replyHeaders",
+          "symbol": "forebay_library_routing_reply_headers",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "rewritten": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "headers",
+              "rewritten"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "headers"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
           "name": "environment",
           "symbol": "forebay_library_routing_environment",
           "kind": "json",

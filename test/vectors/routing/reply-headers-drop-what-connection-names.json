@@ -1,0 +1,16 @@
+{
+  "function": "replyHeaders",
+  "argument": {
+    "headers": {
+      "Connection": "X-Hop, keep-alive ",
+      "x-hop": "1",
+      "x-kept": "2"
+    },
+    "rewritten": false
+  },
+  "result": {
+    "headers": {
+      "x-kept": "2"
+    }
+  }
+}

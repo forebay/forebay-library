@@ -1,0 +1,18 @@
+{
+  "function": "replyHeaders",
+  "argument": {
+    "headers": {
+      "content-length": "5",
+      "content-encoding": "gzip",
+      "etag": "e"
+    },
+    "rewritten": false
+  },
+  "result": {
+    "headers": {
+      "content-length": "5",
+      "content-encoding": "gzip",
+      "etag": "e"
+    }
+  }
+}

@@ -25,6 +25,7 @@ add_library(forebay_library SHARED
     src/accounts_token.c
     src/release.c
     src/routing_environment.c
+    src/routing_headers.c
     src/routing_limits.c
     src/routing_model_map.c
     src/routing_outcome.c
