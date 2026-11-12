@@ -1,5 +1,7 @@
 #include "routing_step_answer.h"
 
+#include "routing_headers.h"
+
 #define MID_STREAM_ERROR_TYPE "api_error"
 
 cJSON *routing_kind_step(const char *kind) {
@@ -56,12 +58,43 @@ cJSON *routing_call_provider_step(const step_walk *walk) {
     return step;
 }
 
+cJSON *routing_provider_failure_step(double status, const cJSON *headers) {
+    cJSON *reply = routing_kind_step("providerFailure");
+    if (reply == NULL || cJSON_AddNumberToObject(reply, "status", status) == NULL ||
+        !service_add(reply, "headers", routing_end_to_end_headers(headers, 1))) {
+        cJSON_Delete(reply);
+        return NULL;
+    }
+    return step_carrying("reply", "reply", reply);
+}
+
+/** {headers, resetAt?}, the shape a rate-limited reply and the walk both carry. */
+static cJSON *limited_json(const step_walk *walk) {
+    cJSON *limited = service_wrap("headers", cJSON_Duplicate(walk->limited_headers, 1));
+    if (limited == NULL ||
+        (walk->limited_reset_at > 0 && cJSON_AddNumberToObject(limited, "resetAt", walk->limited_reset_at) == NULL)) {
+        cJSON_Delete(limited);
+        return NULL;
+    }
+    return limited;
+}
+
+cJSON *routing_rate_limited_step(const step_walk *walk) {
+    cJSON *reply = limited_json(walk);
+    if (reply == NULL || cJSON_AddStringToObject(reply, "kind", "rateLimited") == NULL) {
+        cJSON_Delete(reply);
+        return NULL;
+    }
+    return step_carrying("reply", "reply", reply);
+}
+
 static cJSON *walk_json(const step_walk *walk) {
     cJSON *json = cJSON_CreateObject();
     if (json == NULL || cJSON_AddStringToObject(json, "requested", walk->requested) == NULL ||
         !service_add(json, "chain", cJSON_Duplicate(walk->chain, 1)) ||
         cJSON_AddNumberToObject(json, "index", walk->index) == NULL ||
-        (walk->failure != NULL && cJSON_AddStringToObject(json, "failure", walk->failure) == NULL)) {
+        (walk->failure != NULL && cJSON_AddStringToObject(json, "failure", walk->failure) == NULL) ||
+        (walk->limited_headers != NULL && !service_add(json, "limited", limited_json(walk)))) {
         cJSON_Delete(json);
         return NULL;
     }

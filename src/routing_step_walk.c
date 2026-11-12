@@ -48,6 +48,13 @@ int routing_walk_remember_failure(step_walk *walk, char *message) {
     return message != NULL;
 }
 
+void routing_walk_remember_limit(step_walk *walk, const cJSON *headers, double reset_at) {
+    walk->limited_headers = headers;
+    if (reset_at > walk->limited_reset_at) {
+        walk->limited_reset_at = reset_at;
+    }
+}
+
 void routing_walk_discard(step_walk *walk) {
     free(walk->failure);
     cJSON_Delete(walk->log);
@@ -83,11 +90,24 @@ static int is_position_in(const cJSON *index, const cJSON *chain) {
            (double)(int)index->valuedouble == index->valuedouble;
 }
 
+static int is_limited(const cJSON *limited) {
+    const cJSON *reset_at = cJSON_GetObjectItemCaseSensitive(limited, "resetAt");
+    return cJSON_IsObject(limited) && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(limited, "headers")) &&
+           (reset_at == NULL || (cJSON_IsNumber(reset_at) && reset_at->valuedouble > 0));
+}
+
+static void read_limited(const cJSON *limited, step_walk *walk) {
+    const cJSON *reset_at = cJSON_GetObjectItemCaseSensitive(limited, "resetAt");
+    walk->limited_headers = cJSON_GetObjectItemCaseSensitive(limited, "headers");
+    walk->limited_reset_at = reset_at == NULL ? 0 : reset_at->valuedouble;
+}
+
 int routing_walk_read(const cJSON *json, step_walk *walk, routing_refusal *refusal) {
     const cJSON *requested = cJSON_GetObjectItemCaseSensitive(json, "requested");
     const cJSON *chain = cJSON_GetObjectItemCaseSensitive(json, "chain");
     const cJSON *index = cJSON_GetObjectItemCaseSensitive(json, "index");
     const cJSON *failure = cJSON_GetObjectItemCaseSensitive(json, "failure");
+    const cJSON *limited = cJSON_GetObjectItemCaseSensitive(json, "limited");
     if (!cJSON_IsObject(json)) {
         return refuse_walk(refusal, "it is not an object");
     }
@@ -102,6 +122,12 @@ int routing_walk_read(const cJSON *json, step_walk *walk, routing_refusal *refus
     }
     if (failure != NULL && !cJSON_IsString(failure)) {
         return refuse_walk(refusal, "its failure is not a string");
+    }
+    if (limited != NULL && !is_limited(limited)) {
+        return refuse_walk(refusal, "its limited member is not headers with an optional positive resetAt");
+    }
+    if (limited != NULL) {
+        read_limited(limited, walk);
     }
     walk->requested = requested->valuestring;
     walk->chain = chain;

@@ -41,11 +41,15 @@ but the placeholder value, or the state file records an account.
 reports what happened, and hands back the `walk` it was given, which is present exactly when a report is
 expected. A step is `passThrough` (no provider runs, or the request decoded as a pass-through),
 `refreshModels` (the chain is empty and the call was not `refreshed`), `callProvider` (`provider`, `model`),
-`endStream` (an IR error `event` to write after a stream failed past its first byte), `reply` (`proxyError`
-502 once every entry failed, or `apiError` 503 when nothing serves the model after a refresh, each with a
-`message` the wire format encodes) or `done`. A report is `response`, `streamed`, `streamFailed`
-(`afterBytes`, `message`) or `thrown` (`message`); a stream failing before its first byte, or a thrown call,
-falls to the next entry. An entry whose provider is not in `providers` is skipped and logged, never called.
+`endStream` (an IR error `event` to write after a stream failed past its first byte), `reply` or `done`.
+A `reply` is `proxyError` 502 once every entry failed, or `apiError` 503 when nothing serves the model after a
+refresh, each with a `message` the wire format encodes; `providerFailure` (`status`, and the `headers`
+`replyHeaders` answers for a rewritten body) when a provider fails without rate limiting, sent with the
+failure's own body; or `rateLimited` (`headers`, `resetAt?`) in place of the 502 once any entry was rate
+limited, carrying the last limited entry's headers and the latest reset any of them named. A report is
+`response`, `streamed`, `streamFailed` (`afterBytes`, `message`), `thrown` (`message`) or `failure`
+(`status`, `headers`, `retryAfterMilliseconds?`, `now`, read as `outcome` reads them); a stream failing
+before its first byte, a thrown call or a rate-limited failure falls to the next entry. An entry whose provider is not in `providers` is skipped and logged, never called.
 `wording` gives the login command and settings file the 503 names. A walk handed back altered is refused.
 The hop-by-hop set is one policy for both directions: `connection`, `keep-alive`, `proxy-connection`,
 `transfer-encoding`, `upgrade`, `te`, `trailer`, every name starting `proxy-` and every name the `connection`

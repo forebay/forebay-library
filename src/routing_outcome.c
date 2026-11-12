@@ -52,13 +52,15 @@ static double reset_at(const cJSON *argument, const cJSON *headers, double now) 
     return 0;
 }
 
-static cJSON *answer_for(const cJSON *argument, double status, const cJSON *headers, double now) {
+cJSON *routing_outcome_of(const cJSON *argument) {
     cJSON *result = cJSON_CreateObject();
+    double status = cJSON_GetObjectItemCaseSensitive(argument, "status")->valuedouble;
     if (result == NULL || cJSON_AddBoolToObject(result, "rateLimited", is_rate_limited(status)) == NULL) {
         cJSON_Delete(result);
         return NULL;
     }
-    double reset = reset_at(argument, headers, now);
+    double reset = reset_at(argument, cJSON_GetObjectItemCaseSensitive(argument, "headers"),
+                            cJSON_GetObjectItemCaseSensitive(argument, "now")->valuedouble);
     if (reset > 0 && cJSON_AddNumberToObject(result, "resetAt", reset) == NULL) {
         cJSON_Delete(result);
         return NULL;
@@ -78,7 +80,7 @@ SERVICE_EXPORT int32_t forebay_library_routing_outcome(const uint8_t *in, size_t
     if (service_require(&call, "status", service_is_number, "a number", &reply_status, out, out_len, &status) &&
         service_require(&call, "headers", service_is_object, "an object", &headers, out, out_len, &status) &&
         service_require(&call, "now", service_is_number, "a number", &now, out, out_len, &status)) {
-        status = service_answer(answer_for(call.argument, reply_status->valuedouble, headers, now->valuedouble), out, out_len);
+        status = service_answer(routing_outcome_of(call.argument), out, out_len);
     }
     spisor_discard_call(&call);
     return status;

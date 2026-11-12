@@ -78,6 +78,21 @@ int service_require(const spisor_call *call, const char *name, int (*is_type)(co
     return 0;
 }
 
+int service_require_member(const cJSON *object, const char *subject, const char *name, int (*is_type)(const cJSON *),
+                           const char *type_name, const cJSON **member, uint8_t **out, size_t *out_len,
+                           int32_t *status) {
+    *member = cJSON_GetObjectItemCaseSensitive(object, name);
+    if (*member != NULL && is_type(*member)) {
+        return 1;
+    }
+    char problem[128];
+    char fix[128];
+    snprintf(problem, sizeof(problem), "%s is missing or is not %s", name, type_name);
+    snprintf(fix, sizeof(fix), "send %s as %s", name, type_name);
+    *status = service_fail(subject, problem, fix, out, out_len);
+    return 0;
+}
+
 int service_add(cJSON *object, const char *name, cJSON *item) {
     if (item == NULL) {
         return 0;

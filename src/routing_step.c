@@ -4,12 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "routing_outcome.h"
 #include "routing_resolve.h"
 #include "routing_step_answer.h"
 
 #define BAD_GATEWAY 502
 #define SERVICE_UNAVAILABLE 503
-#define REPORT_KIND_FIX "report response, streamed, streamFailed or thrown"
+#define REPORT_KIND_FIX "report response, streamed, streamFailed, thrown or failure"
 
 typedef int32_t (*report_reader)(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
                                  size_t *out_len);
@@ -35,16 +36,21 @@ static int is_running(const cJSON *providers, const char *provider) {
 }
 
 static cJSON *exhausted(step_walk *walk) {
-    char *message = routing_formatted("no chain entry could serve the request: %s", walk->failure == NULL ? "" : walk->failure);
+    if (walk->limited_headers != NULL) {
+        return routing_answer_of(walk, routing_rate_limited_step(walk), 0);
+    }
+    char *message =
+        routing_formatted("no chain entry could serve the request: %s", walk->failure == NULL ? "" : walk->failure);
     cJSON *step = message == NULL ? NULL : routing_reply_step("proxyError", BAD_GATEWAY, message);
     free(message);
     return routing_answer_of(walk, step, 0);
 }
 
 static int skip_missing(step_walk *walk, int index) {
-    return routing_walk_remember_failure(walk, routing_formatted("no running plugin provides %s, which the model map names for %s",
-                                            routing_walk_entry_member(walk, index, "provider"), routing_walk_entry_member(walk, index, "model"))) &&
-           routing_walk_log(walk, "warn", "%s", walk->failure);
+    char *message = routing_formatted("no running plugin provides %s, which the model map names for %s",
+                                      routing_walk_entry_member(walk, index, "provider"),
+                                      routing_walk_entry_member(walk, index, "model"));
+    return routing_walk_remember_failure(walk, message) && routing_walk_log(walk, "warn", "%s", walk->failure);
 }
 
 /** Calls the first entry from `from` on whose provider runs; every entry before it is logged and skipped. */
@@ -64,27 +70,14 @@ static cJSON *next_entry(step_walk *walk, const cJSON *providers, int from) {
 
 /** @implNote A fallback serving is always logged: the user asked for one model and is answered by another. */
 static cJSON *served(step_walk *walk, cJSON *step) {
-    if (walk->index > 0 && !routing_walk_log(walk, "warn", "%s served %s in place of %s", routing_walk_entry_member(walk, walk->index, "model"),
-                                     walk->requested, routing_walk_entry_member(walk, 0, "model"))) {
+    if (walk->index > 0 &&
+        !routing_walk_log(walk, "warn", "%s served %s in place of %s",
+                          routing_walk_entry_member(walk, walk->index, "model"), walk->requested,
+                          routing_walk_entry_member(walk, 0, "model"))) {
         cJSON_Delete(step);
         return NULL;
     }
     return routing_answer_of(walk, step, 0);
-}
-
-static int require_member(const cJSON *object, const char *subject, const char *name, int (*is_type)(const cJSON *),
-                          const char *type_name, const cJSON **member, uint8_t **out, size_t *out_len,
-                          int32_t *status) {
-    *member = cJSON_GetObjectItemCaseSensitive(object, name);
-    if (*member != NULL && is_type(*member)) {
-        return 1;
-    }
-    char problem[128];
-    char fix[128];
-    snprintf(problem, sizeof(problem), "%s is missing or is not %s", name, type_name);
-    snprintf(fix, sizeof(fix), "send %s as %s", name, type_name);
-    *status = service_fail(subject, problem, fix, out, out_len);
-    return 0;
 }
 
 static int32_t read_served(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
@@ -98,14 +91,16 @@ static int32_t read_thrown(step_walk *walk, const cJSON *providers, const cJSON 
                            size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     const cJSON *message = NULL;
-    if (!require_member(report, "the report member", "message", service_is_string, "a string", &message, out, out_len,
-                        &status)) {
+    if (!service_require_member(report, "the report member", "message", service_is_string, "a string", &message, out,
+                                out_len, &status)) {
         return status;
     }
     cJSON *answer = NULL;
     if (routing_walk_remember_failure(walk, routing_formatted("%s", message->valuestring)) &&
-        routing_walk_log(walk, "warn", "%s failed %s, %s %s: %s", routing_walk_entry_member(walk, walk->index, "provider"),
-                 routing_walk_entry_member(walk, walk->index, "model"), what_follows(walk), walk->requested, message->valuestring)) {
+        routing_walk_log(walk, "warn", "%s failed %s, %s %s: %s",
+                         routing_walk_entry_member(walk, walk->index, "provider"),
+                         routing_walk_entry_member(walk, walk->index, "model"), what_follows(walk), walk->requested,
+                         message->valuestring)) {
         answer = next_entry(walk, providers, walk->index + 1);
     }
     return service_answer(answer, out, out_len);
@@ -114,7 +109,8 @@ static int32_t read_thrown(step_walk *walk, const cJSON *providers, const cJSON 
 static cJSON *stream_failed_before_bytes(step_walk *walk, const cJSON *providers, const char *message) {
     if (!routing_walk_remember_failure(walk, routing_formatted("%s", message)) ||
         !routing_walk_log(walk, "warn", "the stream of %s failed on its first event, %s %s: %s",
-                  routing_walk_entry_member(walk, walk->index, "model"), what_follows(walk), walk->requested, message)) {
+                          routing_walk_entry_member(walk, walk->index, "model"), what_follows(walk), walk->requested,
+                          message)) {
         return NULL;
     }
     return next_entry(walk, providers, walk->index + 1);
@@ -132,14 +128,54 @@ static int32_t read_stream_failed(step_walk *walk, const cJSON *providers, const
     int32_t status = SPISOR_STATUS_SUCCESS;
     const cJSON *after_bytes = NULL;
     const cJSON *message = NULL;
-    if (!require_member(report, "the report member", "afterBytes", service_is_boolean, "a boolean", &after_bytes, out,
-                        out_len, &status) ||
-        !require_member(report, "the report member", "message", service_is_string, "a string", &message, out, out_len,
-                        &status)) {
+    if (!service_require_member(report, "the report member", "afterBytes", service_is_boolean, "a boolean",
+                                &after_bytes, out, out_len, &status) ||
+        !service_require_member(report, "the report member", "message", service_is_string, "a string", &message, out,
+                                out_len, &status)) {
         return status;
     }
     cJSON *answer = cJSON_IsTrue(after_bytes) ? stream_failed_after_bytes(walk, message->valuestring)
                                               : stream_failed_before_bytes(walk, providers, message->valuestring);
+    return service_answer(answer, out, out_len);
+}
+
+static int read_failure_members(const cJSON *report, uint8_t **out, size_t *out_len, int32_t *status) {
+    const cJSON *member = NULL;
+    return service_require_member(report, "the report member", "status", service_is_number, "a number", &member, out,
+                                  out_len, status) &&
+           service_require_member(report, "the report member", "headers", service_is_object, "an object", &member,
+                                  out, out_len, status) &&
+           service_require_member(report, "the report member", "now", service_is_number, "a number", &member, out,
+                                  out_len, status);
+}
+
+static cJSON *rate_limited(step_walk *walk, const cJSON *providers, const cJSON *headers, const cJSON *outcome) {
+    const cJSON *reset_at = cJSON_GetObjectItemCaseSensitive(outcome, "resetAt");
+    routing_walk_remember_limit(walk, headers, reset_at == NULL ? 0 : reset_at->valuedouble);
+    if (!routing_walk_log(walk, "warn", "%s is rate limited, %s %s",
+                          routing_walk_entry_member(walk, walk->index, "model"), what_follows(walk), walk->requested)) {
+        return NULL;
+    }
+    return next_entry(walk, providers, walk->index + 1);
+}
+
+/** @implNote A failure that is not rate limiting ends the request with the provider's own answer, no fallback tried. */
+static int32_t read_failure(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
+                            size_t *out_len) {
+    int32_t status = SPISOR_STATUS_SUCCESS;
+    if (!read_failure_members(report, out, out_len, &status)) {
+        return status;
+    }
+    cJSON *outcome = routing_outcome_of(report);
+    if (outcome == NULL) {
+        return service_out_of_memory(out, out_len);
+    }
+    const cJSON *headers = cJSON_GetObjectItemCaseSensitive(report, "headers");
+    double reply_status = cJSON_GetObjectItemCaseSensitive(report, "status")->valuedouble;
+    cJSON *answer = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(outcome, "rateLimited"))
+                        ? rate_limited(walk, providers, headers, outcome)
+                        : routing_answer_of(walk, routing_provider_failure_step(reply_status, headers), 0);
+    cJSON_Delete(outcome);
     return service_answer(answer, out, out_len);
 }
 
@@ -148,6 +184,7 @@ static const report_reading report_readings[] = {
     {"streamed", read_served},
     {"streamFailed", read_stream_failed},
     {"thrown", read_thrown},
+    {"failure", read_failure},
 };
 
 static report_reader reader_for(const char *kind) {
@@ -177,8 +214,8 @@ static int32_t continue_walk(const spisor_call *call, const cJSON *providers, ui
     const cJSON *report = NULL;
     const cJSON *kind = NULL;
     if (!service_require(call, "report", service_is_object, "an object", &report, out, out_len, &status) ||
-        !require_member(report, "the report member", "kind", service_is_string, "a string", &kind, out, out_len,
-                        &status)) {
+        !service_require_member(report, "the report member", "kind", service_is_string, "a string", &kind, out,
+                                out_len, &status)) {
         return status;
     }
     report_reader read = reader_for(kind->valuestring);
@@ -187,9 +224,10 @@ static int32_t continue_walk(const spisor_call *call, const cJSON *providers, ui
         snprintf(cause, sizeof(cause), "the report kind %.64s is not one routing.step reads", kind->valuestring);
         return service_refuse(cause, REPORT_KIND_FIX, out, out_len);
     }
-    step_walk walk = {NULL, NULL, 0, NULL, cJSON_CreateArray()};
+    step_walk walk = {.log = cJSON_CreateArray()};
     routing_refusal refusal = {0, "", NULL};
-    if (walk.log == NULL || !routing_walk_read(cJSON_GetObjectItemCaseSensitive(call->argument, "walk"), &walk, &refusal)) {
+    const cJSON *handed_back = cJSON_GetObjectItemCaseSensitive(call->argument, "walk");
+    if (walk.log == NULL || !routing_walk_read(handed_back, &walk, &refusal)) {
         status = routing_answer_refusal(&refusal, out, out_len);
     } else {
         status = read(&walk, providers, report, out, out_len);
@@ -218,9 +256,9 @@ static cJSON *no_model_step(const step_walk *walk, const cJSON *providers, const
     const char *settings = cJSON_GetObjectItemCaseSensitive(wording, "settingsFile")->valuestring;
     char *hints = login_hints(providers, command);
     char *message = hints == NULL ? NULL
-                                  : routing_formatted("no running provider offers a model for %s; log a provider in with %s, "
-                                              "or set routing.modelMap in %s",
-                                              walk->requested, hints, settings);
+                                  : routing_formatted("no running provider offers a model for %s; log a provider in "
+                                                      "with %s, or set routing.modelMap in %s",
+                                                      walk->requested, hints, settings);
     cJSON *step = message == NULL ? NULL : routing_reply_step("apiError", SERVICE_UNAVAILABLE, message);
     free(hints);
     free(message);
@@ -252,7 +290,8 @@ static cJSON *walk_over(step_walk *walk, const cJSON *resolution, const cJSON *p
     if (!cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(call->argument, "refreshed"))) {
         return routing_answer_of(walk, routing_kind_step("refreshModels"), 0);
     }
-    return routing_answer_of(walk, no_model_step(walk, providers, cJSON_GetObjectItemCaseSensitive(call->argument, "wording")), 0);
+    const cJSON *wording = cJSON_GetObjectItemCaseSensitive(call->argument, "wording");
+    return routing_answer_of(walk, no_model_step(walk, providers, wording), 0);
 }
 
 static int32_t routed(const spisor_call *call, const cJSON *providers, step_walk *walk, uint8_t **out,
@@ -261,8 +300,8 @@ static int32_t routed(const spisor_call *call, const cJSON *providers, step_walk
     const cJSON *request = cJSON_GetObjectItemCaseSensitive(call->argument, "request");
     const cJSON *model = NULL;
     routing_profile profile;
-    if (!require_member(request, "the request member", "model", service_is_string, "a string", &model, out, out_len,
-                        &status) ||
+    if (!service_require_member(request, "the request member", "model", service_is_string, "a string", &model, out,
+                                out_len, &status) ||
         !routing_read_profile(cJSON_GetObjectItemCaseSensitive(call->argument, "profile"), ROUTING_RESOLUTION_NEEDS,
                               &profile, out, out_len, &status)) {
         return status;
@@ -294,10 +333,10 @@ static int read_first_call(const spisor_call *call, uint8_t **out, size_t *out_l
            service_require(call, "models", service_is_object, "an object", &member, out, out_len, status) &&
            service_require(call, "request", service_is_object, "an object", &member, out, out_len, status) &&
            service_require(call, "wording", service_is_object, "an object", &wording, out, out_len, status) &&
-           require_member(wording, "the wording member", "loginCommand", service_is_string, "a string", &member, out,
-                          out_len, status) &&
-           require_member(wording, "the wording member", "settingsFile", service_is_string, "a string", &member, out,
-                          out_len, status);
+           service_require_member(wording, "the wording member", "loginCommand", service_is_string, "a string",
+                                  &member, out, out_len, status) &&
+           service_require_member(wording, "the wording member", "settingsFile", service_is_string, "a string",
+                                  &member, out, out_len, status);
 }
 
 static int32_t start_walk(const spisor_call *call, const cJSON *providers, uint8_t **out, size_t *out_len) {
@@ -305,7 +344,7 @@ static int32_t start_walk(const spisor_call *call, const cJSON *providers, uint8
     if (!read_first_call(call, out, out_len, &status)) {
         return status;
     }
-    step_walk walk = {NULL, NULL, 0, NULL, cJSON_CreateArray()};
+    step_walk walk = {.log = cJSON_CreateArray()};
     if (walk.log == NULL) {
         status = service_out_of_memory(out, out_len);
     } else if (is_passed_through(cJSON_GetObjectItemCaseSensitive(call->argument, "request"), providers)) {

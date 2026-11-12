@@ -538,7 +538,8 @@
                           "response",
                           "streamed",
                           "streamFailed",
-                          "thrown"
+                          "thrown",
+                          "failure"
                         ]
                       },
                       "afterBytes": {
@@ -546,6 +547,25 @@
                       },
                       "message": {
                         "type": "string"
+                      },
+                      "status": {
+                        "type": "number",
+                        "description": "failure: the status the provider answered"
+                      },
+                      "headers": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "failure: the headers the provider answered"
+                      },
+                      "retryAfterMilliseconds": {
+                        "type": "number",
+                        "description": "failure: the reset delay the provider read itself, which wins over retry-after"
+                      },
+                      "now": {
+                        "type": "number",
+                        "description": "failure: the epoch milliseconds a reset is counted from"
                       }
                     },
                     "required": [
@@ -605,24 +625,69 @@
                   },
                   "reply": {
                     "type": "object",
-                    "properties": {
-                      "kind": {
-                        "enum": [
-                          "proxyError",
-                          "apiError"
-                        ]
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "proxyError",
+                              "apiError"
+                            ]
+                          },
+                          "status": {
+                            "type": "integer"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "status",
+                          "message"
+                        ],
+                        "additionalProperties": false
                       },
-                      "status": {
-                        "type": "integer"
+                      {
+                        "properties": {
+                          "kind": {
+                            "const": "providerFailure"
+                          },
+                          "status": {
+                            "type": "number"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "description": "the failure's end-to-end headers, as replyHeaders answers them for a rewritten body; the plugin sends the failure's own body"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "status",
+                          "headers"
+                        ],
+                        "additionalProperties": false
                       },
-                      "message": {
-                        "type": "string"
+                      {
+                        "properties": {
+                          "kind": {
+                            "const": "rateLimited"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "description": "the last rate-limited entry's headers, unfiltered"
+                          },
+                          "resetAt": {
+                            "type": "number",
+                            "description": "the latest reset any rate-limited entry named, in epoch milliseconds"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "headers"
+                        ],
+                        "additionalProperties": false
                       }
-                    },
-                    "required": [
-                      "kind",
-                      "status",
-                      "message"
                     ]
                   }
                 },
