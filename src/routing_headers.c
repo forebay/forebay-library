@@ -1,14 +1,15 @@
 #include "routing_headers.h"
 
 #include <ctype.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "routing_upstream.h"
+
 #define PROXY_PREFIX "proxy-"
-#define SCHEME_HTTP "http://"
-#define SCHEME_HTTPS "https://"
-#define REFUSAL_FIX "give the profile an upstream such as https://api.example.com"
+#define URL_FIX "pass the request's path and query as url, such as /v1/messages"
 
 static const char *const HOP_BY_HOP[] = {"connection", "keep-alive", "proxy-connection", "transfer-encoding",
                                          "upgrade",    "te",         "trailer"};
@@ -119,78 +120,6 @@ static cJSON *forwarded_headers(const cJSON *headers, const char *placeholder, c
     return forwarded;
 }
 
-typedef struct upstream_parts {
-    char *base;
-    char *host;
-} upstream_parts;
-
-typedef enum upstream_parse {
-    UPSTREAM_PARSED,
-    UPSTREAM_REFUSED,
-    UPSTREAM_OUT_OF_MEMORY
-} upstream_parse;
-
-static size_t scheme_length(const char *upstream) {
-    if (routing_starts_with_ignoring_case(upstream, SCHEME_HTTP)) {
-        return strlen(SCHEME_HTTP);
-    }
-    if (routing_starts_with_ignoring_case(upstream, SCHEME_HTTPS)) {
-        return strlen(SCHEME_HTTPS);
-    }
-    return 0;
-}
-
-static size_t trimmed_path_length(const char *path) {
-    size_t length = strcspn(path, "?#");
-    while (length > 0 && path[length - 1] == '/') {
-        length--;
-    }
-    return length;
-}
-
-static void lower_case(char *text, size_t length) {
-    for (size_t index = 0; index < length; index++) {
-        text[index] = (char)tolower((unsigned char)text[index]);
-    }
-}
-
-static void free_parts(upstream_parts *parts) {
-    free(parts->base);
-    free(parts->host);
-    parts->base = NULL;
-    parts->host = NULL;
-}
-
-/**
- * Splits an absolute http(s) URL into the base a request path is appended to (scheme, host and port,
- * and the path without its trailing slashes) and the Host header value. The scheme and host are
- * lower-cased, as the URL parser the archived host used does.
- */
-static upstream_parse split_upstream(const char *upstream, upstream_parts *parts) {
-    parts->base = NULL;
-    parts->host = NULL;
-    size_t scheme = scheme_length(upstream);
-    const char *authority = upstream + scheme;
-    size_t authority_length = strcspn(authority, "/?#");
-    if (scheme == 0 || authority_length == 0 || memchr(authority, '@', authority_length) != NULL) {
-        return UPSTREAM_REFUSED;
-    }
-    size_t path_length = trimmed_path_length(authority + authority_length);
-    parts->base = malloc(scheme + authority_length + path_length + 1);
-    parts->host = malloc(authority_length + 1);
-    if (parts->base == NULL || parts->host == NULL) {
-        free_parts(parts);
-        return UPSTREAM_OUT_OF_MEMORY;
-    }
-    memcpy(parts->base, upstream, scheme + authority_length);
-    lower_case(parts->base, scheme + authority_length);
-    memcpy(parts->base + scheme + authority_length, authority + authority_length, path_length);
-    parts->base[scheme + authority_length + path_length] = '\0';
-    memcpy(parts->host, parts->base + scheme, authority_length);
-    parts->host[authority_length] = '\0';
-    return UPSTREAM_PARSED;
-}
-
 static char *join_target(const char *base, const char *url) {
     size_t base_length = strlen(base);
     char *target = malloc(base_length + strlen(url) + 1);
@@ -201,7 +130,7 @@ static char *join_target(const char *base, const char *url) {
     return target;
 }
 
-static cJSON *pass_through_answer(const upstream_parts *parts, const cJSON *url, const cJSON *headers,
+static cJSON *pass_through_answer(const routing_upstream *parts, const cJSON *url, const cJSON *headers,
                                   const cJSON *placeholder, double body_length) {
     cJSON *result = cJSON_CreateObject();
     char *target = join_target(parts->base, url->valuestring);
@@ -224,32 +153,41 @@ typedef struct pass_through_arguments {
     const cJSON *placeholder;
 } pass_through_arguments;
 
+static int is_body_length(const cJSON *value) {
+    return cJSON_IsNumber(value) && value->valuedouble >= 0 && value->valuedouble == floor(value->valuedouble);
+}
+
 static int read_pass_through_arguments(const spisor_call *call, pass_through_arguments *read, uint8_t **out,
                                        size_t *out_len, int32_t *status) {
     return service_require(call, "upstream", service_is_string, "a string", &read->upstream, out, out_len, status) &&
            service_require(call, "url", service_is_string, "a string", &read->url, out, out_len, status) &&
            service_require(call, "headers", service_is_object, "an object", &read->headers, out, out_len, status) &&
-           service_require(call, "bodyLength", service_is_number, "a number", &read->body_length, out, out_len, status) &&
+           service_require(call, "bodyLength", is_body_length, "a non-negative integer", &read->body_length, out,
+                           out_len, status) &&
            service_require(call, "placeholderAuthorization", service_is_string, "a string", &read->placeholder, out,
                            out_len, status);
 }
 
+static int32_t refuse_url(const char *url, uint8_t **out, size_t *out_len) {
+    char cause[512];
+    snprintf(cause, sizeof(cause), "the url %.400s is not a path starting with /", url);
+    return service_refuse(cause, URL_FIX, out, out_len);
+}
+
+/** @implNote A url not starting with `/` would join onto the upstream's host, so it could name another host. */
 static int32_t answer_pass_through(const pass_through_arguments *arguments, uint8_t **out, size_t *out_len) {
-    upstream_parts parts;
-    upstream_parse parsed = split_upstream(arguments->upstream->valuestring, &parts);
-    if (parsed == UPSTREAM_OUT_OF_MEMORY) {
-        return service_out_of_memory(out, out_len);
+    if (arguments->url->valuestring[0] != '/') {
+        return refuse_url(arguments->url->valuestring, out, out_len);
     }
-    if (parsed == UPSTREAM_REFUSED) {
-        char cause[512];
-        snprintf(cause, sizeof(cause), "the upstream %.400s is not an absolute http or https URL",
-                 arguments->upstream->valuestring);
-        return service_refuse(cause, REFUSAL_FIX, out, out_len);
+    routing_upstream parts;
+    int32_t status = SPISOR_STATUS_SUCCESS;
+    if (!routing_read_upstream(arguments->upstream->valuestring, &parts, out, out_len, &status)) {
+        return status;
     }
-    int32_t status = service_answer(pass_through_answer(&parts, arguments->url, arguments->headers, arguments->placeholder,
-                                                        arguments->body_length->valuedouble),
-                                    out, out_len);
-    free_parts(&parts);
+    status = service_answer(pass_through_answer(&parts, arguments->url, arguments->headers, arguments->placeholder,
+                                                arguments->body_length->valuedouble),
+                            out, out_len);
+    routing_free_upstream(&parts);
     return status;
 }
 

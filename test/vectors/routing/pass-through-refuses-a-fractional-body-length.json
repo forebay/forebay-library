@@ -1,0 +1,15 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "https://api.example.com",
+    "url": "/x",
+    "headers": {},
+    "bodyLength": 1.5,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "status": 1,
+  "result": {
+    "message": "bodyLength is missing or is not a non-negative integer",
+    "fix": "send bodyLength as a non-negative integer"
+  }
+}

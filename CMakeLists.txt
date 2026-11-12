@@ -37,6 +37,7 @@ add_library(forebay_library SHARED
     src/routing_step_walk.c
     src/routing_support.c
     src/routing_tiers.c
+    src/routing_upstream.c
     src/service_support.c)
 target_link_libraries(forebay_library PRIVATE spisor_library)
 set_target_properties(forebay_library PROPERTIES C_VISIBILITY_PRESET hidden)

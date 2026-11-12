@@ -20,7 +20,7 @@ read nothing of the process: time and the filesystem are arguments. `profile` ha
 | `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
 | `outcome({ status, headers, now, retryAfterMilliseconds? })` | `{ rateLimited, resetAt? }`: rate limited on 429; the reset is `retryAfterMilliseconds` when given, else the `retry-after` header in seconds |
 | `step({ profile, map, models, providers, request, refreshed?, wording })`, then `step({ walk, providers, report })` | `{ step, walk?, log }`: the next thing a proxy plugin does for one request, and the log lines to write |
-| `passThrough({ upstream, url, headers, bodyLength, placeholderAuthorization })` | `{ target, headers }`: `url` appended to the upstream's origin and path (trailing slashes dropped); the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to `placeholderAuthorization`, then `host` (with the port only when the upstream names one) and `content-length` set; a relative or non-http(s) `upstream` is refused |
+| `passThrough({ upstream, url, headers, bodyLength, placeholderAuthorization })` | `{ target, headers }`: `url` appended to the upstream's origin and path (trailing slashes dropped); the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to `placeholderAuthorization`, then `host` (with the port only when the upstream names one) and `content-length` set; a relative, non-http(s) or userinfo-carrying `upstream`, and a `url` not starting with `/`, are refused |
 | `replyHeaders({ headers, rewritten })` | `{ headers }`: the reply headers without the hop-by-hop set, and with `rewritten` also without `content-encoding` and `content-length` |
 | `arrival({ path, headers, port })` | `{ kind }`: `refuse` (with a 403 `proxyError` reply) when an `origin` header is present or `host`, ignoring case, is neither `127.0.0.1:<port>` nor `localhost:<port>`; else `health` (200, `text/plain`, `ok`) for the path `/health` without its query; else `route` |
 | `limits({})` | `{ maxRequestBytes, tooLarge, modelsBudgetMilliseconds, rederiveIntervalMilliseconds, refreshEveryMilliseconds }`: the largest request body, the 413 `proxyError` reply for a larger one, the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
@@ -60,6 +60,7 @@ header lists, all compared ignoring case.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
 `Router.java`; `routing_step_test` drives `step` call by call. A vector's `files` are laid out in a fresh
 directory that becomes its `userHome`, or with `filesUnder` the value of the environment variable it names.
+A vector expects status 0 unless it names another `status`, as one for a malformed call names 1.
 
 ## The accounts service
 

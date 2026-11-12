@@ -797,7 +797,8 @@
                 "minLength": 1
               },
               "url": {
-                "type": "string"
+                "type": "string",
+                "description": "the request's path and query; one not starting with / is refused"
               },
               "headers": {
                 "type": "object",

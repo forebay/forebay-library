@@ -1,0 +1,14 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "ftp://h",
+    "url": "/x",
+    "headers": {},
+    "bodyLength": 0,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "refused": "the upstream ftp://h is not an absolute http or https URL",
+    "fix": "give the profile an upstream such as https://api.example.com"
+  }
+}

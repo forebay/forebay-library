@@ -74,8 +74,9 @@ static void run_vector(const char *path) {
         }
         char *input = cJSON_PrintUnformatted(argument);
         char *expected = cJSON_PrintUnformatted(result);
+        const cJSON *status = cJSON_GetObjectItemCaseSensitive(vector, "status");
         support_answer answer = support_call_raw(function, input);
-        expect_json(&answer, 0, expected, path);
+        expect_json(&answer, cJSON_IsNumber(status) ? (int32_t)status->valueint : 0, expected, path);
         free(input);
         free(expected);
     }
