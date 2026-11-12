@@ -1,0 +1,5 @@
+{
+  "function": "port",
+  "argument": {"value": 34567, "settingsFile": "settings.json", "failure": {"inUse": false, "detail": "EACCES"}},
+  "result": {"refused": "port 34567 on 127.0.0.1 cannot be listened on (EACCES), so the proxy cannot listen", "fix": "stop what listens on port 34567, or set proxy.port in settings.json to a free port"}
+}

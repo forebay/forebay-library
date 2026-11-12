@@ -1,6 +1,7 @@
 #ifndef ROUTING_SUPPORT_H
 #define ROUTING_SUPPORT_H
 
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -63,5 +64,23 @@ routing_pattern *routing_compile_profile_pattern(const char *member, const char 
  */
 int routing_compile_unserved_pattern(const routing_profile *profile, routing_pattern **pattern,
                                      routing_refusal *refusal);
+
+/** Whether left and right are equal comparing ASCII letters without regard to case. */
+int routing_equals_ignoring_case(const char *left, const char *right);
+
+/** Whether text begins with prefix, comparing ASCII letters without regard to case. */
+int routing_starts_with_ignoring_case(const char *text, const char *prefix);
+
+/** The exact key first, then the first key matching ignoring case, as the JavaScript Headers API reads; NULL when absent or not a string. */
+const char *routing_header(const cJSON *headers, const char *name);
+
+/** Whether value is an integer from 1 to 65535. */
+int routing_is_port(const cJSON *value);
+
+/** The printf formatting of format, as a new string, or NULL when memory runs out. */
+char *routing_formatted(const char *format, ...);
+
+/** routing_formatted over a va_list, which it leaves for the caller to end. */
+char *routing_formatted_list(const char *format, va_list values);
 
 #endif

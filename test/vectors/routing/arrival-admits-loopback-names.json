@@ -1,0 +1,5 @@
+{
+  "function": "arrival",
+  "argument": {"path": "/v1/messages", "headers": {"host": "localhost:34567"}, "port": 34567},
+  "result": {"kind": "route"}
+}

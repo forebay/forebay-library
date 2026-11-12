@@ -23,11 +23,13 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": null
     },
-    "stored": {
-      "modelMap": {
-        "haiku": {
-          "provider": "zed",
-          "model": "old"
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "haiku": {
+            "provider": "zed",
+            "model": "old"
+          }
         }
       }
     },

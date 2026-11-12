@@ -1,5 +1,7 @@
 #include "routing_support.h"
 
+#include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -248,4 +250,65 @@ int routing_compile_unserved_pattern(const routing_profile *profile, routing_pat
     }
     *pattern = routing_compile_profile_pattern("unservedModelPattern", profile->unserved_model_pattern, 0, refusal);
     return *pattern != NULL;
+}
+
+int routing_equals_ignoring_case(const char *left, const char *right) {
+    while (*left != '\0' && *right != '\0') {
+        if (tolower((unsigned char)*left) != tolower((unsigned char)*right)) {
+            return 0;
+        }
+        left++;
+        right++;
+    }
+    return *left == *right;
+}
+
+int routing_starts_with_ignoring_case(const char *text, const char *prefix) {
+    while (*prefix != '\0') {
+        if (*text == '\0' || tolower((unsigned char)*text) != tolower((unsigned char)*prefix)) {
+            return 0;
+        }
+        text++;
+        prefix++;
+    }
+    return 1;
+}
+
+const char *routing_header(const cJSON *headers, const char *name) {
+    const cJSON *direct = cJSON_GetObjectItemCaseSensitive(headers, name);
+    if (cJSON_IsString(direct)) {
+        return direct->valuestring;
+    }
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, headers) {
+        if (cJSON_IsString(entry) && routing_equals_ignoring_case(entry->string, name)) {
+            return entry->valuestring;
+        }
+    }
+    return NULL;
+}
+
+int routing_is_port(const cJSON *value) {
+    return cJSON_IsNumber(value) && value->valuedouble >= 1 && value->valuedouble <= 65535 &&
+           value->valuedouble == (double)(int)value->valuedouble;
+}
+
+char *routing_formatted_list(const char *format, va_list values) {
+    va_list copy;
+    va_copy(copy, values);
+    int length = vsnprintf(NULL, 0, format, values);
+    char *text = length < 0 ? NULL : malloc((size_t)length + 1);
+    if (text != NULL) {
+        vsnprintf(text, (size_t)length + 1, format, copy);
+    }
+    va_end(copy);
+    return text;
+}
+
+char *routing_formatted(const char *format, ...) {
+    va_list values;
+    va_start(values, format);
+    char *text = routing_formatted_list(format, values);
+    va_end(values);
+    return text;
 }

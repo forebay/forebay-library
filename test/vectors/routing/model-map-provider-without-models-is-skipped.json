@@ -23,11 +23,13 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": null
     },
-    "stored": {
-      "modelMap": {
-        "opus": {
-          "provider": "unknown-provider",
-          "model": "x"
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "opus": {
+            "provider": "unknown-provider",
+            "model": "x"
+          }
         }
       }
     },

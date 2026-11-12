@@ -1,0 +1,14 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "/v1",
+    "url": "/messages?beta=1",
+    "headers": {},
+    "bodyLength": 12,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "refused": "the upstream /v1 is not an absolute http or https URL",
+    "fix": "give the profile an upstream such as https://api.example.com"
+  }
+}

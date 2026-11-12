@@ -1,0 +1,5 @@
+{
+  "function": "arrival",
+  "argument": {"path": "/healthz", "headers": {"host": "127.0.0.1:34567"}, "port": 34567},
+  "result": {"kind": "route"}
+}

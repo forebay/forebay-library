@@ -1,0 +1,17 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "HTTPS://API.Example.COM/v1",
+    "url": "/messages",
+    "headers": {},
+    "bodyLength": 3,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "target": "https://api.example.com/v1/messages",
+    "headers": {
+      "host": "api.example.com",
+      "content-length": "3"
+    }
+  }
+}

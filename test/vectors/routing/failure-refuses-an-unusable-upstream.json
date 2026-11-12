@@ -1,0 +1,8 @@
+{
+  "function": "failure",
+  "argument": {"reason": "upstreamUnreachable", "upstream": "/v1", "detail": "connect ECONNREFUSED"},
+  "result": {
+    "refused": "the upstream /v1 is not an absolute http or https URL",
+    "fix": "give the profile an upstream such as https://api.example.com"
+  }
+}

@@ -16,9 +16,16 @@ read nothing of the process: time and the filesystem are arguments. `profile` ha
 | function | answer |
 | --- | --- |
 | `tiers({ profile, models })` | `{ tiers }`: `tierRegex` group 1 over the tier source's ranking, ordered by `tierOrder`, unknown last |
-| `modelMap({ profile, stored, models })` | `{ map, healed }`: stored entries kept, healed within their provider, or derived |
+| `modelMap({ profile, settings, models })` | `{ map, healed }`: the map stored at `settings.routing.modelMap`, its entries kept, healed within their provider, or derived |
 | `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
 | `outcome({ status, headers, now, retryAfterMilliseconds? })` | `{ rateLimited, resetAt? }`: rate limited on 429; the reset is `retryAfterMilliseconds` when given, else the `retry-after` header in seconds |
+| `step({ profile, map, models, providers, request, refreshed?, wording })`, then `step({ walk, providers, report })` | `{ step, walk?, log }`: the next thing a proxy plugin does for one request, and the log lines to write |
+| `passThrough({ upstream, url, headers, bodyLength, placeholderAuthorization })` | `{ target, headers }`: `url` appended to the upstream's origin and path (trailing slashes dropped); the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to `placeholderAuthorization`, then `host` (with the port only when the upstream names one) and `content-length` set; a relative, non-http(s) or userinfo-carrying `upstream`, and a `url` not starting with `/`, are refused |
+| `replyHeaders({ headers, rewritten })` | `{ headers }`: the reply headers without the hop-by-hop set, and with `rewritten` also without `content-encoding` and `content-length` |
+| `arrival({ path, headers, port })` | `{ kind }`: `refuse` (with a 403 `proxyError` reply) when an `origin` header is present, whatever its value, or `host`, ignoring case, is neither `127.0.0.1:<port>` nor `localhost:<port>`; else `health` (200, `text/plain`, `ok`) for the path `/health` without its query; else `route` |
+| `limits({})` | `{ maxRequestBytes, tooLarge, modelsBudgetMilliseconds, rederiveIntervalMilliseconds, refreshEveryMilliseconds }`: the largest request body, the 413 `proxyError` reply for a larger one, the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
+| `port({ value, settingsFile, failure? })` | `{ port, address }` for an integer 1 to 65535, with the loopback `address`; else a refusal that the setting is no port, or, with `failure` `{ inUse, detail }`, that the port cannot be listened on |
+| `failure({ reason, upstream?, detail })` | `{ reply, log? }`: for `upstreamUnreachable` a 502 `proxyError` naming the `upstream`'s origin (scheme, host and port) and `detail`, an unusable `upstream` refused as `passThrough` refuses it; for `requestFailed` a 500 `proxyError` whose message is `detail`, with a `warn` line `a request failed: <detail>`; another `reason` is refused |
 | `environment({ map, port, providersEnabled, environment, userHome, application })` | `{ environment }`: the base URL, and with providers the model pairs named by the application's `modelVariables` and the placeholder token unless the application has a login of its own |
 
 A refusal is a successful answer `{ "refused", "fix" }`. Windows has no `regcomp`, so one matcher
@@ -34,9 +41,28 @@ one) and `modelVariables` (`model` for the default, and `tierModel` and `tierMod
 stands for the upper-cased tier, and a template without one is refused) arrive in the call.
 It has a login of its own when one of those variables is non-blank, the placeholder variable holds anything
 but the placeholder value, or the state file records an account.
+`step` walks a request's chain without ever calling into the plugin: the plugin performs each step,
+reports what happened, and hands back the `walk` it was given, which is present exactly when a report is
+expected. A step is `passThrough` (no provider runs, or the request decoded as a pass-through),
+`refreshModels` (the chain is empty and the call was not `refreshed`), `callProvider` (`provider`, `model`),
+`endStream` (an IR error `event` to write after a stream failed past its first byte), `reply` or `done`.
+A `reply` is `proxyError` 502 once every entry failed, or `apiError` 503 when nothing serves the model after a
+refresh, each with a `message` the wire format encodes; `providerFailure` (`status`, and the `headers`
+`replyHeaders` answers for a rewritten body) when a provider fails without rate limiting, sent with the
+failure's own body; or `rateLimited` (`headers`, `resetAt?`) in place of the 502 once any entry was rate
+limited, carrying the last limited entry's headers and the latest reset any of them named. A report is
+`response`, `streamed`, `streamFailed` (`afterBytes`, `message`), `thrown` (`message`) or `failure`
+(`status`, `headers`, `retryAfterMilliseconds?`, `now`, read as `outcome` reads them); a stream failing
+before its first byte, a thrown call or a rate-limited failure falls to the next entry. An entry whose
+provider is not in `providers` is skipped and logged, never called.
+`wording` gives the login command and settings file the 503 names. A walk handed back malformed is refused.
+The hop-by-hop set is one policy for both directions: `connection`, `keep-alive`, `proxy-connection`,
+`transfer-encoding`, `upgrade`, `te`, `trailer`, every name starting `proxy-` and every name the `connection`
+header lists, all compared ignoring case.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
-`Router.java`. A vector's `files` are laid out in a fresh directory that becomes its `userHome`, or with
-`filesUnder` the value of the environment variable it names.
+`Router.java`; `routing_step_test` drives `step` call by call. A vector's `files` are laid out in a fresh
+directory that becomes its `userHome`, or with `filesUnder` the value of the environment variable it names.
+A vector expects status 0 unless it names another `status`, as one for a malformed call names 1.
 
 ## The accounts service
 

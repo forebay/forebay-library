@@ -166,7 +166,7 @@
                   "tierRegex"
                 ]
               },
-              "stored": {
+              "settings": {
                 "type": "object"
               },
               "models": {
@@ -178,7 +178,7 @@
             },
             "required": [
               "profile",
-              "stored",
+              "settings",
               "models"
             ],
             "additionalProperties": false
@@ -435,6 +435,303 @@
           }
         },
         {
+          "name": "step",
+          "symbol": "forebay_library_routing_step",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "description": "a first call carries the request; every later call hands back the walk the last step answered, with a report of what that step did",
+            "oneOf": [
+              {
+                "properties": {
+                  "profile": {
+                    "type": "object",
+                    "properties": {
+                      "nativeModelPattern": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "unservedModelPattern": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  "map": {
+                    "type": "object"
+                  },
+                  "models": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  },
+                  "providers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "the ids of the providers running now"
+                  },
+                  "request": {
+                    "type": "object",
+                    "properties": {
+                      "model": {
+                        "type": "string"
+                      },
+                      "passThrough": {
+                        "const": true
+                      }
+                    }
+                  },
+                  "refreshed": {
+                    "type": "boolean",
+                    "description": "true on the call made after a refreshModels step"
+                  },
+                  "wording": {
+                    "type": "object",
+                    "properties": {
+                      "loginCommand": {
+                        "type": "string"
+                      },
+                      "settingsFile": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "loginCommand",
+                      "settingsFile"
+                    ]
+                  }
+                },
+                "required": [
+                  "profile",
+                  "map",
+                  "models",
+                  "providers",
+                  "request",
+                  "wording"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "walk": {
+                    "type": "object",
+                    "description": "opaque: handed back exactly as the last step answered it"
+                  },
+                  "providers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "report": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "response",
+                          "streamed",
+                          "streamFailed",
+                          "thrown",
+                          "failure"
+                        ]
+                      },
+                      "afterBytes": {
+                        "type": "boolean"
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "number",
+                        "description": "failure: the status the provider answered"
+                      },
+                      "headers": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "failure: the headers the provider answered"
+                      },
+                      "retryAfterMilliseconds": {
+                        "type": "number",
+                        "description": "failure: the reset delay the provider read itself, which wins over retry-after"
+                      },
+                      "now": {
+                        "type": "number",
+                        "description": "failure: the epoch milliseconds a reset is counted from"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  }
+                },
+                "required": [
+                  "walk",
+                  "providers",
+                  "report"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "passThrough",
+                      "refreshModels",
+                      "callProvider",
+                      "endStream",
+                      "reply",
+                      "done"
+                    ]
+                  },
+                  "provider": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "event": {
+                    "type": "object",
+                    "properties": {
+                      "event": {
+                        "const": "error"
+                      },
+                      "errorType": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "event",
+                      "errorType",
+                      "message"
+                    ]
+                  },
+                  "reply": {
+                    "type": "object",
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "kind": {
+                            "enum": [
+                              "proxyError",
+                              "apiError"
+                            ]
+                          },
+                          "status": {
+                            "type": "integer"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "status",
+                          "message"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "properties": {
+                          "kind": {
+                            "const": "providerFailure"
+                          },
+                          "status": {
+                            "type": "integer"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "description": "the failure's end-to-end headers, as replyHeaders answers them for a rewritten body; the plugin sends the failure's own body"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "status",
+                          "headers"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "properties": {
+                          "kind": {
+                            "const": "rateLimited"
+                          },
+                          "headers": {
+                            "type": "object",
+                            "description": "the last rate-limited entry's headers, unfiltered"
+                          },
+                          "resetAt": {
+                            "type": "number",
+                            "description": "the latest reset any rate-limited entry named, in epoch milliseconds"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "headers"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "walk": {
+                "type": "object",
+                "description": "present exactly when the step expects a report"
+              },
+              "log": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "level": {
+                      "enum": [
+                        "info",
+                        "warn"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "level",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
           "name": "limits",
           "symbol": "forebay_library_routing_limits",
           "kind": "json",
@@ -447,12 +744,452 @@
             "properties": {
               "maxRequestBytes": {
                 "type": "integer"
+              },
+              "tooLarge": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "proxyError"
+                  },
+                  "status": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "status",
+                  "message"
+                ],
+                "additionalProperties": false
+              },
+              "modelsBudgetMilliseconds": {
+                "type": "integer"
+              },
+              "rederiveIntervalMilliseconds": {
+                "type": "integer"
+              },
+              "refreshEveryMilliseconds": {
+                "type": "integer"
               }
             },
             "required": [
-              "maxRequestBytes"
+              "maxRequestBytes",
+              "tooLarge",
+              "modelsBudgetMilliseconds",
+              "rederiveIntervalMilliseconds",
+              "refreshEveryMilliseconds"
             ],
             "additionalProperties": false
+          }
+        },
+        {
+          "name": "passThrough",
+          "symbol": "forebay_library_routing_pass_through",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "upstream": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "description": "the request's path and query; one not starting with / is refused"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "bodyLength": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "placeholderAuthorization": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "upstream",
+              "url",
+              "headers",
+              "bodyLength",
+              "placeholderAuthorization"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "target",
+                  "headers"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "refused": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refused",
+                  "fix"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "replyHeaders",
+          "symbol": "forebay_library_routing_reply_headers",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "rewritten": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "headers",
+              "rewritten"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "headers"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "arrival",
+          "symbol": "forebay_library_routing_arrival",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              }
+            },
+            "required": [
+              "path",
+              "headers",
+              "port"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "refuse"
+                  },
+                  "reply": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "proxyError"
+                      },
+                      "status": {
+                        "type": "integer"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "status",
+                      "message"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "reply"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "health"
+                  },
+                  "status": {
+                    "type": "integer"
+                  },
+                  "contentType": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "status",
+                  "contentType",
+                  "body"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "route"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "port",
+          "symbol": "forebay_library_routing_port",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "value": {},
+              "settingsFile": {
+                "type": "string"
+              },
+              "failure": {
+                "type": "object",
+                "properties": {
+                  "inUse": {
+                    "type": "boolean"
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "inUse",
+                  "detail"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "value",
+              "settingsFile"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "address": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "port",
+                  "address"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "refused": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refused",
+                  "fix"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "failure",
+          "symbol": "forebay_library_routing_failure",
+          "kind": "json",
+          "argument": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "const": "upstreamUnreachable"
+                  },
+                  "upstream": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "upstream",
+                  "detail"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "const": "requestFailed"
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "detail"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "reply": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "proxyError"
+                      },
+                      "status": {
+                        "type": "integer"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "status",
+                      "message"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "log": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "level": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "level",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "reply"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "refused": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refused",
+                  "fix"
+                ],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         {

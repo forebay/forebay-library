@@ -228,11 +228,6 @@ static cJSON *build_environment(const request *asked) {
     return built;
 }
 
-static int is_port(const cJSON *value) {
-    return cJSON_IsNumber(value) && value->valuedouble >= 1 && value->valuedouble <= 65535 &&
-           value->valuedouble == (double)(int)value->valuedouble;
-}
-
 static int is_text_list(const cJSON *value) {
     if (!cJSON_IsArray(value)) {
         return 0;
@@ -279,7 +274,7 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
     const cJSON *home = NULL;
     memset(asked, 0, sizeof(*asked));
     if (!service_require(call, "map", service_is_object, "an object", &asked->map, out, out_len, status) ||
-        !service_require(call, "port", is_port, "a port number from 1 to 65535", &port, out, out_len, status) ||
+        !service_require(call, "port", routing_is_port, "a port number from 1 to 65535", &port, out, out_len, status) ||
         !service_require(call, "providersEnabled", service_is_boolean, "a boolean", &enabled, out, out_len,
                          status) ||
         !service_require(call, "environment", service_is_object, "an object", &asked->environment, out, out_len,

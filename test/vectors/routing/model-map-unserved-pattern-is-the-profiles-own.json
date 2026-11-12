@@ -24,7 +24,7 @@
       "nativeModelPattern": null,
       "unservedModelPattern": "^zz-"
     },
-    "stored": {},
+    "settings": {"routing": {}},
     "models": {
       "antigravity": {
         "ranking": [

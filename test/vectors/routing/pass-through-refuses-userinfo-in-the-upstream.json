@@ -1,0 +1,14 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "https://user@h",
+    "url": "/x",
+    "headers": {},
+    "bodyLength": 0,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "refused": "the upstream https://user@h is not an absolute http or https URL",
+    "fix": "give the profile an upstream such as https://api.example.com"
+  }
+}

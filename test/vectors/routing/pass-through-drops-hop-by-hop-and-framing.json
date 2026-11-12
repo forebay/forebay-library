@@ -1,0 +1,27 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "https://api.example.test/v1/",
+    "url": "/messages?beta=1",
+    "headers": {
+      "Connection": "x-trace",
+      "x-trace": "1",
+      "Keep-Alive": "5",
+      "Proxy-Authorization": "p",
+      "Transfer-Encoding": "chunked",
+      "Host": "localhost:1",
+      "Content-Length": "99",
+      "content-type": "application/json"
+    },
+    "bodyLength": 12,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "target": "https://api.example.test/v1/messages?beta=1",
+    "headers": {
+      "content-type": "application/json",
+      "host": "api.example.test",
+      "content-length": "12"
+    }
+  }
+}

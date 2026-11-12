@@ -1,0 +1,14 @@
+{
+  "function": "passThrough",
+  "argument": {
+    "upstream": "https://api.example.com",
+    "url": "http://evil.com/x",
+    "headers": {"authorization": "Bearer real"},
+    "bodyLength": 0,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "refused": "the url http://evil.com/x is not a path starting with /",
+    "fix": "pass the request's path and query as url, such as /v1/messages"
+  }
+}

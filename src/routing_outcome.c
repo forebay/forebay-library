@@ -6,32 +6,6 @@
 #define RATE_LIMITED_STATUS 429
 #define MAX_JAVA_INT INT64_C(2147483647)
 
-static int equals_ignoring_case(const char *left, const char *right) {
-    while (*left != '\0' && *right != '\0') {
-        if (tolower((unsigned char)*left) != tolower((unsigned char)*right)) {
-            return 0;
-        }
-        left++;
-        right++;
-    }
-    return *left == *right;
-}
-
-/** The exact key first, then the first key matching ignoring case, as the JavaScript Headers API reads. */
-static const char *header(const cJSON *headers, const char *name) {
-    const cJSON *direct = cJSON_GetObjectItemCaseSensitive(headers, name);
-    if (cJSON_IsString(direct)) {
-        return direct->valuestring;
-    }
-    const cJSON *entry = NULL;
-    cJSON_ArrayForEach(entry, headers) {
-        if (cJSON_IsString(entry) && equals_ignoring_case(entry->string, name)) {
-            return entry->valuestring;
-        }
-    }
-    return NULL;
-}
-
 /**
  * Java's lenient integer read: trimmed, an optional sign, then a run of digits with trailing text
  * ignored. Anything unreadable, or beyond a 32-bit int, answers 0, which callers treat as absent.
@@ -71,20 +45,22 @@ static double reset_at(const cJSON *argument, const cJSON *headers, double now) 
     if (cJSON_IsNumber(milliseconds) && milliseconds->valuedouble > 0) {
         return now + milliseconds->valuedouble;
     }
-    int64_t seconds = lenient_integer(header(headers, "retry-after"));
+    int64_t seconds = lenient_integer(routing_header(headers, "retry-after"));
     if (seconds > 0) {
         return now + (double)seconds * 1000.0;
     }
     return 0;
 }
 
-static cJSON *answer_for(const cJSON *argument, double status, const cJSON *headers, double now) {
+cJSON *routing_outcome_of(const cJSON *argument) {
     cJSON *result = cJSON_CreateObject();
+    double status = cJSON_GetObjectItemCaseSensitive(argument, "status")->valuedouble;
     if (result == NULL || cJSON_AddBoolToObject(result, "rateLimited", is_rate_limited(status)) == NULL) {
         cJSON_Delete(result);
         return NULL;
     }
-    double reset = reset_at(argument, headers, now);
+    double reset = reset_at(argument, cJSON_GetObjectItemCaseSensitive(argument, "headers"),
+                            cJSON_GetObjectItemCaseSensitive(argument, "now")->valuedouble);
     if (reset > 0 && cJSON_AddNumberToObject(result, "resetAt", reset) == NULL) {
         cJSON_Delete(result);
         return NULL;
@@ -104,7 +80,7 @@ SERVICE_EXPORT int32_t forebay_library_routing_outcome(const uint8_t *in, size_t
     if (service_require(&call, "status", service_is_number, "a number", &reply_status, out, out_len, &status) &&
         service_require(&call, "headers", service_is_object, "an object", &headers, out, out_len, &status) &&
         service_require(&call, "now", service_is_number, "a number", &now, out, out_len, &status)) {
-        status = service_answer(answer_for(call.argument, reply_status->valuedouble, headers, now->valuedouble), out, out_len);
+        status = service_answer(routing_outcome_of(call.argument), out, out_len);
     }
     spisor_discard_call(&call);
     return status;

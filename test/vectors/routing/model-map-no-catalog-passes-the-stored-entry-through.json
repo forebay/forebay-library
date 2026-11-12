@@ -22,11 +22,13 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": "^claude-"
     },
-    "stored": {
-      "modelMap": {
-        "opus": {
-          "provider": "antigravity",
-          "model": "claude-opus-4-6-thinking"
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "opus": {
+            "provider": "antigravity",
+            "model": "claude-opus-4-6-thinking"
+          }
         }
       }
     },

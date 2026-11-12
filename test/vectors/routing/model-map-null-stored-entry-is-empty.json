@@ -23,9 +23,11 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": null
     },
-    "stored": {
-      "modelMap": {
-        "opus": null
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "opus": null
+        }
       }
     },
     "models": {}

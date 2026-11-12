@@ -33,6 +33,11 @@ int32_t service_open(const uint8_t *in, size_t in_len, spisor_call *call, uint8_
 int service_require(const spisor_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
                     const cJSON **member, uint8_t **out, size_t *out_len, int32_t *status);
 
+/** service_require for a member of a nested object, failed as "<subject> <name> is missing or is not <type>". */
+int service_require_member(const cJSON *object, const char *subject, const char *name, int (*is_type)(const cJSON *),
+                           const char *type_name, const cJSON **member, uint8_t **out, size_t *out_len,
+                           int32_t *status);
+
 /** {name: item} with item consumed, or NULL when memory runs out. */
 cJSON *service_wrap(const char *name, cJSON *item);
 

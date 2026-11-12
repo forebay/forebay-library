@@ -1,0 +1,5 @@
+{
+  "function": "port",
+  "argument": {"value": 0, "settingsFile": "settings.json"},
+  "result": {"refused": "proxy.port is 0, which is no port", "fix": "set proxy.port in settings.json to a port from 1 to 65535"}
+}

@@ -24,14 +24,21 @@ add_library(forebay_library SHARED
     src/accounts_support.c
     src/accounts_token.c
     src/release.c
+    src/routing_arrival.c
     src/routing_environment.c
+    src/routing_failure.c
+    src/routing_headers.c
     src/routing_limits.c
     src/routing_model_map.c
     src/routing_outcome.c
     src/routing_pattern.c
     src/routing_resolve.c
+    src/routing_step.c
+    src/routing_step_answer.c
+    src/routing_step_walk.c
     src/routing_support.c
     src/routing_tiers.c
+    src/routing_upstream.c
     src/service_support.c)
 target_link_libraries(forebay_library PRIVATE spisor_library)
 set_target_properties(forebay_library PROPERTIES C_VISIBILITY_PRESET hidden)

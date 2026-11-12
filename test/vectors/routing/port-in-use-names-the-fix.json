@@ -1,0 +1,5 @@
+{
+  "function": "port",
+  "argument": {"value": 34567, "settingsFile": "settings.json", "failure": {"inUse": true, "detail": "EADDRINUSE"}},
+  "result": {"refused": "port 34567 on 127.0.0.1 is already in use, so the proxy cannot listen", "fix": "stop what listens on port 34567, or set proxy.port in settings.json to a free port"}
+}

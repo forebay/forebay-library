@@ -6,6 +6,11 @@ int32_t forebay_library_routing_resolve(const uint8_t *in, size_t in_len, uint8_
 int32_t forebay_library_routing_outcome(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 int32_t forebay_library_routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 int32_t forebay_library_routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_pass_through(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_reply_headers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_arrival(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_port(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_failure(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
 typedef struct named_function {
     const char *name;
@@ -19,6 +24,11 @@ static const named_function functions[] = {
     {"outcome", forebay_library_routing_outcome},
     {"environment", forebay_library_routing_environment},
     {"limits", forebay_library_routing_limits},
+    {"passThrough", forebay_library_routing_pass_through},
+    {"replyHeaders", forebay_library_routing_reply_headers},
+    {"arrival", forebay_library_routing_arrival},
+    {"port", forebay_library_routing_port},
+    {"failure", forebay_library_routing_failure},
 };
 
 static library_function find_function(const char *name) {
@@ -66,8 +76,9 @@ static void run_vector(const char *path) {
         }
         char *input = cJSON_PrintUnformatted(argument);
         char *expected = cJSON_PrintUnformatted(result);
+        const cJSON *status = cJSON_GetObjectItemCaseSensitive(vector, "status");
         support_answer answer = support_call_raw(function, input);
-        expect_json(&answer, 0, expected, path);
+        expect_json(&answer, cJSON_IsNumber(status) ? (int32_t)status->valueint : 0, expected, path);
         free(input);
         free(expected);
     }

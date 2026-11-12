@@ -2,6 +2,10 @@
   "function": "limits",
   "argument": {},
   "result": {
-    "maxRequestBytes": 67108864
+    "maxRequestBytes": 67108864,
+    "tooLarge": {"kind": "proxyError", "status": 413, "message": "the request body is larger than the 67108864 bytes the proxy accepts"},
+    "modelsBudgetMilliseconds": 2000,
+    "rederiveIntervalMilliseconds": 3000,
+    "refreshEveryMilliseconds": 3600000
   }
 }

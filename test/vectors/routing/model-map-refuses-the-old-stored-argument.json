@@ -1,0 +1,20 @@
+{
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "upstream": "http://127.0.0.1:1",
+      "tierSourceProvider": "antigravity",
+      "tierOrder": ["opus", "sonnet"],
+      "tierFallback": ["opus", "sonnet"],
+      "tierRegex": "^claude-([a-z]+)-\\d",
+      "nativeModelPattern": null
+    },
+    "stored": {"default": {"provider": "a", "model": "m1"}},
+    "models": {}
+  },
+  "status": 1,
+  "result": {
+    "message": "settings is missing or is not an object",
+    "fix": "send settings as an object"
+  }
+}

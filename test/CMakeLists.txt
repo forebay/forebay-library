@@ -26,6 +26,12 @@ target_compile_definitions(routing_test PRIVATE
     ROUTING_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/routing_vectors.txt")
 add_test(NAME routing_test COMMAND routing_test)
 
+add_executable(routing_step_test routing_step_test.c)
+target_link_libraries(routing_step_test PRIVATE forebay_library spisor_library)
+spisor_strict_warnings(routing_step_test)
+target_compile_definitions(routing_step_test PRIVATE LIBRARY_SCRATCH_PATH="${CMAKE_CURRENT_BINARY_DIR}")
+add_test(NAME routing_step_test COMMAND routing_step_test)
+
 add_test(NAME sources_are_ascii
     COMMAND ${CMAKE_COMMAND} -DDIRECTORY=${PROJECT_SOURCE_DIR}/src -P ${spisor_library_SOURCE_DIR}/test/ascii_check.cmake)
 

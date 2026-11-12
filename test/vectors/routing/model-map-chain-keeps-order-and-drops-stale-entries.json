@@ -23,22 +23,24 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": null
     },
-    "stored": {
-      "modelMap": {
-        "opus": [
-          {
-            "provider": "a",
-            "model": "m1"
-          },
-          {
-            "provider": "b",
-            "model": "gone"
-          },
-          {
-            "provider": "c",
-            "model": "m3"
-          }
-        ]
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "opus": [
+            {
+              "provider": "a",
+              "model": "m1"
+            },
+            {
+              "provider": "b",
+              "model": "gone"
+            },
+            {
+              "provider": "c",
+              "model": "m3"
+            }
+          ]
+        }
       }
     },
     "models": {

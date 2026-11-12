@@ -1,0 +1,16 @@
+{
+  "function": "replyHeaders",
+  "argument": {
+    "headers": {
+      "Proxy-Authenticate": "x",
+      "proxy-foo": "y",
+      "x-proxy": "z"
+    },
+    "rewritten": false
+  },
+  "result": {
+    "headers": {
+      "x-proxy": "z"
+    }
+  }
+}
