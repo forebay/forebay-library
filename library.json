@@ -654,7 +654,7 @@
                             "const": "providerFailure"
                           },
                           "status": {
-                            "type": "number"
+                            "type": "integer"
                           },
                           "headers": {
                             "type": "object",

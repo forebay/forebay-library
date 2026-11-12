@@ -248,7 +248,7 @@ static char *login_hints(const cJSON *providers, const char *command) {
         }
         hints = longer;
     }
-    return hints;
+    return hints == NULL ? routing_formatted("%s", "") : hints;
 }
 
 static cJSON *no_model_step(const step_walk *walk, const cJSON *providers, const cJSON *wording) {

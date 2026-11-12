@@ -334,6 +334,24 @@ static void an_altered_walk_is_refused(void) {
     expect_walk_refused("{\"requested\":\"m\",\"chain\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\"}],"
                         "\"index\":0,\"limited\":{\"headers\":{},\"resetAt\":\"later\"}}",
                         "an_altered_walk_is_refused: a limited reset that is not a number");
+    expect_walk_refused("{\"requested\":\"m\",\"chain\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\"}],"
+                        "\"index\":0,\"limited\":{\"headers\":{},\"resetAt\":0}}",
+                        "an_altered_walk_is_refused: a limited reset of 0");
+    expect_walk_refused("{\"requested\":\"m\",\"chain\":[\"alpha\"],\"index\":0}",
+                        "an_altered_walk_is_refused: a chain entry that is not an object");
+    expect_walk_refused("{\"requested\":\"m\",\"chain\":[{\"provider\":1,\"model\":\"alpha-large\"}],\"index\":0}",
+                        "an_altered_walk_is_refused: a chain entry lacking a string provider");
+    expect_walk_refused("{\"requested\":\"m\",\"chain\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\"}],"
+                        "\"index\":-1}",
+                        "an_altered_walk_is_refused: a negative index");
+    expect_walk_refused("{\"requested\":\"m\",\"chain\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\"},"
+                        "{\"provider\":\"beta\",\"model\":\"beta-large\"}],\"index\":0.5}",
+                        "an_altered_walk_is_refused: a fractional index");
+    expect_walk_refused("{\"requested\":7,\"chain\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\"}],\"index\":0}",
+                        "an_altered_walk_is_refused: a requested model that is not a string");
+    expect_walk_refused("{\"requested\":\"m\",\"chain\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\"}],"
+                        "\"index\":0,\"failure\":false}",
+                        "an_altered_walk_is_refused: a failure that is not a string");
 }
 
 static void refuses_a_malformed_call(void) {

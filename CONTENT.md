@@ -53,8 +53,9 @@ failure's own body; or `rateLimited` (`headers`, `resetAt?`) in place of the 502
 limited, carrying the last limited entry's headers and the latest reset any of them named. A report is
 `response`, `streamed`, `streamFailed` (`afterBytes`, `message`), `thrown` (`message`) or `failure`
 (`status`, `headers`, `retryAfterMilliseconds?`, `now`, read as `outcome` reads them); a stream failing
-before its first byte, a thrown call or a rate-limited failure falls to the next entry. An entry whose provider is not in `providers` is skipped and logged, never called.
-`wording` gives the login command and settings file the 503 names. A walk handed back altered is refused.
+before its first byte, a thrown call or a rate-limited failure falls to the next entry. An entry whose
+provider is not in `providers` is skipped and logged, never called.
+`wording` gives the login command and settings file the 503 names. A walk handed back malformed is refused.
 The hop-by-hop set is one policy for both directions: `connection`, `keep-alive`, `proxy-connection`,
 `transfer-encoding`, `upgrade`, `te`, `trailer`, every name starting `proxy-` and every name the `connection`
 header lists, all compared ignoring case.
