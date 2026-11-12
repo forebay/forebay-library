@@ -1079,6 +1079,120 @@
           }
         },
         {
+          "name": "failure",
+          "symbol": "forebay_library_routing_failure",
+          "kind": "json",
+          "argument": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "const": "upstreamUnreachable"
+                  },
+                  "upstream": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "upstream",
+                  "detail"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "const": "requestFailed"
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "detail"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "reply": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "proxyError"
+                      },
+                      "status": {
+                        "type": "integer"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "status",
+                      "message"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "log": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "level": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "level",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "reply"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "refused": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refused",
+                  "fix"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        {
           "name": "environment",
           "symbol": "forebay_library_routing_environment",
           "kind": "json",

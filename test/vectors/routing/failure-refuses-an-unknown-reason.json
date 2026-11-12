@@ -1,0 +1,8 @@
+{
+  "function": "failure",
+  "argument": {"reason": "vanished", "detail": "gone"},
+  "result": {
+    "refused": "the reason vanished is not one routing.failure words",
+    "fix": "pass reason as upstreamUnreachable or requestFailed"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "function": "failure",
+  "argument": {"reason": "requestFailed", "detail": "the body is not JSON"},
+  "result": {
+    "reply": {"kind": "proxyError", "status": 500, "message": "the body is not JSON"},
+    "log": [{"level": "warn", "message": "a request failed: the body is not JSON"}]
+  }
+}

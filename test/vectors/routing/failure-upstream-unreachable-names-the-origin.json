@@ -1,0 +1,5 @@
+{
+  "function": "failure",
+  "argument": {"reason": "upstreamUnreachable", "upstream": "HTTPS://Api.Example.com:8443/v1/", "detail": "connect ECONNREFUSED"},
+  "result": {"reply": {"kind": "proxyError", "status": 502, "message": "the upstream https://api.example.com:8443 could not be reached: connect ECONNREFUSED"}}
+}

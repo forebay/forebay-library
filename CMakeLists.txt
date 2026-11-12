@@ -26,6 +26,7 @@ add_library(forebay_library SHARED
     src/release.c
     src/routing_arrival.c
     src/routing_environment.c
+    src/routing_failure.c
     src/routing_headers.c
     src/routing_limits.c
     src/routing_model_map.c
