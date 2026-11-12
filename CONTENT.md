@@ -19,6 +19,7 @@ read nothing of the process: time and the filesystem are arguments. `profile` ha
 | `modelMap({ profile, stored, models })` | `{ map, healed }`: stored entries kept, healed within their provider, or derived |
 | `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
 | `outcome({ status, headers, now, retryAfterMilliseconds? })` | `{ rateLimited, resetAt? }`: rate limited on 429; the reset is `retryAfterMilliseconds` when given, else the `retry-after` header in seconds |
+| `step({ profile, map, models, providers, request, refreshed?, wording })`, then `step({ walk, providers, report })` | `{ step, walk?, log }`: the next thing a proxy plugin does for one request, and the log lines to write |
 | `environment({ map, port, providersEnabled, environment, userHome, application })` | `{ environment }`: the base URL, and with providers the model pairs named by the application's `modelVariables` and the placeholder token unless the application has a login of its own |
 
 A refusal is a successful answer `{ "refused", "fix" }`. Windows has no `regcomp`, so one matcher
@@ -34,9 +35,19 @@ one) and `modelVariables` (`model` for the default, and `tierModel` and `tierMod
 stands for the upper-cased tier, and a template without one is refused) arrive in the call.
 It has a login of its own when one of those variables is non-blank, the placeholder variable holds anything
 but the placeholder value, or the state file records an account.
+`step` walks a request's chain without ever calling into the plugin: the plugin performs each step,
+reports what happened, and hands back the `walk` it was given, which is present exactly when a report is
+expected. A step is `passThrough` (no provider runs, or the request decoded as a pass-through),
+`refreshModels` (the chain is empty and the call was not `refreshed`), `callProvider` (`provider`, `model`),
+`endStream` (an IR error `event` to write after a stream failed past its first byte), `reply` (`proxyError`
+502 once every entry failed, or `apiError` 503 when nothing serves the model after a refresh, each with a
+`message` the wire format encodes) or `done`. A report is `response`, `streamed`, `streamFailed`
+(`afterBytes`, `message`) or `thrown` (`message`); a stream failing before its first byte, or a thrown call,
+falls to the next entry. An entry whose provider is not in `providers` is skipped and logged, never called.
+`wording` gives the login command and settings file the 503 names. A walk handed back altered is refused.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
-`Router.java`. A vector's `files` are laid out in a fresh directory that becomes its `userHome`, or with
-`filesUnder` the value of the environment variable it names.
+`Router.java`; `routing_step_test` drives `step` call by call. A vector's `files` are laid out in a fresh
+directory that becomes its `userHome`, or with `filesUnder` the value of the environment variable it names.
 
 ## The accounts service
 

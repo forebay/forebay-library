@@ -435,6 +435,238 @@
           }
         },
         {
+          "name": "step",
+          "symbol": "forebay_library_routing_step",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "description": "a first call carries the request; every later call hands back the walk the last step answered, with a report of what that step did",
+            "oneOf": [
+              {
+                "properties": {
+                  "profile": {
+                    "type": "object",
+                    "properties": {
+                      "nativeModelPattern": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "unservedModelPattern": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  },
+                  "map": {
+                    "type": "object"
+                  },
+                  "models": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object"
+                    }
+                  },
+                  "providers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "the ids of the providers running now"
+                  },
+                  "request": {
+                    "type": "object",
+                    "properties": {
+                      "model": {
+                        "type": "string"
+                      },
+                      "passThrough": {
+                        "const": true
+                      }
+                    }
+                  },
+                  "refreshed": {
+                    "type": "boolean",
+                    "description": "true on the call made after a refreshModels step"
+                  },
+                  "wording": {
+                    "type": "object",
+                    "properties": {
+                      "loginCommand": {
+                        "type": "string"
+                      },
+                      "settingsFile": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "loginCommand",
+                      "settingsFile"
+                    ]
+                  }
+                },
+                "required": [
+                  "profile",
+                  "map",
+                  "models",
+                  "providers",
+                  "request",
+                  "wording"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "properties": {
+                  "walk": {
+                    "type": "object",
+                    "description": "opaque: handed back exactly as the last step answered it"
+                  },
+                  "providers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "report": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "response",
+                          "streamed",
+                          "streamFailed",
+                          "thrown"
+                        ]
+                      },
+                      "afterBytes": {
+                        "type": "boolean"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  }
+                },
+                "required": [
+                  "walk",
+                  "providers",
+                  "report"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "result": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "passThrough",
+                      "refreshModels",
+                      "callProvider",
+                      "endStream",
+                      "reply",
+                      "done"
+                    ]
+                  },
+                  "provider": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "event": {
+                    "type": "object",
+                    "properties": {
+                      "event": {
+                        "const": "error"
+                      },
+                      "errorType": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "event",
+                      "errorType",
+                      "message"
+                    ]
+                  },
+                  "reply": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "proxyError",
+                          "apiError"
+                        ]
+                      },
+                      "status": {
+                        "type": "integer"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "status",
+                      "message"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "walk": {
+                "type": "object",
+                "description": "present exactly when the step expects a report"
+              },
+              "log": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "level": {
+                      "enum": [
+                        "info",
+                        "warn"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "level",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "refused": {
+                "type": "string"
+              },
+              "fix": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
           "name": "limits",
           "symbol": "forebay_library_routing_limits",
           "kind": "json",

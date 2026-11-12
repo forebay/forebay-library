@@ -30,6 +30,7 @@ add_library(forebay_library SHARED
     src/routing_outcome.c
     src/routing_pattern.c
     src/routing_resolve.c
+    src/routing_step.c
     src/routing_support.c
     src/routing_tiers.c
     src/service_support.c)
