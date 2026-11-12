@@ -286,3 +286,8 @@ const char *routing_header(const cJSON *headers, const char *name) {
     }
     return NULL;
 }
+
+int routing_is_port(const cJSON *value) {
+    return cJSON_IsNumber(value) && value->valuedouble >= 1 && value->valuedouble <= 65535 &&
+           value->valuedouble == (double)(int)value->valuedouble;
+}

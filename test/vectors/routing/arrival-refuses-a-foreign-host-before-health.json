@@ -1,0 +1,5 @@
+{
+  "function": "arrival",
+  "argument": {"path": "/health", "headers": {"host": "example.test"}, "port": 34567},
+  "result": {"kind": "refuse", "reply": {"kind": "proxyError", "status": 403, "message": "the proxy answers only requests to 127.0.0.1:34567 or localhost:34567 that carry no Origin"}}
+}

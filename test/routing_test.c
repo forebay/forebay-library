@@ -8,6 +8,8 @@ int32_t forebay_library_routing_environment(const uint8_t *in, size_t in_len, ui
 int32_t forebay_library_routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 int32_t forebay_library_routing_pass_through(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 int32_t forebay_library_routing_reply_headers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_arrival(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t forebay_library_routing_port(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
 
 typedef struct named_function {
     const char *name;
@@ -23,6 +25,8 @@ static const named_function functions[] = {
     {"limits", forebay_library_routing_limits},
     {"passThrough", forebay_library_routing_pass_through},
     {"replyHeaders", forebay_library_routing_reply_headers},
+    {"arrival", forebay_library_routing_arrival},
+    {"port", forebay_library_routing_port},
 };
 
 static library_function find_function(const char *name) {

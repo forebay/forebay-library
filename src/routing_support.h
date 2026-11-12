@@ -73,4 +73,7 @@ int routing_starts_with_ignoring_case(const char *text, const char *prefix);
 /** The exact key first, then the first key matching ignoring case, as the JavaScript Headers API reads; NULL when absent or not a string. */
 const char *routing_header(const cJSON *headers, const char *name);
 
+/** Whether value is an integer from 1 to 65535. */
+int routing_is_port(const cJSON *value);
+
 #endif

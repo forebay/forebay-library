@@ -869,6 +869,182 @@
           }
         },
         {
+          "name": "arrival",
+          "symbol": "forebay_library_routing_arrival",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              }
+            },
+            "required": [
+              "path",
+              "headers",
+              "port"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "refuse"
+                  },
+                  "reply": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "integer"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "status",
+                      "message"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "reply"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "health"
+                  },
+                  "status": {
+                    "type": "integer"
+                  },
+                  "contentType": {
+                    "type": "string"
+                  },
+                  "body": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "status",
+                  "contentType",
+                  "body"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "route"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        {
+          "name": "port",
+          "symbol": "forebay_library_routing_port",
+          "kind": "json",
+          "argument": {
+            "type": "object",
+            "properties": {
+              "value": {},
+              "settingsFile": {
+                "type": "string"
+              },
+              "failure": {
+                "type": "object",
+                "properties": {
+                  "inUse": {
+                    "type": "boolean"
+                  },
+                  "detail": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "inUse",
+                  "detail"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "value",
+              "settingsFile"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "address": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "port",
+                  "address"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "refused": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "refused",
+                  "fix"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        {
           "name": "environment",
           "symbol": "forebay_library_routing_environment",
           "kind": "json",

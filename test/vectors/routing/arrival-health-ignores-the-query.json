@@ -1,0 +1,5 @@
+{
+  "function": "arrival",
+  "argument": {"path": "/health?probe=1", "headers": {"host": "localhost:34567"}, "port": 34567},
+  "result": {"kind": "health", "status": 200, "contentType": "text/plain", "body": "ok"}
+}
