@@ -23,7 +23,7 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": null
     },
-    "stored": {},
+    "settings": {"routing": {}},
     "models": {
       "antigravity": {
         "models": {

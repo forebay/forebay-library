@@ -16,13 +16,14 @@ read nothing of the process: time and the filesystem are arguments. `profile` ha
 | function | answer |
 | --- | --- |
 | `tiers({ profile, models })` | `{ tiers }`: `tierRegex` group 1 over the tier source's ranking, ordered by `tierOrder`, unknown last |
-| `modelMap({ profile, stored, models })` | `{ map, healed }`: stored entries kept, healed within their provider, or derived |
+| `modelMap({ profile, settings, models })` | `{ map, healed }`: the map stored at `settings.routing.modelMap`, its entries kept, healed within their provider, or derived |
 | `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
 | `outcome({ status, headers, now, retryAfterMilliseconds? })` | `{ rateLimited, resetAt? }`: rate limited on 429; the reset is `retryAfterMilliseconds` when given, else the `retry-after` header in seconds |
 | `step({ profile, map, models, providers, request, refreshed?, wording })`, then `step({ walk, providers, report })` | `{ step, walk?, log }`: the next thing a proxy plugin does for one request, and the log lines to write |
 | `passThrough({ upstream, url, headers, bodyLength, placeholderAuthorization })` | `{ target, headers }`: `url` appended to the upstream's origin and path (trailing slashes dropped); the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to `placeholderAuthorization`, then `host` (with the port only when the upstream names one) and `content-length` set; a relative or non-http(s) `upstream` is refused |
 | `replyHeaders({ headers, rewritten })` | `{ headers }`: the reply headers without the hop-by-hop set, and with `rewritten` also without `content-encoding` and `content-length` |
 | `arrival({ path, headers, port })` | `{ kind }`: `refuse` (with a 403 `proxyError` reply) when an `origin` header is present or `host`, ignoring case, is neither `127.0.0.1:<port>` nor `localhost:<port>`; else `health` (200, `text/plain`, `ok`) for the path `/health` without its query; else `route` |
+| `limits({})` | `{ maxRequestBytes, tooLarge, modelsBudgetMilliseconds, rederiveIntervalMilliseconds, refreshEveryMilliseconds }`: the largest request body, the 413 `proxyError` reply for a larger one, the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
 | `port({ value, settingsFile, failure? })` | `{ port, address }` for an integer 1 to 65535, with the loopback `address`; else a refusal that the setting is no port, or, with `failure` `{ inUse, detail }`, that the port cannot be listened on |
 | `environment({ map, port, providersEnabled, environment, userHome, application })` | `{ environment }`: the base URL, and with providers the model pairs named by the application's `modelVariables` and the placeholder token unless the application has a login of its own |
 

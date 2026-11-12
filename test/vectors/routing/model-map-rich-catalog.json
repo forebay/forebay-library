@@ -23,19 +23,21 @@
       "nativeModelPattern": "^claude-",
       "unservedModelPattern": "-auto$"
     },
-    "stored": {
-      "modelMap": {
-        "opus": {
-          "provider": "antigravity",
-          "model": "claude-opus-OLD-STALE"
-        },
-        "sonnet": {
-          "provider": "claude-code",
-          "model": "claude-sonnet-4-6"
-        },
-        "fable": {
-          "provider": "claude-code",
-          "model": "claude-fable-5-auto"
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "opus": {
+            "provider": "antigravity",
+            "model": "claude-opus-OLD-STALE"
+          },
+          "sonnet": {
+            "provider": "claude-code",
+            "model": "claude-sonnet-4-6"
+          },
+          "fable": {
+            "provider": "claude-code",
+            "model": "claude-fable-5-auto"
+          }
         }
       }
     },

@@ -17,18 +17,20 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": null
     },
-    "stored": {
-      "modelMap": {
-        "opus": [
-          {
-            "provider": "rl",
-            "model": "m-rl"
-          },
-          {
-            "provider": "ok",
-            "model": "m-ok"
-          }
-        ]
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "opus": [
+            {
+              "provider": "rl",
+              "model": "m-rl"
+            },
+            {
+              "provider": "ok",
+              "model": "m-ok"
+            }
+          ]
+        }
       }
     },
     "models": {}

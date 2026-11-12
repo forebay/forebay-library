@@ -23,11 +23,13 @@
       "envPrefix": "ANTHROPIC",
       "nativeModelPattern": null
     },
-    "stored": {
-      "modelMap": {
-        "opus": {
-          "provider": "antigravity",
-          "model": "m-opus"
+    "settings": {
+      "routing": {
+        "modelMap": {
+          "opus": {
+            "provider": "antigravity",
+            "model": "m-opus"
+          }
         }
       }
     },

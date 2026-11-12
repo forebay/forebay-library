@@ -166,7 +166,7 @@
                   "tierRegex"
                 ]
               },
-              "stored": {
+              "settings": {
                 "type": "object"
               },
               "models": {
@@ -178,7 +178,7 @@
             },
             "required": [
               "profile",
-              "stored",
+              "settings",
               "models"
             ],
             "additionalProperties": false
@@ -744,10 +744,43 @@
             "properties": {
               "maxRequestBytes": {
                 "type": "integer"
+              },
+              "tooLarge": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "proxyError"
+                  },
+                  "status": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "status",
+                  "message"
+                ],
+                "additionalProperties": false
+              },
+              "modelsBudgetMilliseconds": {
+                "type": "integer"
+              },
+              "rederiveIntervalMilliseconds": {
+                "type": "integer"
+              },
+              "refreshEveryMilliseconds": {
+                "type": "integer"
               }
             },
             "required": [
-              "maxRequestBytes"
+              "maxRequestBytes",
+              "tooLarge",
+              "modelsBudgetMilliseconds",
+              "rederiveIntervalMilliseconds",
+              "refreshEveryMilliseconds"
             ],
             "additionalProperties": false
           }

@@ -202,7 +202,14 @@ static cJSON *answer_for(const cJSON *tiers, const cJSON *catalog, const cJSON *
     return result;
 }
 
-static int32_t answer_call(const cJSON *profile_json, const cJSON *stored, const cJSON *models, uint8_t **out,
+/** The plugin's stored map, `settings.routing.modelMap`, or the empty map when any step of that path is absent. */
+static const cJSON *stored_map_of(const cJSON *settings, const cJSON *empty) {
+    const cJSON *routing = cJSON_GetObjectItemCaseSensitive(settings, "routing");
+    const cJSON *declared = cJSON_GetObjectItemCaseSensitive(routing, "modelMap");
+    return cJSON_IsObject(declared) ? declared : empty;
+}
+
+static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, const cJSON *models, uint8_t **out,
                            size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     routing_profile profile;
@@ -222,9 +229,9 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *stored, const
     }
     cJSON *catalog = routing_catalog(models, unserved);
     cJSON *empty = cJSON_CreateObject();
-    const cJSON *declared = cJSON_GetObjectItemCaseSensitive(stored, "modelMap");
-    const cJSON *stored_map = cJSON_IsObject(declared) ? declared : empty;
-    cJSON *result = (catalog == NULL || empty == NULL) ? NULL : answer_for(tiers, catalog, stored_map, &profile);
+    cJSON *result = (catalog == NULL || empty == NULL)
+                        ? NULL
+                        : answer_for(tiers, catalog, stored_map_of(settings, empty), &profile);
     status = service_answer(result, out, out_len);
     cJSON_Delete(tiers);
     cJSON_Delete(catalog);
@@ -240,12 +247,12 @@ SERVICE_EXPORT int32_t forebay_library_routing_model_map(const uint8_t *in, size
         return status;
     }
     const cJSON *profile = NULL;
-    const cJSON *stored = NULL;
+    const cJSON *settings = NULL;
     const cJSON *models = NULL;
     if (service_require(&call, "profile", service_is_object, "an object", &profile, out, out_len, &status) &&
-        service_require(&call, "stored", service_is_object, "an object", &stored, out, out_len, &status) &&
+        service_require(&call, "settings", service_is_object, "an object", &settings, out, out_len, &status) &&
         service_require(&call, "models", service_is_object, "an object", &models, out, out_len, &status)) {
-        status = answer_call(profile, stored, models, out, out_len);
+        status = answer_call(profile, settings, models, out, out_len);
     }
     spisor_discard_call(&call);
     return status;
