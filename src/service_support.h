@@ -23,6 +23,13 @@ int32_t service_refuse(const char *cause, const char *fix, uint8_t **out, size_t
 /** Answers result and consumes it; NULL answers out of memory. */
 int32_t service_answer(cJSON *result, uint8_t **out, size_t *out_len);
 
+/**
+ * Makes this thread's next service_answer hand its tree to *slot instead of printing it, until service_capture(NULL).
+ *
+ * @implNote Spike only: lets a definition reuse the JSON functions' logic without their printing.
+ */
+void service_capture(cJSON **slot);
+
 /** Fails a malformed call as "<subject> <problem>", the standard failure object. */
 int32_t service_fail(const char *subject, const char *problem, const char *fix, uint8_t **out, size_t *out_len);
 

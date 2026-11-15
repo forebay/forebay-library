@@ -25,6 +25,7 @@ add_library(forebay_library SHARED
     src/accounts_token.c
     src/release.c
     src/routing_arrival.c
+    src/routing_definition.c
     src/routing_environment.c
     src/routing_failure.c
     src/routing_headers.c
@@ -41,6 +42,8 @@ add_library(forebay_library SHARED
     src/routing_upstream.c
     src/service_support.c)
 target_link_libraries(forebay_library PRIVATE spisor_library)
+target_include_directories(forebay_library PUBLIC include)
+target_compile_definitions(forebay_library PRIVATE FOREBAY_LIBRARY_BUILDING)
 set_target_properties(forebay_library PROPERTIES C_VISIBILITY_PRESET hidden)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(forebay_library PRIVATE -Wl,--exclude-libs,ALL)
@@ -50,4 +53,5 @@ spisor_strict_warnings(forebay_library)
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     enable_testing()
     add_subdirectory(test)
+    add_subdirectory(spike)
 endif()

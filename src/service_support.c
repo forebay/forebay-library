@@ -9,9 +9,25 @@ int32_t service_out_of_memory(uint8_t **out, size_t *out_len) {
     return SPISOR_STATUS_OUT_OF_MEMORY;
 }
 
+#if defined(_MSC_VER)
+#define SERVICE_THREAD_LOCAL __declspec(thread)
+#else
+#define SERVICE_THREAD_LOCAL _Thread_local
+#endif
+
+static SERVICE_THREAD_LOCAL cJSON **captured_answer = NULL;
+
+void service_capture(cJSON **slot) {
+    captured_answer = slot;
+}
+
 int32_t service_answer(cJSON *result, uint8_t **out, size_t *out_len) {
     if (result == NULL) {
         return service_out_of_memory(out, out_len);
+    }
+    if (captured_answer != NULL) {
+        *captured_answer = result;
+        return SPISOR_STATUS_SUCCESS;
     }
     int32_t status = spisor_succeed(result, out, out_len);
     cJSON_Delete(result);

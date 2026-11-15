@@ -356,18 +356,24 @@ static int32_t start_walk(const spisor_call *call, const cJSON *providers, uint8
     return status;
 }
 
+int32_t routing_step_call(const spisor_call *call, uint8_t **out, size_t *out_len) {
+    int32_t status = SPISOR_STATUS_SUCCESS;
+    const cJSON *providers = NULL;
+    if (service_require(call, "providers", is_string_list, "a list of strings", &providers, out, out_len, &status)) {
+        status = cJSON_GetObjectItemCaseSensitive(call->argument, "walk") == NULL
+                     ? start_walk(call, providers, out, out_len)
+                     : continue_walk(call, providers, out, out_len);
+    }
+    return status;
+}
+
 SERVICE_EXPORT int32_t forebay_library_routing_step(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
     spisor_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
     }
-    const cJSON *providers = NULL;
-    if (service_require(&call, "providers", is_string_list, "a list of strings", &providers, out, out_len, &status)) {
-        status = cJSON_GetObjectItemCaseSensitive(call.argument, "walk") == NULL
-                     ? start_walk(&call, providers, out, out_len)
-                     : continue_walk(&call, providers, out, out_len);
-    }
+    status = routing_step_call(&call, out, out_len);
     spisor_discard_call(&call);
     return status;
 }
