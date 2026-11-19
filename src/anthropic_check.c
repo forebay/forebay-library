@@ -3,6 +3,7 @@
 #include "spisor/definition.h"
 
 #define REQUEST_SHAPE SPISOR_SHAPE_THROUGH(forebay_ir_request, extensions)
+#define RESPONSE_SHAPE SPISOR_SHAPE_THROUGH(forebay_ir_response, extensions)
 
 static spisor_status refuse(anthropic_problem *problem, const char *member, const char *rule) {
     problem->member = member;
@@ -164,4 +165,16 @@ spisor_status anthropic_check_request(const forebay_ir_request *request, anthrop
         status = check_tools(request, problem);
     }
     return status == SPISOR_OK ? check_stop_sequences(request, problem) : status;
+}
+
+spisor_status anthropic_check_response(const forebay_ir_response *response, anthropic_problem *problem) {
+    if (response == NULL || !spisor_has_shape(response->size, RESPONSE_SHAPE)) {
+        return refuse(problem, "response", "a forebay_ir_response that reaches its first shape");
+    }
+    spisor_status status = require(response->id != NULL && response->model != NULL && response->stop_reason != NULL,
+                                   problem, "a response's id, model and stop_reason", "set");
+    if (status == SPISOR_OK) {
+        status = check_value(response->extensions, "the response's extensions", problem);
+    }
+    return status == SPISOR_OK ? check_blocks(response->content, response->content_count, problem) : status;
 }

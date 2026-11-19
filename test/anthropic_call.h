@@ -50,26 +50,62 @@ static inline spisor_status anthropic_encode_request_of(const forebay_ir_request
     return anthropic_definition()->encode_request(NULL, &argument, answer, refusal);
 }
 
+/** Whether the IR JSON `written`, in the schema form, is the IR JSON `expected` in its schema form. */
+static inline int anthropic_ir_json_equals(const cJSON *written, const cJSON *expected) {
+    cJSON *written_form = ir_json_schema_form(written);
+    cJSON *expected_form = ir_json_schema_form(expected);
+    int same = written_form != NULL && expected_form != NULL && cJSON_Compare(expected_form, written_form, 1);
+    if (!same && written_form != NULL && expected_form != NULL) {
+        char *wanted = cJSON_PrintUnformatted(expected_form);
+        char *got = cJSON_PrintUnformatted(written_form);
+        fprintf(stderr, "  expected %s\n  actual   %s\n", wanted, got);
+        cJSON_free(wanted);
+        cJSON_free(got);
+    }
+    cJSON_Delete(written_form);
+    cJSON_Delete(expected_form);
+    return same;
+}
+
 /** Whether an IR request, in the schema form, is the IR JSON `expected` in its schema form. */
 static inline int anthropic_request_equals(const forebay_ir_request *request, const cJSON *expected) {
     cJSON *written = NULL;
-    cJSON *expected_form = ir_json_schema_form(expected);
-    int same = 0;
-    if (ir_json_write_request(request, &written) == SPISOR_OK) {
-        cJSON *written_form = ir_json_schema_form(written);
-        same = expected_form != NULL && cJSON_Compare(expected_form, written_form, 1);
-        if (!same && expected_form != NULL) {
-            char *wanted = cJSON_PrintUnformatted(expected_form);
-            char *got = cJSON_PrintUnformatted(written_form);
-            fprintf(stderr, "  expected %s\n  actual   %s\n", wanted, got);
-            cJSON_free(wanted);
-            cJSON_free(got);
-        }
-        cJSON_Delete(written_form);
-    }
+    int same = ir_json_write_request(request, &written) == SPISOR_OK && anthropic_ir_json_equals(written, expected);
     cJSON_Delete(written);
-    cJSON_Delete(expected_form);
     return same;
+}
+
+/** Whether an IR response, in the schema form, is the IR JSON `expected` in its schema form. */
+static inline int anthropic_response_equals(const forebay_ir_response *response, const cJSON *expected) {
+    cJSON *written = NULL;
+    int same = ir_json_write_response(response, &written) == SPISOR_OK && anthropic_ir_json_equals(written, expected);
+    cJSON_Delete(written);
+    return same;
+}
+
+/** The IR response of an encode vector's `input` or any IR JSON, in the arena; 1 when the codec read it. */
+static inline int anthropic_read_response_ir(const cJSON *ir, ir_json_arena *arena, forebay_ir_response *response) {
+    cJSON *form = ir_json_schema_form(ir);
+    spisor_status status = form == NULL ? SPISOR_OUT_OF_MEMORY : ir_json_read_response(form, arena, response);
+    cJSON_Delete(form);
+    return status == SPISOR_OK;
+}
+
+static inline spisor_status anthropic_decode_response_text(const char *text,
+                                                           forebay_anthropic_response_answer *answer,
+                                                           spisor_refusal *refusal) {
+    forebay_anthropic_body_argument argument = SPISOR_INIT(forebay_anthropic_body_argument);
+    argument.bytes = (const uint8_t *)text;
+    argument.length = strlen(text);
+    return anthropic_definition()->decode_response(NULL, &argument, answer, refusal);
+}
+
+static inline spisor_status anthropic_encode_response_of(const forebay_ir_response *response,
+                                                         forebay_anthropic_body_answer *answer,
+                                                         spisor_refusal *refusal) {
+    forebay_anthropic_encode_response_argument argument = SPISOR_INIT(forebay_anthropic_encode_response_argument);
+    argument.response = response;
+    return anthropic_definition()->encode_response(NULL, &argument, answer, refusal);
 }
 
 /** Whether a body, parsed as JSON, equals the wire JSON `expected`. */

@@ -34,11 +34,14 @@ add_library(forebay_objects OBJECT
     src/anthropic_check.c
     src/anthropic_decode_blocks.c
     src/anthropic_decode_request.c
+    src/anthropic_decode_response.c
     src/anthropic_definition.c
     src/anthropic_encode_blocks.c
     src/anthropic_encode_request.c
+    src/anthropic_encode_response.c
     src/anthropic_reader.c
     src/anthropic_stringify.c
+    src/anthropic_usage.c
     src/anthropic_wire.c
     src/anthropic_writer.c
     src/definition_support.c

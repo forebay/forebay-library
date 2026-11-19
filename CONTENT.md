@@ -110,14 +110,16 @@ chains further calls against it.
 `anthropic` translates the Anthropic Messages wire format to and from the IR of `include/forebay/ir.h`, the port of
 `anthropic-translator`. The wire body is the one place JSON is read and written: an operation takes bytes and answers
 IR structs, or takes IR structs and answers bytes, and the IR crosses the definition as C structs, never as JSON.
-Every body is answered as `forebay_anthropic_body_answer` and freed by the one `release_body`.
+Every body, from either encoder, is answered as `forebay_anthropic_body_answer` and freed by the one `release_body`.
 
 | operation | does |
 | --- | --- |
 | `decode_request` | a request body to a `forebay_ir_request`: a string `content` or `system` becomes one text block flagged `$contentIsString` or `$systemIsString`, a member of the wrong type or a count outside 0 to 2^53 reads as absent, a stop sequence reads as JavaScript's `String` does, and every member nothing consumed is kept in `extensions`; a JSON root that is no object is the empty request; bytes that are not JSON are refused MALFORMED, saying to send a JSON body |
 | `encode_request` | an IR request to a body, the members in the order the translator builds them and keyed as `JSON.stringify` orders them; `$` keys in `extensions` are left out, except a tool's and a tool choice's, which are written whole |
+| `decode_response` | a response body to a `forebay_ir_response`: a stop reason the translator knows is kept and any other, or none, is `error`, with the wire's own in `$stopReasonRaw` beside `$stopSequenceRaw`, `$typeRaw` and `$roleRaw`; usage counts read as the request's counts do; a JSON root that is no object is the empty response |
+| `encode_response` | an IR response to a body, `id`, `type`, `role`, `content`, `model`, `stop_reason`, `stop_sequence`, `usage`, then the wire members of `extensions`; the raw extensions restore what was decoded and `$` keys never reach the body |
 
-`test/vectors/anthropic/` holds the translator's vectors, copied unchanged; `anthropic_test` runs every `request-*` one in
+`test/vectors/anthropic/` holds the translator's vectors, copied unchanged; `anthropic_test` runs every `request-*` and `response-*` one in
 both directions through the definition, and `anthropic_out_of_memory_test` fails each allocation of them, singly and
 from that one on.
 

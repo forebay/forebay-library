@@ -14,6 +14,12 @@ cJSON *anthropic_encode_request_object(anthropic_writer *writer, const forebay_i
 /** The wire array of IR blocks; an absent list is empty. NULL once the writer has failed. */
 cJSON *anthropic_encode_block_list(anthropic_writer *writer, const forebay_ir_block *blocks, size_t count);
 
+/** The wire object of an IR response that anthropic_check_response accepted; NULL once the writer has failed. */
+cJSON *anthropic_encode_response_object(anthropic_writer *writer, const forebay_ir_response *response);
+
+/** The wire object of IR usage, holding the counts that are present. NULL once the writer has failed. */
+cJSON *anthropic_encode_usage(anthropic_writer *writer, const forebay_ir_usage *usage);
+
 /**
  * Whether `blocks` are written back as a string: `extensions` has `flag` set, which says the string was read as one
  * text block, and that block is still plain, with no cache control and no extensions.

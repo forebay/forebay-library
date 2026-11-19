@@ -31,6 +31,12 @@ int anthropic_decode_blocks(anthropic_reader *reader, const cJSON *wire, const f
 int anthropic_decode_content(anthropic_reader *reader, const cJSON *content, const char *string_flag,
                              const forebay_ir_block **blocks, size_t *count, anthropic_extension_list *extensions);
 
+/** A wire response as an IR response in the reader's storage; NULL once memory has run out. */
+const forebay_ir_response *anthropic_decode_response(anthropic_reader *reader, const cJSON *root);
+
+/** The usage of a wire `usage` member; NULL when it is no object, and once memory has run out. */
+const forebay_ir_usage *anthropic_decode_usage(anthropic_reader *reader, const cJSON *wire);
+
 /** One text block holding `text`, as a string `content` or `system` is read. */
 void anthropic_wrap_text(anthropic_reader *reader, const char *text, const forebay_ir_block **blocks, size_t *count);
 

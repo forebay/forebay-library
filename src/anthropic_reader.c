@@ -5,7 +5,7 @@
 
 #include "answer_storage.h"
 
-#define TRANSLATOR_KEY_LIMIT 3
+#define TRANSLATOR_KEY_LIMIT 4
 
 static const spisor_value null_value = {SPISOR_VALUE_NULL, 0, 0, NULL, 0, NULL, NULL, 0};
 

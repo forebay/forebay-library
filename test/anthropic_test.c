@@ -4,13 +4,15 @@
 
 /**
  * @file
- * The anthropic service's request translation through its definition: every `request-*` vector in both directions (a
+ * The anthropic service's translation through its definition: every `request-*` and `response-*` vector in both
+ * directions (a
  * decode vector's `input` as bytes against its `output`, an encode vector's `input` against its `output`), then the
  * cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is not an object, an IR
  * that breaks its header, and the byte form of a body.
  */
 
 #define REQUEST_VECTOR_COUNT 18
+#define RESPONSE_VECTOR_COUNT 16
 
 static cJSON *parse(const char *text) {
     int out_of_memory = 0;
@@ -54,6 +56,36 @@ static void check_encode(const char *label, const cJSON *ir, const cJSON *expect
     ir_json_arena_release(&arena);
 }
 
+static void check_decode_response(const char *label, const char *body, const cJSON *expected) {
+    forebay_anthropic_response_answer answer = SPISOR_INIT(forebay_anthropic_response_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_decode_response_text(body, &answer, &refusal);
+    if (status != SPISOR_OK) {
+        support_failf(label, "decode answered %d", (int)status);
+    } else if (answer.response == NULL || !anthropic_response_equals(answer.response, expected)) {
+        support_fail(label, "the decoded response is not the expected one");
+    }
+    anthropic_definition()->release_response(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void check_encode_response(const char *label, const cJSON *ir, const cJSON *expected) {
+    ir_json_arena arena = {0};
+    forebay_ir_response response;
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    if (!anthropic_read_response_ir(ir, &arena, &response)) {
+        support_fail(label, "the IR is not one the test codec reads");
+    } else if (anthropic_encode_response_of(&response, &answer, &refusal) != SPISOR_OK) {
+        support_fail(label, "encode did not answer OK");
+    } else if (!anthropic_body_equals(&answer, expected)) {
+        support_fail(label, "the encoded body is not the expected one");
+    }
+    anthropic_definition()->release_body(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    ir_json_arena_release(&arena);
+}
+
 static void run_vector(const char *path) {
     cJSON *vector = spisor_vector_read(path);
     const cJSON *input = cJSON_GetObjectItemCaseSensitive(vector, "input");
@@ -66,13 +98,19 @@ static void run_vector(const char *path) {
         cJSON_free(body);
     } else if (anthropic_is_direction(vector, "encodeRequest")) {
         check_encode(path, input, output);
+    } else if (anthropic_is_direction(vector, "decodeResponse")) {
+        char *body = cJSON_PrintUnformatted(input);
+        check_decode_response(path, body, output);
+        cJSON_free(body);
+    } else if (anthropic_is_direction(vector, "encodeResponse")) {
+        check_encode_response(path, input, output);
     } else {
-        support_fail(path, "a request vector of neither direction");
+        support_fail(path, "a vector of no direction this service has");
     }
     cJSON_Delete(vector);
 }
 
-static int run_request_vectors(void) {
+static int run_vectors(const char *prefix) {
     char *list = support_read_text(ANTHROPIC_VECTOR_LIST);
     int count = 0;
     if (list == NULL) {
@@ -80,7 +118,7 @@ static int run_request_vectors(void) {
         return 0;
     }
     for (char *line = strtok(list, "\r\n"); line != NULL; line = strtok(NULL, "\r\n")) {
-        if (strstr(line, "request-") != NULL) {
+        if (strstr(line, prefix) != NULL) {
             run_vector(line);
             count++;
         }
@@ -182,16 +220,27 @@ static void a_root_that_is_no_object_decodes_to_the_empty_request(void) {
     cJSON_Delete(empty);
 }
 
+static const char *const NON_JSON_BODIES[] = {"not json", "", "{", "[1,2", "{\"a\":1} x", "\xff\xfe",
+                                              "{\"a\":\"\\u0000\"}"};
+
+static void expect_not_json_refusal(const char *body, spisor_status status, const spisor_refusal *refusal,
+                                    const void *answered) {
+    if (status != SPISOR_MALFORMED || refusal->detail == NULL || refusal->fix == NULL ||
+        strstr(refusal->fix, "JSON") == NULL || answered != NULL) {
+        support_failf("bytes that are no JSON", "\"%s\" answered %d", body, (int)status);
+    }
+}
+
 static void bytes_that_are_no_json_are_malformed(void) {
-    static const char *const bodies[] = {"not json", "", "{", "[1,2", "{\"a\":1} x", "\xff\xfe", "{\"a\":\"\\u0000\"}"};
-    for (size_t index = 0; index < sizeof bodies / sizeof bodies[0]; index++) {
+    for (size_t index = 0; index < sizeof NON_JSON_BODIES / sizeof NON_JSON_BODIES[0]; index++) {
         forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
         spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
-        spisor_status status = anthropic_decode_text(bodies[index], &answer, &refusal);
-        if (status != SPISOR_MALFORMED || refusal.detail == NULL || refusal.fix == NULL ||
-            strstr(refusal.fix, "JSON") == NULL || answer.request != NULL || answer.storage != NULL) {
-            support_failf("bytes that are no JSON", "\"%s\" answered %d", bodies[index], (int)status);
-        }
+        spisor_status status = anthropic_decode_text(NON_JSON_BODIES[index], &answer, &refusal);
+        expect_not_json_refusal(NON_JSON_BODIES[index], status, &refusal, answer.storage);
+        anthropic_definition()->release_refusal(NULL, &refusal);
+        forebay_anthropic_response_answer response_answer = SPISOR_INIT(forebay_anthropic_response_answer);
+        status = anthropic_decode_response_text(NON_JSON_BODIES[index], &response_answer, &refusal);
+        expect_not_json_refusal(NON_JSON_BODIES[index], status, &refusal, response_answer.storage);
         anthropic_definition()->release_refusal(NULL, &refusal);
     }
 }
@@ -403,22 +452,216 @@ static void an_extension_tree_that_is_not_well_formed_is_malformed(void) {
     expect_malformed("an unknown block's raw without entries", &request);
 }
 
+typedef struct response_case {
+    const char *label;
+    const char *input;
+    const char *expected;
+} response_case;
+
+static const response_case RESPONSE_DECODE_CASES[] = {
+    {"a member of the wrong type reads as absent and is kept raw",
+     "{\"id\":5,\"model\":null,\"content\":\"x\",\"stop_reason\":7,\"stop_sequence\":\"s\",\"type\":3,\"role\":[],"
+     "\"usage\":\"u\"}",
+     "{\"id\":\"\",\"model\":\"\",\"content\":[],\"stopReason\":\"error\",\"extensions\":{\"$stopReasonRaw\":null,"
+     "\"$stopSequenceRaw\":\"s\",\"$typeRaw\":3,\"$roleRaw\":[]}}"},
+    {"a usage count outside the range reads as absent",
+     "{\"id\":\"i\",\"model\":\"m\",\"usage\":{\"input_tokens\":-1,\"output_tokens\":\"2\","
+     "\"cache_creation_input_tokens\":1e30,\"cache_read_input_tokens\":2.9,\"x\":1}}",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"error\",\"usage\":{\"cacheReadInputTokens\":2},"
+     "\"extensions\":{\"$stopReasonRaw\":null,\"$stopSequenceRaw\":null,\"$typeRaw\":null,\"$roleRaw\":null}}"},
+    {"a stop reason is known only by its exact text",
+     "{\"id\":\"i\",\"model\":\"m\",\"stop_reason\":\"End_Turn\"}",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"error\",\"extensions\":{\"$stopReasonRaw\":"
+     "\"End_Turn\",\"$stopSequenceRaw\":null,\"$typeRaw\":null,\"$roleRaw\":null}}"},
+    {"a tool use stop reason is kept as it is",
+     "{\"id\":\"i\",\"model\":\"m\",\"stop_reason\":\"tool_use\"}",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"tool_use\",\"extensions\":{\"$stopReasonRaw\":"
+     "\"tool_use\",\"$stopSequenceRaw\":null,\"$typeRaw\":null,\"$roleRaw\":null}}"},
+    {"a wire key named like a translator key takes its place",
+     "{\"id\":\"i\",\"model\":\"m\",\"$typeRaw\":\"x\",\"type\":\"message\",\"y\":1}",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"error\",\"extensions\":{\"$stopReasonRaw\":null,"
+     "\"$stopSequenceRaw\":null,\"$typeRaw\":\"x\",\"$roleRaw\":null,\"y\":1}}"},
+    {"a number that is not finite reads as null",
+     "{\"id\":\"i\",\"model\":\"m\",\"x\":1e400,\"stop_sequence\":-1e400}",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"error\",\"extensions\":{\"$stopReasonRaw\":null,"
+     "\"$stopSequenceRaw\":null,\"$typeRaw\":null,\"$roleRaw\":null,\"x\":null}}"},
+};
+
+static void run_response_decode_cases(void) {
+    for (size_t index = 0; index < sizeof RESPONSE_DECODE_CASES / sizeof RESPONSE_DECODE_CASES[0]; index++) {
+        cJSON *expected = parse(RESPONSE_DECODE_CASES[index].expected);
+        if (expected == NULL) {
+            support_fail(RESPONSE_DECODE_CASES[index].label, "the expected IR is not JSON");
+        } else {
+            check_decode_response(RESPONSE_DECODE_CASES[index].label, RESPONSE_DECODE_CASES[index].input, expected);
+        }
+        cJSON_Delete(expected);
+    }
+}
+
+static void a_response_root_that_is_no_object_decodes_to_the_empty_response(void) {
+    static const char *const roots[] = {"[]", "5", "\"x\"", "null", "true", "[{\"id\":\"i\"}]"};
+    cJSON *empty = parse("{\"id\":\"\",\"model\":\"\",\"content\":[],\"stopReason\":\"error\"}");
+    for (size_t index = 0; index < sizeof roots / sizeof roots[0]; index++) {
+        check_decode_response(roots[index], roots[index], empty);
+    }
+    cJSON_Delete(empty);
+}
+
+static const response_case RESPONSE_ENCODE_CASES[] = {
+    {"a response read from no wire is written with the defaults",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"tool_use\"}",
+     "{\"id\":\"i\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"m\","
+     "\"stop_reason\":\"tool_use\",\"stop_sequence\":null}"},
+    {"a raw extension of any kind is written, a null one is not",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"end_turn\",\"extensions\":{\"$stopReasonRaw\":null,"
+     "\"$stopSequenceRaw\":\"s\",\"$typeRaw\":5,\"$roleRaw\":{\"a\":1},\"$other\":1,\"x\":2}}",
+     "{\"id\":\"i\",\"type\":5,\"role\":{\"a\":1},\"content\":[],\"model\":\"m\",\"stop_reason\":\"end_turn\","
+     "\"stop_sequence\":\"s\",\"x\":2}"},
+    {"usage is written in the order of its counts and only those present",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"end_turn\",\"usage\":{\"cacheReadInputTokens\":4,"
+     "\"cacheCreationInputTokens\":3,\"outputTokens\":2,\"inputTokens\":1}}",
+     "{\"id\":\"i\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"m\","
+     "\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"usage\":{\"input_tokens\":1,\"output_tokens\":2,"
+     "\"cache_creation_input_tokens\":3,\"cache_read_input_tokens\":4}}"},
+    {"an empty usage is written as an empty object",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"end_turn\",\"usage\":{}}",
+     "{\"id\":\"i\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"m\","
+     "\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"usage\":{}}"},
+    {"a wire extension replaces a member of the same name where it stands",
+     "{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"end_turn\",\"extensions\":{\"model\":\"other\"}}",
+     "{\"id\":\"i\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"other\","
+     "\"stop_reason\":\"end_turn\",\"stop_sequence\":null}"},
+};
+
+static void run_response_encode_cases(void) {
+    for (size_t index = 0; index < sizeof RESPONSE_ENCODE_CASES / sizeof RESPONSE_ENCODE_CASES[0]; index++) {
+        cJSON *ir = parse(RESPONSE_ENCODE_CASES[index].input);
+        cJSON *expected = parse(RESPONSE_ENCODE_CASES[index].expected);
+        if (ir == NULL || expected == NULL) {
+            support_fail(RESPONSE_ENCODE_CASES[index].label, "the case is not JSON");
+        } else {
+            check_encode_response(RESPONSE_ENCODE_CASES[index].label, ir, expected);
+        }
+        cJSON_Delete(expected);
+        cJSON_Delete(ir);
+    }
+}
+
+/** Decoding a body and encoding what came back writes the body again, for what the IR cannot hold as well. */
+static void a_response_decoded_then_encoded_restores_the_wire(void) {
+    static const char wire[] =
+        "{\"id\":\"i\",\"type\":\"msg2\",\"role\":\"bot\",\"content\":[{\"type\":\"text\",\"text\":\"t\"}],"
+        "\"model\":\"m\",\"stop_reason\":\"future\",\"stop_sequence\":\"s\",\"usage\":{\"input_tokens\":1},"
+        "\"extra\":{\"a\":[1,null]}}";
+    forebay_anthropic_response_answer decoded = SPISOR_INIT(forebay_anthropic_response_answer);
+    forebay_anthropic_body_answer encoded = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    cJSON *expected = parse(wire);
+    if (anthropic_decode_response_text(wire, &decoded, &refusal) != SPISOR_OK ||
+        anthropic_encode_response_of(decoded.response, &encoded, &refusal) != SPISOR_OK ||
+        !anthropic_body_equals(&encoded, expected)) {
+        support_fail("a response round trip", "did not restore the wire");
+    }
+    anthropic_definition()->release_body(NULL, &encoded);
+    anthropic_definition()->release_response(NULL, &decoded);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    cJSON_Delete(expected);
+}
+
+static void a_response_body_has_the_bytes_the_translator_writes(void) {
+    static const char expected[] =
+        "{\"2\":1,\"id\":\"i\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"m\","
+        "\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"usage\":{\"input_tokens\":1},\"b\":0.5}";
+    cJSON *ir = parse("{\"id\":\"i\",\"model\":\"m\",\"content\":[],\"stopReason\":\"end_turn\","
+                      "\"usage\":{\"inputTokens\":1},\"extensions\":{\"b\":0.5,\"2\":1}}");
+    ir_json_arena arena = {0};
+    forebay_ir_response response;
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    if (ir == NULL || !anthropic_read_response_ir(ir, &arena, &response) ||
+        anthropic_encode_response_of(&response, &answer, &refusal) != SPISOR_OK) {
+        support_fail("the bytes of a response body", "the response was not encoded");
+    } else if (answer.length != sizeof expected - 1 || memcmp(answer.bytes, expected, answer.length) != 0 ||
+               answer.bytes[answer.length] != '\0') {
+        support_failf("the bytes of a response body", "wrote %.*s", (int)answer.length, (const char *)answer.bytes);
+    }
+    anthropic_definition()->release_body(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    ir_json_arena_release(&arena);
+    cJSON_Delete(ir);
+}
+
+static void expect_malformed_response(const char *label, const forebay_ir_response *response) {
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_encode_response_of(response, &answer, &refusal);
+    if (status != SPISOR_MALFORMED || refusal.detail == NULL || refusal.fix == NULL || answer.storage != NULL ||
+        answer.bytes != NULL) {
+        support_failf(label, "answered %d, not MALFORMED with a refusal and an empty answer", (int)status);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static forebay_ir_response valid_response(void) {
+    forebay_ir_response response = SPISOR_INIT(forebay_ir_response);
+    response.id = "i";
+    response.model = "m";
+    response.stop_reason = "end_turn";
+    return response;
+}
+
+static void a_response_that_breaks_its_header_is_malformed(void) {
+    static const forebay_ir_block text_without_text = {.kind = FOREBAY_IR_BLOCK_TEXT};
+    static const spisor_value empty_text = {SPISOR_VALUE_TEXT, 0, 0, NULL, 0, NULL, NULL, 0};
+    forebay_ir_response response = valid_response();
+    response.size = (uint32_t)sizeof response.size;
+    expect_malformed_response("a response short of its first shape", &response);
+    expect_malformed_response("a NULL response", NULL);
+    response = valid_response();
+    response.id = NULL;
+    expect_malformed_response("a response without an id", &response);
+    response = valid_response();
+    response.model = NULL;
+    expect_malformed_response("a response without a model", &response);
+    response = valid_response();
+    response.stop_reason = NULL;
+    expect_malformed_response("a response without a stop reason", &response);
+    response = valid_response();
+    response.content_count = 1;
+    expect_malformed_response("content NULL beside a count", &response);
+    response = valid_response();
+    response.content = &text_without_text;
+    response.content_count = 1;
+    expect_malformed_response("a text block without text", &response);
+    response = valid_response();
+    response.extensions = &empty_text;
+    expect_malformed_response("extensions text without bytes", &response);
+}
+
 static void releasing_an_answer_never_filled_does_nothing(void) {
     forebay_anthropic_request_answer request_answer = {0};
+    forebay_anthropic_response_answer response_answer = {0};
     forebay_anthropic_body_answer body_answer = {0};
     spisor_refusal refusal = {0};
     anthropic_definition()->release_request(NULL, &request_answer);
+    anthropic_definition()->release_response(NULL, &response_answer);
     anthropic_definition()->release_body(NULL, &body_answer);
     anthropic_definition()->release_refusal(NULL, &refusal);
+    anthropic_definition()->release_response(NULL, NULL);
     anthropic_definition()->release_request(NULL, NULL);
     anthropic_definition()->release_body(NULL, NULL);
 }
 
 int main(void) {
     spisor_json_use_library_allocator();
-    int vectors = run_request_vectors();
+    int vectors = run_vectors("request-");
     if (vectors != REQUEST_VECTOR_COUNT) {
         support_failf("request vectors", "%d files, expected %d", vectors, REQUEST_VECTOR_COUNT);
+    }
+    int response_vectors = run_vectors("response-");
+    if (response_vectors != RESPONSE_VECTOR_COUNT) {
+        support_failf("response vectors", "%d files, expected %d", response_vectors, RESPONSE_VECTOR_COUNT);
     }
     run_decode_cases();
     a_root_that_is_no_object_decodes_to_the_empty_request();
@@ -430,7 +673,13 @@ int main(void) {
     a_body_has_the_bytes_the_translator_writes();
     an_ir_that_breaks_its_header_is_malformed();
     an_extension_tree_that_is_not_well_formed_is_malformed();
+    run_response_decode_cases();
+    a_response_root_that_is_no_object_decodes_to_the_empty_response();
+    run_response_encode_cases();
+    a_response_decoded_then_encoded_restores_the_wire();
+    a_response_body_has_the_bytes_the_translator_writes();
+    a_response_that_breaks_its_header_is_malformed();
     releasing_an_answer_never_filled_does_nothing();
-    printf("anthropic_test: %d request vectors\n", vectors);
+    printf("anthropic_test: %d request vectors, %d response vectors\n", vectors, response_vectors);
     return support_summary("anthropic_test");
 }
