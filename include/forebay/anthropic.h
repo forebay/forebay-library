@@ -171,7 +171,8 @@ typedef struct forebay_anthropic_definition {
      * Feeds a piece of SSE text and answers the IR events of the frames it completed, as `anthropic-translator`'s
      * stream decoder does: a line ends at LF, one CR before it dropped (a lone CR ends no line); a frame ends at a
      * blank line and is its `data:` lines joined with LF; a comment, any other field, a `ping`, a frame of another
-     * type or of no JSON, and a delta of another type yield nothing. A message delta keeps its stop sequence in
+     * type or of no JSON (JSON that cannot be parsed, or holds a NUL in a string, is no JSON here, where a body is
+     * refused), and a delta of another type yield nothing. A message delta keeps its stop sequence in
      * `$stopSequenceRaw`, and a message start's and a message delta's other members are kept in `extensions`. An index
      * that is no count from 0 to 2^53 reads as 0. MALFORMED when `decoder` is NULL.
      */
