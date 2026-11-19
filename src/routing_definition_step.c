@@ -12,10 +12,6 @@
 #define STEP_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_step_answer, storage)
 #define REPORT_SHAPE FOREBAY_SHAPE_THROUGH(forebay_report, now)
 
-/**
- * A walk the library answered: its tree is never changed once answered, so a caller may hand the same walk back
- * twice, and from any thread, until it releases it.
- */
 struct forebay_walk {
     cJSON *tree;
 };
