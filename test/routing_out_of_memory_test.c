@@ -20,6 +20,14 @@ static int answers_as(const routing_call *call, const routing_answers *answers, 
     return same;
 }
 
+/** Whether every answer and the refusal are as routing_empty_answers left them, whatever the status. */
+static int answers_left_empty(const routing_answers *answers) {
+    routing_answers empty;
+    routing_empty_answers(&empty);
+    empty.status = answers->status;
+    return memcmp(&empty, answers, sizeof empty) == 0;
+}
+
 /** One failing call of a vector: 1 to go on with the next allocation, 0 once the call ran whole or failed a check. */
 static int fail_vector_once(const routing_call *call, const cJSON *expected, const char *label,
                             allocation_failure_mode mode, uint64_t attempt) {
@@ -29,7 +37,8 @@ static int fail_vector_once(const routing_call *call, const cJSON *expected, con
     routing_make_call(call, &answers);
     int failed = spisor_memory_failed();
     spisor_memory_fail_at(0);
-    int answered = answers.status == SPISOR_OUT_OF_MEMORY || answers_as(call, &answers, expected);
+    int answered = answers.status == SPISOR_OUT_OF_MEMORY ? answers_left_empty(&answers)
+                                                          : answers_as(call, &answers, expected);
     routing_release_answers(&answers);
     int64_t leaked = spisor_memory_live_blocks() - baseline;
     if (leaked != 0 || !answered) {
@@ -90,14 +99,15 @@ static forebay_step_argument first_step(void) {
 static int fail_step_once(const forebay_step_argument *argument, uint32_t whole_kind, const char *label,
                           allocation_failure_mode mode, uint64_t attempt) {
     const forebay_routing_definition *routing = routing_definition();
-    forebay_step_answer answer = SPISOR_INIT(forebay_step_answer);
+    forebay_step_answer answer;
+    start_empty(&answer, sizeof answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
     int64_t baseline = spisor_memory_live_blocks();
     fail_allocation(mode, attempt);
     spisor_status status = routing->step(NULL, argument, &answer, &refusal);
     int failed = spisor_memory_failed();
     spisor_memory_fail_at(0);
-    int answered = (status == SPISOR_OUT_OF_MEMORY && answer.storage == NULL && answer.walk == NULL) ||
+    int answered = empty_unless_answered(status, &answer, sizeof answer) == SPISOR_OUT_OF_MEMORY ||
                    (status == SPISOR_OK && answer.kind == whole_kind);
     routing->release_walk(NULL, answer.walk);
     routing->release_step_answer(NULL, &answer);

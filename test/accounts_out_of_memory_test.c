@@ -8,9 +8,9 @@
 /**
  * @file
  * Fails every allocation of every accounts vector's first step, one at a time and from that one on, and requires each
- * failure to answer OUT_OF_MEMORY with the store's bytes as they were and every block released, or, where the failed
- * allocation was not one the call needed, the vector's own result. A failure is never read as an empty pool, a
- * refusal or a malformed call.
+ * failure to answer OUT_OF_MEMORY with the store's bytes as they were, the answer empty and every block released, or,
+ * where the failed allocation was not one the call needed, the vector's own result. A failure is never read as an
+ * empty pool, a refusal or a malformed call.
  */
 
 static int same_text(const char *left, const char *right) {
@@ -35,17 +35,27 @@ typedef struct failed_call {
     cJSON *result;
     int failed;
     int64_t leaked;
+    int left_empty;
 } failed_call;
+
+/** Whether every answer and the refusal are as accounts_empty_answers left them, whatever the status. */
+static int answers_left_empty(const accounts_answers *answers) {
+    accounts_answers empty;
+    accounts_empty_answers(&empty);
+    empty.status = answers->status;
+    return memcmp(&empty, answers, sizeof empty) == 0;
+}
 
 static failed_call call_failing(const accounts_call *call, allocation_failure_mode mode, uint64_t attempt) {
     accounts_answers answers;
-    failed_call outcome = {SPISOR_OK, NULL, 0, 0};
+    failed_call outcome = {SPISOR_OK, NULL, 0, 0, 0};
     int64_t baseline = spisor_memory_live_blocks();
     fail_allocation(mode, attempt);
     accounts_make_call(call, &answers);
     outcome.failed = spisor_memory_failed();
     spisor_memory_fail_at(0);
     outcome.status = answers.status;
+    outcome.left_empty = answers_left_empty(&answers);
     cJSON *result = accounts_result_of(call, &answers);
     static char printed[65536];
     if (!cJSON_PrintPreallocated(result, printed, (int)sizeof printed, 0)) {
@@ -62,10 +72,10 @@ static failed_call call_failing(const accounts_call *call, allocation_failure_mo
 static int answered_as_required(const failed_call *outcome, const cJSON *expected, const char *before,
                                 const char *after, const char *label, uint64_t attempt) {
     if (outcome->status == SPISOR_OUT_OF_MEMORY) {
-        if (same_text(before, after)) {
+        if (same_text(before, after) && outcome->left_empty) {
             return 1;
         }
-        support_failf(label, "failing allocation %llu answered out of memory after it wrote the store",
+        support_failf(label, "failing allocation %llu answered out of memory after it wrote the store or an answer",
                       (unsigned long long)attempt);
         return 0;
     }
