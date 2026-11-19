@@ -82,15 +82,6 @@ spisor_status routing_decide_arrival(const forebay_arrival_argument *argument, f
     return SPISOR_OK;
 }
 
-static int is_listen_failure(const cJSON *value) {
-    return cJSON_IsObject(value) && cJSON_IsBool(cJSON_GetObjectItemCaseSensitive(value, "inUse")) &&
-           cJSON_IsString(cJSON_GetObjectItemCaseSensitive(value, "detail"));
-}
-
-static int is_anything(const cJSON *value) {
-    return value != NULL;
-}
-
 static int32_t refuse_the_setting(const cJSON *value, const char *settings_file, service_reply *reply) {
     char *printed = cJSON_PrintUnformatted(value);
     char *cause = printed == NULL ? NULL : routing_formatted("proxy.port is %s, which is no port", printed);
@@ -142,18 +133,7 @@ static int32_t decide_the_port(const cJSON *value, const char *settings_file, co
 }
 
 int32_t routing_port_call(const cJSON *argument, service_reply *reply) {
-    service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
-    const cJSON *value = NULL;
-    const cJSON *settings_file = NULL;
-    const cJSON *failure = cJSON_GetObjectItemCaseSensitive(call.argument, "failure");
-    if (failure != NULL && !is_listen_failure(failure)) {
-        status = service_fail("argument", "member failure is not an object with inUse and detail",
-                              "pass failure as {inUse: boolean, detail: string}", reply);
-    } else if (service_require(&call, "value", is_anything, "any value", &value, reply, &status) &&
-               service_require(&call, "settingsFile", service_is_string, "a string", &settings_file, reply,
-                               &status)) {
-        status = decide_the_port(value, settings_file->valuestring, failure, reply);
-    }
-    return status;
+    return decide_the_port(cJSON_GetObjectItemCaseSensitive(argument, "value"),
+                           cJSON_GetObjectItemCaseSensitive(argument, "settingsFile")->valuestring,
+                           cJSON_GetObjectItemCaseSensitive(argument, "failure"), reply);
 }

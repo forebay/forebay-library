@@ -69,15 +69,5 @@ cJSON *routing_outcome_of(const cJSON *argument) {
 }
 
 int32_t routing_outcome_call(const cJSON *argument, service_reply *reply) {
-    service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
-    const cJSON *reply_status = NULL;
-    const cJSON *headers = NULL;
-    const cJSON *now = NULL;
-    if (service_require(&call, "status", service_is_number, "a number", &reply_status, reply, &status) &&
-        service_require(&call, "headers", service_is_object, "an object", &headers, reply, &status) &&
-        service_require(&call, "now", service_is_number, "a number", &now, reply, &status)) {
-        status = service_answer(routing_outcome_of(call.argument), reply);
-    }
-    return status;
+    return service_answer(routing_outcome_of(argument), reply);
 }

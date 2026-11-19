@@ -34,55 +34,6 @@ int32_t service_fail(const char *subject, const char *problem, const char *fix, 
     return reply->status;
 }
 
-int service_is_object(const cJSON *value) {
-    return cJSON_IsObject(value);
-}
-
-int service_is_array(const cJSON *value) {
-    return cJSON_IsArray(value);
-}
-
-int service_is_string(const cJSON *value) {
-    return cJSON_IsString(value);
-}
-
-int service_is_number(const cJSON *value) {
-    return cJSON_IsNumber(value);
-}
-
-int service_is_boolean(const cJSON *value) {
-    return cJSON_IsBool(value);
-}
-
-int service_require(const service_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
-                    const cJSON **member, service_reply *reply, int32_t *status) {
-    *member = cJSON_GetObjectItemCaseSensitive(call->argument, name);
-    if (*member != NULL && is_type(*member)) {
-        return 1;
-    }
-    char problem[96];
-    char fix[128];
-    snprintf(problem, sizeof(problem), "is missing or is not %s", type_name);
-    snprintf(fix, sizeof(fix), "set %s to %s", name, type_name);
-    *status = service_fail(name, problem, fix, reply);
-    return 0;
-}
-
-int service_require_member(const cJSON *object, const char *subject, const char *name, int (*is_type)(const cJSON *),
-                           const char *type_name, const cJSON **member, service_reply *reply,
-                           int32_t *status) {
-    *member = cJSON_GetObjectItemCaseSensitive(object, name);
-    if (*member != NULL && is_type(*member)) {
-        return 1;
-    }
-    char problem[128];
-    char fix[128];
-    snprintf(problem, sizeof(problem), "%s is missing or is not %s", name, type_name);
-    snprintf(fix, sizeof(fix), "set %s to %s", name, type_name);
-    *status = service_fail(subject, problem, fix, reply);
-    return 0;
-}
-
 int service_add(cJSON *object, const char *name, cJSON *item) {
     if (item == NULL) {
         return 0;
