@@ -34,14 +34,6 @@ int32_t service_fail(const char *subject, const char *problem, const char *fix, 
     return reply->status;
 }
 
-int32_t service_open(const cJSON *argument, service_call *call, service_reply *reply) {
-    call->argument = argument;
-    if (!cJSON_IsObject(argument)) {
-        return service_fail("the argument", "is not an object", "pass the operation's argument struct", reply);
-    }
-    return SERVICE_SUCCESS;
-}
-
 int service_is_object(const cJSON *value) {
     return cJSON_IsObject(value);
 }

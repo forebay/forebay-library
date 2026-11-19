@@ -250,11 +250,8 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, con
 }
 
 int32_t routing_model_map_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *profile = NULL;
     const cJSON *settings = NULL;
     const cJSON *models = NULL;

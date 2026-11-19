@@ -43,9 +43,6 @@ int32_t service_answer(cJSON *result, service_reply *reply);
 /** Fails a malformed call as "<subject> <problem>". */
 int32_t service_fail(const char *subject, const char *problem, const char *fix, service_reply *reply);
 
-/** Opens a call over an argument that must be an object. */
-int32_t service_open(const cJSON *argument, service_call *call, service_reply *reply);
-
 /** Reads the named argument member of the type asked for; answers 0 with the call already failed. */
 int service_require(const service_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
                     const cJSON **member, service_reply *reply, int32_t *status);

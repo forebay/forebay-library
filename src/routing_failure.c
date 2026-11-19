@@ -86,11 +86,8 @@ static int32_t answer_failure(const service_call *call, const char *reason, cons
 }
 
 int32_t routing_failure_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *reason = NULL;
     const cJSON *detail = NULL;
     if (service_require(&call, "reason", service_is_string, "a string", &reason, reply, &status) &&
