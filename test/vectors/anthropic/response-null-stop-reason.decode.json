@@ -1,0 +1,21 @@
+{
+  "direction": "decodeResponse",
+  "input": {
+    "id": "msg_9",
+    "model": "m",
+    "content": [],
+    "stop_reason": null
+  },
+  "output": {
+    "id": "msg_9",
+    "model": "m",
+    "content": [],
+    "stopReason": "error",
+    "extensions": {
+      "$stopReasonRaw": null,
+      "$stopSequenceRaw": null,
+      "$typeRaw": null,
+      "$roleRaw": null
+    }
+  }
+}

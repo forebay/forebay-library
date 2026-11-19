@@ -1,0 +1,42 @@
+{
+  "direction": "decodeResponse",
+  "input": {
+    "id": "msg_02",
+    "type": "message",
+    "role": "assistant",
+    "model": "claude-fable-5",
+    "content": [
+      {
+        "type": "text",
+        "text": "..."
+      }
+    ],
+    "stop_reason": "refusal",
+    "stop_sequence": null,
+    "usage": {
+      "input_tokens": 10,
+      "output_tokens": 5
+    }
+  },
+  "output": {
+    "id": "msg_02",
+    "model": "claude-fable-5",
+    "content": [
+      {
+        "kind": "text",
+        "text": "..."
+      }
+    ],
+    "stopReason": "refusal",
+    "usage": {
+      "inputTokens": 10,
+      "outputTokens": 5
+    },
+    "extensions": {
+      "$stopReasonRaw": "refusal",
+      "$stopSequenceRaw": null,
+      "$typeRaw": "message",
+      "$roleRaw": "assistant"
+    }
+  }
+}

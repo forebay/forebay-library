@@ -1,0 +1,35 @@
+{
+  "direction": "decodeRequest",
+  "input": {
+    "model": "m",
+    "max_tokens": 8,
+    "messages": [],
+    "thinking": {
+      "type": "adaptive"
+    },
+    "temperature": 1,
+    "top_k": 2.7,
+    "stop_sequences": [
+      "a",
+      "b"
+    ]
+  },
+  "output": {
+    "model": "m",
+    "messages": [],
+    "maxTokens": 8,
+    "temperature": 1,
+    "topK": 2,
+    "stopSequences": [
+      "a",
+      "b"
+    ],
+    "stream": false,
+    "thinking": {
+      "enabled": true
+    },
+    "extensions": {
+      "$thinkingType": "adaptive"
+    }
+  }
+}

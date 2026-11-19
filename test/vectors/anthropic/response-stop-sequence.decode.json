@@ -1,0 +1,24 @@
+{
+  "direction": "decodeResponse",
+  "input": {
+    "id": "msg_9",
+    "type": "message",
+    "role": "assistant",
+    "model": "m",
+    "content": [],
+    "stop_reason": "stop_sequence",
+    "stop_sequence": "END"
+  },
+  "output": {
+    "id": "msg_9",
+    "model": "m",
+    "content": [],
+    "stopReason": "stop_sequence",
+    "extensions": {
+      "$stopReasonRaw": "stop_sequence",
+      "$stopSequenceRaw": "END",
+      "$typeRaw": "message",
+      "$roleRaw": "assistant"
+    }
+  }
+}

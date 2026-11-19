@@ -1,0 +1,66 @@
+{
+  "direction": "encodeStream",
+  "input": [
+    {
+      "event": "message_start"
+    },
+    {
+      "event": "content_block_start",
+      "index": 1,
+      "blockKind": "tool_use",
+      "toolUseId": "t",
+      "toolName": "n"
+    },
+    {
+      "event": "content_block_start",
+      "index": 2,
+      "blockKind": "thinking"
+    },
+    {
+      "event": "message_delta",
+      "stopReason": "error"
+    },
+    {
+      "event": "message_delta",
+      "stopReason": "refusal",
+      "extensions": {
+        "$stopSequenceRaw": "S",
+        "container": 1
+      }
+    },
+    {
+      "event": "message_delta"
+    },
+    {
+      "event": "message_start",
+      "id": "i",
+      "model": "m",
+      "role": "assistant",
+      "usage": {
+        "inputTokens": 1
+      },
+      "extensions": {
+        "container": 2,
+        "$x": 3
+      }
+    },
+    {
+      "event": "text_delta",
+      "index": 0
+    },
+    {
+      "event": "error"
+    }
+  ],
+  "output": [
+    "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":null,\"type\":\"message\",\"role\":null,\"content\":[],\"model\":null,\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n",
+    "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"tool_use\",\"id\":\"t\",\"name\":\"n\",\"input\":{}}}\n\n",
+    "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":2,\"content_block\":{\"type\":\"thinking\",\"thinking\":\"\"}}\n\n",
+    "event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":0}}\n\n",
+    "event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"refusal\",\"stop_sequence\":\"S\",\"container\":1},\"usage\":{\"output_tokens\":0}}\n\n",
+    "event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":null,\"stop_sequence\":null},\"usage\":{\"output_tokens\":0}}\n\n",
+    "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"i\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"m\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":1},\"container\":2}}\n\n",
+    "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":null}}\n\n",
+    "event: error\ndata: {\"type\":\"error\",\"error\":{\"type\":null,\"message\":null}}\n\n"
+  ]
+}

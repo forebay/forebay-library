@@ -1,0 +1,222 @@
+{
+  "direction": "decodeRequest",
+  "input": {
+    "model": "claude-opus-4-8",
+    "max_tokens": 4096,
+    "system": [
+      {
+        "type": "text",
+        "text": "You are a helpful assistant.",
+        "cache_control": {
+          "type": "ephemeral",
+          "ttl": "1h"
+        }
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the weather in Berlin?"
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Let me check that for you."
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_01",
+            "name": "get_weather",
+            "input": {
+              "city": "Berlin"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "toolu_01",
+            "content": "18C, cloudy"
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "The weather is 18C and cloudy; summarize it.",
+            "signature": "sig-abc123"
+          },
+          {
+            "type": "text",
+            "text": "It's 18C and cloudy in Berlin."
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        },
+        "cache_control": {
+          "type": "ephemeral"
+        }
+      }
+    ],
+    "tool_choice": {
+      "type": "auto"
+    },
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 40,
+    "stop_sequences": [
+      "STOP"
+    ],
+    "stream": false,
+    "thinking": {
+      "type": "enabled",
+      "budget_tokens": 2048
+    },
+    "metadata": {
+      "user_id": "user-123"
+    }
+  },
+  "output": {
+    "model": "claude-opus-4-8",
+    "system": [
+      {
+        "kind": "text",
+        "cacheControl": "ephemeral",
+        "text": "You are a helpful assistant.",
+        "extensions": {
+          "$cacheControlExtra": {
+            "ttl": "1h"
+          }
+        }
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "kind": "text",
+            "text": "What is the weather in Berlin?"
+          }
+        ],
+        "extensions": {
+          "$contentIsString": true
+        }
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "kind": "text",
+            "text": "Let me check that for you."
+          },
+          {
+            "kind": "tool_use",
+            "id": "toolu_01",
+            "name": "get_weather",
+            "input": {
+              "city": "Berlin"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "kind": "tool_result",
+            "toolUseId": "toolu_01",
+            "content": [
+              {
+                "kind": "text",
+                "text": "18C, cloudy"
+              }
+            ],
+            "extensions": {
+              "$contentIsString": true
+            }
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "kind": "thinking",
+            "text": "The weather is 18C and cloudy; summarize it.",
+            "signature": "sig-abc123"
+          },
+          {
+            "kind": "text",
+            "text": "It's 18C and cloudy in Berlin."
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a city",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "city"
+          ]
+        },
+        "extensions": {
+          "cache_control": {
+            "type": "ephemeral"
+          }
+        }
+      }
+    ],
+    "toolChoice": {
+      "type": "auto"
+    },
+    "maxTokens": 4096,
+    "temperature": 0.7,
+    "topP": 0.9,
+    "topK": 40,
+    "stopSequences": [
+      "STOP"
+    ],
+    "stream": false,
+    "thinking": {
+      "enabled": true,
+      "budgetTokens": 2048
+    },
+    "metadata": {
+      "user_id": "user-123"
+    },
+    "extensions": {
+      "$thinkingType": "enabled"
+    }
+  }
+}
