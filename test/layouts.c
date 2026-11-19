@@ -492,9 +492,6 @@ static void print_ir_layouts(void) {
     FIELD(forebay_ir_event, error_type);
     FIELD(forebay_ir_event, message);
     SIZE(forebay_ir_event);
-    FIELD(forebay_ir_header, name);
-    FIELD(forebay_ir_header, value);
-    SIZE(forebay_ir_header);
     FIELD(forebay_ir_failure, status);
     FIELD(forebay_ir_failure, headers);
     FIELD(forebay_ir_failure, header_count);

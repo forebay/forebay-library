@@ -207,13 +207,13 @@ spisor_status ir_json_read_events(const cJSON *json, ir_json_arena *arena, const
     return reader.status;
 }
 
-static const forebay_ir_header *read_headers(ir_reader *reader, const cJSON *json, size_t *count) {
+static const forebay_pair *read_headers(ir_reader *reader, const cJSON *json, size_t *count) {
     *count = 0;
     if (json == NULL || !is_object(reader, json, "headers")) {
         return NULL;
     }
     size_t size = (size_t)cJSON_GetArraySize(json);
-    forebay_ir_header *headers = ir_read_take(reader, size, sizeof *headers);
+    forebay_pair *headers = ir_read_take(reader, size, sizeof *headers);
     if (headers == NULL) {
         return NULL;
     }

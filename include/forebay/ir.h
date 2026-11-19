@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "forebay/pair.h"
 #include "spisor/value.h"
 
 #ifdef __cplusplus
@@ -202,19 +203,13 @@ typedef struct forebay_ir_event {
     const char *message;
 } forebay_ir_event;
 
-/** One response header of a failure. */
-typedef struct forebay_ir_header {
-    const char *name;
-    const char *value;
-} forebay_ir_header;
-
 /**
- * An upstream failure: its HTTP `status`, from 100 to 599, its headers, each name once, its `body` as text, and the
+ * An upstream failure: its HTTP `status`, from 100 to 599, its response headers, each name once, its `body` as text, and the
  * wait it asked for when `has_retry_after` is 1.
  */
 typedef struct forebay_ir_failure {
     uint32_t status;
-    const forebay_ir_header *headers;
+    const forebay_pair *headers;
     size_t header_count;
     const char *body;
     uint32_t has_retry_after;

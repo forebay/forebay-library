@@ -15,18 +15,13 @@
 #include <stdint.h>
 
 #include "forebay/definition.h"
+#include "forebay/pair.h"
 #include "spisor/status.h"
 #include "spisor/value.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** One header or environment variable. A later pair with a name already given replaces the earlier one. */
-typedef struct forebay_pair {
-    const char *name;
-    const char *value;
-} forebay_pair;
 
 /**
  * One provider's model a model-map slot is served by: `name` its display name, NULL in an argument for the model id,
