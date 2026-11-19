@@ -123,13 +123,8 @@ library links `spisor_allocator`, the tests may take `spisor_allocator_counting`
 requires an empty answer. CI runs six jobs: Debug under ASan and UBSan on Linux and macOS, Release on all three,
 and Debug on Windows.
 
-`parity/typescript` holds the plugin contract schemas in `contracts/` to their vectors in `test/vectors/ir/`
-(`parity.yml`); it tests no C:
-
-```
-npm ci --prefix parity/typescript
-npm test --prefix parity/typescript
-```
+`contracts/` keeps the plugin contract schemas, with their vectors in `test/vectors/ir/`, as files; nothing here tests
+them.
 
 ## Releasing
 
