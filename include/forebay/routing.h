@@ -523,7 +523,7 @@ typedef struct forebay_routing_definition {
 } forebay_routing_definition;
 
 /** The static forebay_routing_definition, living until the library is unloaded. */
-FOREBAY_DEFINITION_API const void *forebay_library_routing_definition(void);
+FOREBAY_DEFINITION_API const void *forebay_routing_definition_of(void);
 
 #ifdef __cplusplus
 }

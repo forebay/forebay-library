@@ -30,7 +30,7 @@ typedef struct step_result {
 } step_result;
 
 static const forebay_routing_definition *routing(void) {
-    return forebay_library_routing_definition();
+    return forebay_routing_definition_of();
 }
 
 static void release_walk(forebay_walk *walk) {

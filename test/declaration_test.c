@@ -11,7 +11,7 @@
 /**
  * @file
  * Reads `library.json` with the weivel standard's own reader and requires it to declare forebay-library 0.2.0 with no
- * release, since every service is a definition, and exactly one service per `forebay_library_*_definition` a header
+ * release, since every service is a definition, and exactly one service per `forebay_*_definition_of` a header
  * under `include/forebay` declares: named by the symbol's middle, holding that symbol as its one function of the
  * definition kind. The symbols come from the headers at configure time, so a service added to a header and left out
  * of the declaration fails here.
@@ -20,8 +20,8 @@
 static const char *const header_symbols[] = {FOREBAY_DEFINITION_SYMBOLS};
 static const size_t header_symbol_count = sizeof header_symbols / sizeof header_symbols[0];
 
-static const char definition_prefix[] = "forebay_library_";
-static const char definition_suffix[] = "_definition";
+static const char definition_prefix[] = "forebay_";
+static const char definition_suffix[] = "_definition_of";
 
 static int read_library(weivel_standard_library *library) {
     size_t length = 0;
@@ -66,7 +66,7 @@ static void check_service(const weivel_standard_library_service *service) {
     check_text(function->name, "definition", service->id);
     CHECK(function->kind == WEIVEL_STANDARD_FUNCTION_DEFINITION && function->context == 0);
     if (!is_symbol_of(function->symbol, service->id)) {
-        fprintf(stderr, "service %s names the symbol %s, not forebay_library_%s_definition\n", service->id,
+        fprintf(stderr, "service %s names the symbol %s, not forebay_%s_definition_of\n", service->id,
                 function->symbol, service->id);
         check_failures++;
     }

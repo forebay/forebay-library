@@ -2,7 +2,7 @@
 
 The forebay ecosystem's C library, `forebay-library`. `library.json` declares it in the weivel standard's
 format, `forebay-library` 0.2.0, with two services, `routing` and `accounts`, each one function of kind
-`definition`: its exported symbol (`forebay_library_routing_definition`, `forebay_library_accounts_definition`)
+`definition`: its exported symbol (`forebay_routing_definition_of`, `forebay_accounts_definition_of`)
 answers a static C struct that begins with its `size`, then the provider's `context`, then one function pointer
 per operation and one release per kind of answer, living until the library is unloaded. The structs are declared
 in `include/forebay/routing.h` and `include/forebay/accounts.h`, which document every operation, what it takes

@@ -514,6 +514,6 @@ static const forebay_routing_definition definition = {
     spisor_release_refusal,
 };
 
-FOREBAY_DEFINITION_API const void *forebay_library_routing_definition(void) {
+FOREBAY_DEFINITION_API const void *forebay_routing_definition_of(void) {
     return &definition;
 }

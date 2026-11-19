@@ -7,7 +7,7 @@
       "functions": [
         {
           "name": "definition",
-          "symbol": "forebay_library_routing_definition",
+          "symbol": "forebay_routing_definition_of",
           "kind": "definition"
         }
       ]
@@ -17,7 +17,7 @@
       "functions": [
         {
           "name": "definition",
-          "symbol": "forebay_library_accounts_definition",
+          "symbol": "forebay_accounts_definition_of",
           "kind": "definition"
         }
       ]

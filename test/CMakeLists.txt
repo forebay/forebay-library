@@ -66,10 +66,10 @@ foreach(header IN LISTS forebay_public_headers)
     if(header_text MATCHES "#include \"forebay/definition.h\"")
         math(EXPR forebay_definition_header_count "${forebay_definition_header_count} + 1")
     endif()
-    string(REGEX MATCHALL "forebay_library_[a-z_]+_definition[ \t\r\n]*[(][ \t\r\n]*void[ \t\r\n]*[)]"
+    string(REGEX MATCHALL "forebay_[a-z_]+_definition_of[ \t\r\n]*[(][ \t\r\n]*void[ \t\r\n]*[)]"
         declarations "${header_text}")
     foreach(declaration IN LISTS declarations)
-        string(REGEX MATCH "forebay_library_[a-z_]+_definition" symbol "${declaration}")
+        string(REGEX MATCH "forebay_[a-z_]+_definition_of" symbol "${declaration}")
         list(APPEND forebay_definition_symbols ${symbol})
     endforeach()
 endforeach()
