@@ -1,11 +1,9 @@
-#include <stdio.h>
 #include <string.h>
 
-#include "anthropic_check.h"
 #include "anthropic_decode.h"
 #include "anthropic_encode.h"
+#include "anthropic_operations.h"
 #include "anthropic_stringify.h"
-#include "answer_storage.h"
 #include "forebay/anthropic.h"
 #include "spisor/allocation.h"
 #include "spisor/definition.h"
@@ -16,28 +14,12 @@
 #define ENCODE_REQUEST_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_encode_request_argument, request)
 #define RESPONSE_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_response_answer, storage)
 #define ENCODE_RESPONSE_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_encode_response_argument, response)
-#define BODY_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_body_answer, storage)
-
-#define DETAIL_LIMIT 200
 
 static spisor_status refuse_not_json(spisor_refusal *refusal) {
     static const char detail[] =
         "the body is not JSON this library can read: it must be UTF-8 JSON text "
         "in which no string holds a NUL (\\u0000)";
     return spisor_refuse_as(refusal, SPISOR_MALFORMED, detail, "send a JSON body without a NUL in any string");
-}
-
-static spisor_status refuse_problem(spisor_refusal *refusal, const anthropic_problem *problem) {
-    char detail[DETAIL_LIMIT];
-    char fix[DETAIL_LIMIT];
-    snprintf(detail, sizeof detail, "%s must be %s", problem->member, problem->rule);
-    snprintf(fix, sizeof fix, "correct %s in the IR so that it is %s", problem->member, problem->rule);
-    return spisor_refuse_as(refusal, SPISOR_MALFORMED, detail, fix);
-}
-
-static spisor_status refuse_bytes(spisor_refusal *refusal) {
-    return spisor_refuse_as(refusal, SPISOR_MALFORMED, "bytes is NULL beside a length that is not 0",
-                            "set bytes to the body, or length to 0");
 }
 
 typedef const void *(*body_reader)(anthropic_reader *reader, const cJSON *root);
@@ -57,7 +39,7 @@ static const void *read_response(anthropic_reader *reader, const cJSON *root) {
 static spisor_status decode_body(const forebay_anthropic_body_argument *argument, body_reader read, const void **result,
                                  void **storage, spisor_refusal *refusal) {
     if (argument->bytes == NULL && argument->length > 0) {
-        return refuse_bytes(refusal);
+        return anthropic_refuse_bytes(refusal);
     }
     static const uint8_t no_bytes[1] = {0};
     int out_of_memory = 0;
@@ -130,9 +112,8 @@ static spisor_status finish_encoding(const anthropic_writer *writer, cJSON *wire
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     if (writer->status == SPISOR_MALFORMED) {
         cJSON_Delete(wire);
-        problem->member = writer->member;
-        problem->rule = "a well-formed spisor_value";
-        return refuse_problem(refusal, problem);
+        anthropic_writer_problem(writer, problem);
+        return anthropic_refuse_problem(refusal, problem);
     }
     if (writer->status != SPISOR_OK) {
         cJSON_Delete(wire);
@@ -145,13 +126,13 @@ static spisor_status encode_request(void *context, const forebay_anthropic_encod
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ENCODE_REQUEST_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, BODY_ANSWER_SHAPE)) {
+        !SPISOR_IS_EMPTY_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE)) {
         return spisor_refuse_shape(refusal, "anthropic's encode_request");
     }
     anthropic_problem problem;
     spisor_status checked = anthropic_check_request(argument->request, &problem);
     if (checked == SPISOR_MALFORMED) {
-        return refuse_problem(refusal, &problem);
+        return anthropic_refuse_problem(refusal, &problem);
     }
     if (checked != SPISOR_OK) {
         return checked;
@@ -165,13 +146,13 @@ static spisor_status encode_response(void *context, const forebay_anthropic_enco
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ENCODE_RESPONSE_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, BODY_ANSWER_SHAPE)) {
+        !SPISOR_IS_EMPTY_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE)) {
         return spisor_refuse_shape(refusal, "anthropic's encode_response");
     }
     anthropic_problem problem;
     spisor_status checked = anthropic_check_response(argument->response, &problem);
     if (checked == SPISOR_MALFORMED) {
-        return refuse_problem(refusal, &problem);
+        return anthropic_refuse_problem(refusal, &problem);
     }
     if (checked != SPISOR_OK) {
         return checked;
@@ -181,18 +162,9 @@ static spisor_status encode_response(void *context, const forebay_anthropic_enco
     return finish_encoding(&writer, wire, &problem, answer, refusal);
 }
 
-#define RELEASE_ANSWER(name, type, shape)                              \
-    static void name(void *context, type *answer) {                    \
-        (void)context;                                                 \
-        if (answer != NULL && spisor_has_shape(answer->size, shape)) { \
-            forebay_storage_release(answer->storage);                  \
-            SPISOR_CLEAR_ANSWER(answer, shape);                        \
-        }                                                              \
-    }
-
-RELEASE_ANSWER(release_request, forebay_anthropic_request_answer, REQUEST_ANSWER_SHAPE)
-RELEASE_ANSWER(release_response, forebay_anthropic_response_answer, RESPONSE_ANSWER_SHAPE)
-RELEASE_ANSWER(release_body, forebay_anthropic_body_answer, BODY_ANSWER_SHAPE)
+static ANTHROPIC_RELEASE_ANSWER(release_request, forebay_anthropic_request_answer, REQUEST_ANSWER_SHAPE)
+static ANTHROPIC_RELEASE_ANSWER(release_response, forebay_anthropic_response_answer, RESPONSE_ANSWER_SHAPE)
+ANTHROPIC_RELEASE_ANSWER(anthropic_release_body, forebay_anthropic_body_answer, ANTHROPIC_BODY_ANSWER_SHAPE)
 
 static const forebay_anthropic_definition definition = {
     sizeof(forebay_anthropic_definition),
@@ -200,11 +172,20 @@ static const forebay_anthropic_definition definition = {
     decode_request,
     encode_request,
     release_request,
-    release_body,
+    anthropic_release_body,
     spisor_release_refusal,
     decode_response,
     encode_response,
     release_response,
+    anthropic_stream_decoder_open,
+    anthropic_stream_decode,
+    anthropic_stream_decode_finish,
+    anthropic_release_events,
+    anthropic_release_stream_decoder,
+    anthropic_stream_encoder_open,
+    anthropic_stream_encode,
+    anthropic_stream_encode_finish,
+    anthropic_release_stream_encoder,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_anthropic_definition_of(void) {

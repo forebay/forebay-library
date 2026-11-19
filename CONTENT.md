@@ -110,7 +110,8 @@ chains further calls against it.
 `anthropic` translates the Anthropic Messages wire format to and from the IR of `include/forebay/ir.h`, the port of
 `anthropic-translator`. The wire body is the one place JSON is read and written: an operation takes bytes and answers
 IR structs, or takes IR structs and answers bytes, and the IR crosses the definition as C structs, never as JSON.
-Every body, from either encoder, is answered as `forebay_anthropic_body_answer` and freed by the one `release_body`.
+Every body and every stream's text an encoder writes is answered as `forebay_anthropic_body_answer` and freed by the
+one `release_body`.
 
 | operation | does |
 | --- | --- |
@@ -119,9 +120,22 @@ Every body, from either encoder, is answered as `forebay_anthropic_body_answer` 
 | `decode_response` | a response body to a `forebay_ir_response`: a stop reason the translator knows is kept and any other, or none, is `error`, with the wire's own in `$stopReasonRaw` beside `$stopSequenceRaw`, `$typeRaw` and `$roleRaw`; usage counts read as the request's counts do; a JSON root that is no object is the empty response |
 | `encode_response` | an IR response to a body, `id`, `type`, `role`, `content`, `model`, `stop_reason`, `stop_sequence`, `usage`, then the wire members of `extensions`; the raw extensions restore what was decoded and `$` keys never reach the body |
 
-`test/vectors/anthropic/` holds the translator's vectors, copied unchanged; `anthropic_test` runs every `request-*` and `response-*` one in
-both directions through the definition, and `anthropic_out_of_memory_test` fails each allocation of them, singly and
-from that one on.
+A stream is read and written through a handle the caller opens and releases, one thread at a time:
+`forebay_anthropic_stream_decoder` keeps the text of the frame not yet ended, so a piece may end anywhere, inside a
+line, a frame or a CRLF. A feed that runs out of memory leaves its handle as it was, so the same piece may be fed again.
+
+| operation | does |
+| --- | --- |
+| `stream_decoder_open`, `release_stream_decoder` | a new decoder; freeing one, NULL doing nothing |
+| `stream_decode` | a piece of SSE text to the events of the frames it completed, as the translator's decoder reads them: a line ends at LF with one CR before it dropped, a frame at a blank line, its `data:` lines joined; comments, other fields, `ping`, frames of another type or of no JSON and deltas of another type yield nothing; a message delta keeps its stop sequence in `$stopSequenceRaw` |
+| `stream_decode_finish` | a last piece, then the end: an unterminated last line and last frame yield as complete ones; the decoder is left empty for a new stream |
+| `stream_encoder_open`, `release_stream_encoder` | a new encoder; freeing one |
+| `stream_encode`, `stream_encode_finish` | IR events to SSE text, `event:`, `data:` and a blank line each, with the translator's defaults for what an event leaves out; an event of a kind the header does not name is refused MALFORMED |
+
+`test/vectors/anthropic/` holds the translator's vectors, copied unchanged; `anthropic_test` runs every `request-*` and
+`response-*` one in both directions through the definition, `anthropic_stream_test` every `stream-*` one, a decode
+also split in two at every byte and fed a byte at a time, and `anthropic_out_of_memory_test` fails each allocation of
+every vector, singly and from that one on.
 
 ## Building and testing
 

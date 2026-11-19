@@ -19,93 +19,28 @@ static cJSON *parse(const char *text) {
     return spisor_parse_json_reporting((const uint8_t *)text, strlen(text), &out_of_memory);
 }
 
-static void expect_equal_request(const forebay_anthropic_request_answer *answer, const cJSON *expected,
-                                 const char *label) {
-    if (answer->request == NULL || !anthropic_request_equals(answer->request, expected)) {
-        support_failf(label, "the decoded request is not the expected one");
-    }
+/** Checks the direction named `name` on a decode's wire `body`. */
+static void check_text(const char *name, const char *label, const char *body, const cJSON *expected) {
+    anthropic_input input = anthropic_input_of_text(body);
+    anthropic_check_direction(anthropic_direction_named(name), label, &input, expected);
 }
 
-static void check_decode(const char *label, const char *body, const cJSON *expected) {
-    forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
-    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
-    spisor_status status = anthropic_decode_text(body, &answer, &refusal);
-    if (status != SPISOR_OK) {
-        support_failf(label, "decode answered %d", (int)status);
-    } else {
-        expect_equal_request(&answer, expected, label);
-    }
-    anthropic_definition()->release_request(NULL, &answer);
-    anthropic_definition()->release_refusal(NULL, &refusal);
-}
-
-static void check_encode(const char *label, const cJSON *ir, const cJSON *expected) {
-    ir_json_arena arena = {0};
-    forebay_ir_request request;
-    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
-    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
-    if (!anthropic_read_ir(ir, &arena, &request)) {
-        support_fail(label, "the IR is not one the test codec reads");
-    } else if (anthropic_encode_request_of(&request, &answer, &refusal) != SPISOR_OK) {
-        support_fail(label, "encode did not answer OK");
-    } else if (!anthropic_body_equals(&answer, expected)) {
-        support_fail(label, "the encoded body is not the expected one");
-    }
-    anthropic_definition()->release_body(NULL, &answer);
-    anthropic_definition()->release_refusal(NULL, &refusal);
-    ir_json_arena_release(&arena);
-}
-
-static void check_decode_response(const char *label, const char *body, const cJSON *expected) {
-    forebay_anthropic_response_answer answer = SPISOR_INIT(forebay_anthropic_response_answer);
-    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
-    spisor_status status = anthropic_decode_response_text(body, &answer, &refusal);
-    if (status != SPISOR_OK) {
-        support_failf(label, "decode answered %d", (int)status);
-    } else if (answer.response == NULL || !anthropic_response_equals(answer.response, expected)) {
-        support_fail(label, "the decoded response is not the expected one");
-    }
-    anthropic_definition()->release_response(NULL, &answer);
-    anthropic_definition()->release_refusal(NULL, &refusal);
-}
-
-static void check_encode_response(const char *label, const cJSON *ir, const cJSON *expected) {
-    ir_json_arena arena = {0};
-    forebay_ir_response response;
-    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
-    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
-    if (!anthropic_read_response_ir(ir, &arena, &response)) {
-        support_fail(label, "the IR is not one the test codec reads");
-    } else if (anthropic_encode_response_of(&response, &answer, &refusal) != SPISOR_OK) {
-        support_fail(label, "encode did not answer OK");
-    } else if (!anthropic_body_equals(&answer, expected)) {
-        support_fail(label, "the encoded body is not the expected one");
-    }
-    anthropic_definition()->release_body(NULL, &answer);
-    anthropic_definition()->release_refusal(NULL, &refusal);
-    ir_json_arena_release(&arena);
+/** Checks the direction named `name` on an encode's IR JSON `ir`. */
+static void check_ir(const char *name, const char *label, const cJSON *ir, const cJSON *expected) {
+    anthropic_check_vector_input(anthropic_direction_named(name), label, ir, expected);
 }
 
 static void run_vector(const char *path) {
     cJSON *vector = spisor_vector_read(path);
     const cJSON *input = cJSON_GetObjectItemCaseSensitive(vector, "input");
     const cJSON *output = cJSON_GetObjectItemCaseSensitive(vector, "output");
+    const anthropic_direction *direction = anthropic_direction_of(vector);
     if (vector == NULL || input == NULL || output == NULL) {
         support_fail(path, "not a vector with an input and an output");
-    } else if (anthropic_is_direction(vector, "decodeRequest")) {
-        char *body = cJSON_PrintUnformatted(input);
-        check_decode(path, body, output);
-        cJSON_free(body);
-    } else if (anthropic_is_direction(vector, "encodeRequest")) {
-        check_encode(path, input, output);
-    } else if (anthropic_is_direction(vector, "decodeResponse")) {
-        char *body = cJSON_PrintUnformatted(input);
-        check_decode_response(path, body, output);
-        cJSON_free(body);
-    } else if (anthropic_is_direction(vector, "encodeResponse")) {
-        check_encode_response(path, input, output);
-    } else {
+    } else if (direction == NULL) {
         support_fail(path, "a vector of no direction this service has");
+    } else {
+        anthropic_check_vector_input(direction, path, input, output);
     }
     cJSON_Delete(vector);
 }
@@ -186,7 +121,7 @@ static void run_decode_cases(void) {
         if (expected == NULL) {
             support_fail(DECODE_CASES[index].label, "the expected IR is not JSON");
         } else {
-            check_decode(DECODE_CASES[index].label, DECODE_CASES[index].body, expected);
+            check_text("decodeRequest", DECODE_CASES[index].label, DECODE_CASES[index].body, expected);
         }
         cJSON_Delete(expected);
     }
@@ -215,7 +150,7 @@ static void a_root_that_is_no_object_decodes_to_the_empty_request(void) {
     static const char *const roots[] = {"[]", "5", "\"x\"", "null", "true", "[{\"model\":\"m\"}]"};
     cJSON *empty = parse("{\"model\":\"\",\"messages\":[],\"stream\":false}");
     for (size_t index = 0; index < sizeof roots / sizeof roots[0]; index++) {
-        check_decode(roots[index], roots[index], empty);
+        check_text("decodeRequest", roots[index], roots[index], empty);
     }
     cJSON_Delete(empty);
 }
@@ -328,7 +263,7 @@ static void run_encode_cases(void) {
         if (ir == NULL || expected == NULL) {
             support_fail(ENCODE_CASES[index].label, "the case is not JSON");
         } else {
-            check_encode(ENCODE_CASES[index].label, ir, expected);
+            check_ir("encodeRequest", ENCODE_CASES[index].label, ir, expected);
         }
         cJSON_Delete(expected);
         cJSON_Delete(ir);
@@ -493,7 +428,8 @@ static void run_response_decode_cases(void) {
         if (expected == NULL) {
             support_fail(RESPONSE_DECODE_CASES[index].label, "the expected IR is not JSON");
         } else {
-            check_decode_response(RESPONSE_DECODE_CASES[index].label, RESPONSE_DECODE_CASES[index].input, expected);
+            check_text("decodeResponse", RESPONSE_DECODE_CASES[index].label, RESPONSE_DECODE_CASES[index].input,
+                       expected);
         }
         cJSON_Delete(expected);
     }
@@ -503,7 +439,7 @@ static void a_response_root_that_is_no_object_decodes_to_the_empty_response(void
     static const char *const roots[] = {"[]", "5", "\"x\"", "null", "true", "[{\"id\":\"i\"}]"};
     cJSON *empty = parse("{\"id\":\"\",\"model\":\"\",\"content\":[],\"stopReason\":\"error\"}");
     for (size_t index = 0; index < sizeof roots / sizeof roots[0]; index++) {
-        check_decode_response(roots[index], roots[index], empty);
+        check_text("decodeResponse", roots[index], roots[index], empty);
     }
     cJSON_Delete(empty);
 }
@@ -541,7 +477,7 @@ static void run_response_encode_cases(void) {
         if (ir == NULL || expected == NULL) {
             support_fail(RESPONSE_ENCODE_CASES[index].label, "the case is not JSON");
         } else {
-            check_encode_response(RESPONSE_ENCODE_CASES[index].label, ir, expected);
+            check_ir("encodeResponse", RESPONSE_ENCODE_CASES[index].label, ir, expected);
         }
         cJSON_Delete(expected);
         cJSON_Delete(ir);

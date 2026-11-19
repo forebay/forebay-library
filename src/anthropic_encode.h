@@ -17,6 +17,12 @@ cJSON *anthropic_encode_block_list(anthropic_writer *writer, const forebay_ir_bl
 /** The wire object of an IR response that anthropic_check_response accepted; NULL once the writer has failed. */
 cJSON *anthropic_encode_response_object(anthropic_writer *writer, const forebay_ir_response *response);
 
+/**
+ * The `data` object of an event's SSE frame, as the translator's stream encoder builds it, from an event that
+ * anthropic_check_events accepted; the frame's name is its `type`. NULL once the writer has failed.
+ */
+cJSON *anthropic_encode_stream_event(anthropic_writer *writer, const forebay_ir_event *event);
+
 /** The wire object of IR usage, holding the counts that are present. NULL once the writer has failed. */
 cJSON *anthropic_encode_usage(anthropic_writer *writer, const forebay_ir_usage *usage);
 

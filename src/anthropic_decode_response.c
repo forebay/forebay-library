@@ -20,8 +20,7 @@ static const char *known_stop_reason(const char *wire_reason) {
     return NULL;
 }
 
-/** The IR stop reason of a wire one: a known one as it is, any other, or none, "error". */
-static const char *stop_reason_to_ir(const char *wire_reason) {
+const char *anthropic_stop_reason_to_ir(const char *wire_reason) {
     const char *known = known_stop_reason(wire_reason);
     return known != NULL ? known : UNMAPPED_STOP_REASON;
 }
@@ -46,7 +45,8 @@ static void decode_members(anthropic_reader *reader, const cJSON *root, forebay_
     response->model = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(root, "model")));
     anthropic_decode_blocks(reader, anthropic_wire_member(root, "content"), &response->content,
                             &response->content_count);
-    response->stop_reason = stop_reason_to_ir(anthropic_wire_string(anthropic_wire_member(root, "stop_reason")));
+    response->stop_reason =
+        anthropic_stop_reason_to_ir(anthropic_wire_string(anthropic_wire_member(root, "stop_reason")));
     response->usage = anthropic_decode_usage(reader, anthropic_wire_member(root, "usage"));
     put_raw_members(reader, root, &extensions);
     anthropic_extensions_put_unconsumed(reader, &extensions, root, ANTHROPIC_KEYS_OF(RESPONSE_CONSUMED));

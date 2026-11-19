@@ -34,6 +34,8 @@ void anthropic_append(anthropic_writer *writer, cJSON *array, cJSON *item);
 void anthropic_set(anthropic_writer *writer, cJSON *object, const char *key, cJSON *item);
 
 void anthropic_set_text(anthropic_writer *writer, cJSON *object, const char *key, const char *text);
+/** Sets a member to `text`, or to null when it is NULL. */
+void anthropic_set_text_or_null(anthropic_writer *writer, cJSON *object, const char *key, const char *text);
 void anthropic_set_count(anthropic_writer *writer, cJSON *object, const char *key, uint64_t count);
 void anthropic_set_number(anthropic_writer *writer, cJSON *object, const char *key, double number);
 void anthropic_set_flag(anthropic_writer *writer, cJSON *object, const char *key, uint32_t flag);
