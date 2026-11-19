@@ -13,11 +13,6 @@
   ],
   "dependencies": [
     {
-      "id": "github:1427176225",
-      "importName": "model",
-      "commit": "0a2e3321c08afc04848c92ee4fc42dc8d9047a87"
-    },
-    {
       "id": "github:1434914426",
       "importName": "library",
       "commit": "ef6d101d4a8c3214f821dbbf5d640ba9c86263e9"
