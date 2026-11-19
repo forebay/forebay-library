@@ -110,7 +110,10 @@ typedef struct forebay_model_map_argument {
     size_t provider_count;
 } forebay_model_map_argument;
 
-/** Every slot, and the slots whose choice was replaced because the catalog no longer serves it. */
+/**
+ * Every slot, and the slots whose choice was replaced because the catalog no longer serves it. First shape ends at
+ * `storage`.
+ */
 typedef struct forebay_model_map_answer {
     uint32_t size;
     const forebay_slot *slots;
@@ -161,7 +164,10 @@ typedef struct forebay_outcome_argument {
     double retry_after_milliseconds;
 } forebay_outcome_argument;
 
-/** Whether the response limited the rate, and until when when `has_reset_at` is 1. It owns nothing. */
+/**
+ * Whether the response limited the rate, and until when when `has_reset_at` is 1. It owns nothing. First shape ends
+ * at `reset_at`.
+ */
 typedef struct forebay_outcome_answer {
     uint32_t size;
     uint32_t rate_limited;
@@ -281,12 +287,17 @@ typedef struct forebay_step_answer {
     void *storage;
 } forebay_step_answer;
 
-/** The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply. */
+/**
+ * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply. First
+ * shape ends at `size`.
+ */
 typedef struct forebay_limits_argument {
     uint32_t size;
 } forebay_limits_argument;
 
-/** The limits; `too_large_message` is static text. It owns nothing. First shape ends at `refresh_every_milliseconds`.
+/**
+ * The limits; `too_large_message` is static text. It owns nothing. First shape ends at
+ * `refresh_every_milliseconds`.
  */
 typedef struct forebay_limits_answer {
     uint32_t size;
@@ -298,7 +309,10 @@ typedef struct forebay_limits_answer {
     uint64_t refresh_every_milliseconds;
 } forebay_limits_answer;
 
-/** A request to send upstream undecoded, with the placeholder authorization a client sent. First shape ends there. */
+/**
+ * A request to send upstream undecoded, with the placeholder authorization a client sent. First shape ends at
+ * `placeholder_authorization`.
+ */
 typedef struct forebay_pass_through_argument {
     uint32_t size;
     const char *upstream;
@@ -365,7 +379,10 @@ typedef struct forebay_arrival_answer {
     void *storage;
 } forebay_arrival_answer;
 
-/** Why the proxy could not listen on the port: `in_use` 1 when another listener holds it. First shape ends there. */
+/**
+ * Why the proxy could not listen on the port: `in_use` 1 when another listener holds it. First shape ends at
+ * `detail`.
+ */
 typedef struct forebay_port_failure {
     uint32_t size;
     uint32_t in_use;
@@ -397,7 +414,10 @@ typedef enum forebay_failure_reason {
     FOREBAY_REQUEST_FAILED = 2
 } forebay_failure_reason;
 
-/** A forebay_failure_reason, the `upstream` an unreachable one names, and the `detail`. First shape ends there. */
+/**
+ * A forebay_failure_reason, the `upstream` an unreachable one names, and the `detail`. First shape ends at
+ * `detail`.
+ */
 typedef struct forebay_failure_argument {
     uint32_t size;
     uint32_t reason;
@@ -416,7 +436,10 @@ typedef struct forebay_failure_answer {
     void *storage;
 } forebay_failure_answer;
 
-/** Where an application's own login keeps its state: `name` in the directory `directory_variable` names, or home. */
+/**
+ * Where an application's own login keeps its state: `name` in the directory `directory_variable` names, or home.
+ * First shape ends at `member`.
+ */
 typedef struct forebay_state_file {
     uint32_t size;
     const char *directory_variable;

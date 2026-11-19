@@ -114,3 +114,16 @@ add_test(NAME forebay_exports_only_definitions_test
     COMMAND ${CMAKE_COMMAND} -DLIBRARY=$<TARGET_FILE:forebay_library> -DLISTER=${forebay_export_lister}
         -DFORMAT=${forebay_export_format} -DEXPECTED=${forebay_expected_exports}
         -P ${spisor_library_SOURCE_DIR}/cmake/exports_check.cmake)
+
+include(${spisor_library_SOURCE_DIR}/cmake/definition_calls.cmake)
+set(forebay_definition_operations ${CMAKE_CURRENT_BINARY_DIR}/generated/definition_operations.c)
+spisor_definition_operations(${forebay_definition_operations} DEFINITIONS ${PROJECT_SOURCE_DIR}/include/forebay
+    INCLUDE_ROOT ${PROJECT_SOURCE_DIR}/include PREFIX forebay_ LAYOUTS layouts SHAPES ${PROJECT_SOURCE_DIR}/include)
+# Both tests compile the generated table, so it is generated once ahead of them rather than by each in a parallel build.
+add_custom_target(forebay_definition_operations DEPENDS ${forebay_definition_operations})
+foreach(name IN ITEMS short_shape_test empty_answer_test)
+    spisor_add_definition_call_test(${name} SOURCE ${name}.c LIBRARY forebay_library
+        OPERATIONS ${forebay_definition_operations})
+    target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
+    add_dependencies(${name} forebay_definition_operations)
+endforeach()
