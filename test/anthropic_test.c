@@ -331,9 +331,9 @@ static forebay_ir_request valid_request(void) {
 
 static void an_ir_that_breaks_its_header_is_malformed(void) {
     static const forebay_ir_message message = {"user", NULL, 0, NULL};
-    static const forebay_ir_block unnamed_kind = {99};
-    static const forebay_ir_block unknown_without_raw = {FOREBAY_IR_BLOCK_UNKNOWN};
-    static const forebay_ir_block text_without_text = {FOREBAY_IR_BLOCK_TEXT};
+    static const forebay_ir_block unnamed_kind = {.kind = 99};
+    static const forebay_ir_block unknown_without_raw = {.kind = FOREBAY_IR_BLOCK_UNKNOWN};
+    static const forebay_ir_block text_without_text = {.kind = FOREBAY_IR_BLOCK_TEXT};
     static const forebay_ir_message block_message_kind = {"user", &unnamed_kind, 1, NULL};
     static const forebay_ir_message block_message_raw = {"user", &unknown_without_raw, 1, NULL};
     static const forebay_ir_message block_message_text = {"user", &text_without_text, 1, NULL};
@@ -379,8 +379,7 @@ static void an_extension_tree_that_is_not_well_formed_is_malformed(void) {
         {"abc", 1, {SPISOR_VALUE_NULL, 0, 0, NULL, 0, NULL, NULL, 0}}};
     static const spisor_value short_key_record = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, short_key, 1};
     static const forebay_ir_thinking thinking = {1, 0, 0};
-    static const forebay_ir_block raw_block = {FOREBAY_IR_BLOCK_UNKNOWN, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, 0, 0, 0, NULL, &no_entries};
+    static const forebay_ir_block raw_block = {.kind = FOREBAY_IR_BLOCK_UNKNOWN, .raw = &no_entries};
     static const forebay_ir_message raw_message = {"user", &raw_block, 1, NULL};
     static const spisor_value *const bad[] = {&empty_text, &no_entries, &unkeyed_record, &thinking_record,
                                               &short_key_record};
