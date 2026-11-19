@@ -10,4 +10,9 @@
 #define ANTHROPIC_EXTENSION_REDACTED "$redacted"
 #define ANTHROPIC_EXTENSION_REDACTED_DATA "$redactedThinkingData"
 
+#define ANTHROPIC_EXTENSION_STOP_REASON_RAW "$stopReasonRaw"
+#define ANTHROPIC_EXTENSION_STOP_SEQUENCE_RAW "$stopSequenceRaw"
+#define ANTHROPIC_EXTENSION_TYPE_RAW "$typeRaw"
+#define ANTHROPIC_EXTENSION_ROLE_RAW "$roleRaw"
+
 #endif

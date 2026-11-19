@@ -46,6 +46,19 @@ typedef struct forebay_anthropic_encode_request_argument {
     const forebay_ir_request *request;
 } forebay_anthropic_encode_request_argument;
 
+/** The response a body held, the provider's until release_response. First shape ends at `storage`. */
+typedef struct forebay_anthropic_response_answer {
+    uint32_t size;
+    const forebay_ir_response *response;
+    void *storage;
+} forebay_anthropic_response_answer;
+
+/** A response to write as a body, borrowed for the call. First shape ends at `response`. */
+typedef struct forebay_anthropic_encode_response_argument {
+    uint32_t size;
+    const forebay_ir_response *response;
+} forebay_anthropic_encode_response_argument;
+
 /**
  * A body of UTF-8 JSON, `bytes` of `length` with a NUL after them, the provider's until release_body. Every operation
  * that writes a body answers this, so one release serves them all. First shape ends at `storage`.
@@ -65,7 +78,8 @@ typedef struct forebay_anthropic_body_answer {
  * tree spisor_value_check refuses, which includes every `extensions` record and an unknown block's `raw`); and
  * OUT_OF_MEMORY, with the answer empty. JSON this library cannot read, a string holding a NUL (`\u0000`), is refused
  * as a body that is not JSON, and a number that is not finite (`1e400`) reads as null, as JSON.stringify writes it.
- * First shape ends at `release_refusal`; a later operation is appended after it.
+ * First shape ends at `release_refusal`; the response operations follow it, and a later operation is appended after
+ * those.
  */
 typedef struct forebay_anthropic_definition {
     uint32_t size;
@@ -83,6 +97,18 @@ typedef struct forebay_anthropic_definition {
     void (*release_request)(void *context, forebay_anthropic_request_answer *answer);
     void (*release_body)(void *context, forebay_anthropic_body_answer *answer);
     void (*release_refusal)(void *context, spisor_refusal *refusal);
+    /**
+     * A body to an IR response, as decodeResponse does. The stop reason is a known one as it is, any other or none
+     * "error", and the wire's own is kept in `$stopReasonRaw`, with `$stopSequenceRaw`, `$typeRaw` and `$roleRaw`
+     * beside it, so writing restores them. A JSON root that is not an object reads as a response with id and model
+     * "", stop reason "error", no blocks, no usage and no extensions.
+     */
+    spisor_status (*decode_response)(void *context, const forebay_anthropic_body_argument *argument,
+                                     forebay_anthropic_response_answer *answer, spisor_refusal *refusal);
+    /** An IR response to a body, as encodeResponse does, the members in the order it builds them. */
+    spisor_status (*encode_response)(void *context, const forebay_anthropic_encode_response_argument *argument,
+                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
+    void (*release_response)(void *context, forebay_anthropic_response_answer *answer);
 } forebay_anthropic_definition;
 
 /** The static forebay_anthropic_definition, living until the library is unloaded. */

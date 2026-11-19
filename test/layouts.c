@@ -402,6 +402,13 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_encode_request_argument, size);
     FIELD(forebay_anthropic_encode_request_argument, request);
     SIZE(forebay_anthropic_encode_request_argument);
+    FIELD(forebay_anthropic_response_answer, size);
+    FIELD(forebay_anthropic_response_answer, response);
+    FIELD(forebay_anthropic_response_answer, storage);
+    SIZE(forebay_anthropic_response_answer);
+    FIELD(forebay_anthropic_encode_response_argument, size);
+    FIELD(forebay_anthropic_encode_response_argument, response);
+    SIZE(forebay_anthropic_encode_response_argument);
     FIELD(forebay_anthropic_body_answer, size);
     FIELD(forebay_anthropic_body_answer, bytes);
     FIELD(forebay_anthropic_body_answer, length);
@@ -414,6 +421,9 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_definition, release_request);
     FIELD(forebay_anthropic_definition, release_body);
     FIELD(forebay_anthropic_definition, release_refusal);
+    FIELD(forebay_anthropic_definition, decode_response);
+    FIELD(forebay_anthropic_definition, encode_response);
+    FIELD(forebay_anthropic_definition, release_response);
     SIZE(forebay_anthropic_definition);
 }
 

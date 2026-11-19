@@ -20,4 +20,10 @@ typedef struct anthropic_problem {
  */
 spisor_status anthropic_check_request(const forebay_ir_request *request, anthropic_problem *problem);
 
+/**
+ * Whether an IR response keeps the rules of forebay/ir.h that writing it needs, as anthropic_check_request does for a
+ * request: `id`, `model` and `stop_reason` set, and the same walk of its blocks and `extensions`.
+ */
+spisor_status anthropic_check_response(const forebay_ir_response *response, anthropic_problem *problem);
+
 #endif
