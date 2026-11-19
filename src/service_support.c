@@ -3,79 +3,43 @@
 #include <stdio.h>
 #include <string.h>
 
-int32_t service_out_of_memory(uint8_t **out, size_t *out_len) {
-    *out = NULL;
-    *out_len = 0;
-    return SPISOR_STATUS_OUT_OF_MEMORY;
+int32_t service_out_of_memory(service_reply *reply) {
+    reply->status = SERVICE_OUT_OF_MEMORY;
+    return reply->status;
 }
 
-static int32_t emit_printed(char *printed, int32_t status, uint8_t **out, size_t *out_len) {
-    if (printed == NULL) {
-        return service_out_of_memory(out, out_len);
-    }
-    *out = (uint8_t *)printed;
-    *out_len = strlen(printed);
-    return status;
-}
-
-int32_t service_answer(cJSON *result, uint8_t **out, size_t *out_len) {
+int32_t service_answer(cJSON *result, service_reply *reply) {
     if (result == NULL) {
-        return service_out_of_memory(out, out_len);
+        return service_out_of_memory(reply);
     }
-    int32_t status = emit_printed(cJSON_PrintUnformatted(result), SPISOR_STATUS_SUCCESS, out, out_len);
-    cJSON_Delete(result);
-    return status;
+    reply->result = result;
+    reply->status = SERVICE_SUCCESS;
+    return reply->status;
 }
 
-static int32_t fail_with(const char *message, const char *fix, uint8_t **out, size_t *out_len) {
-    cJSON *failure = cJSON_CreateObject();
-    if (failure == NULL || cJSON_AddStringToObject(failure, "message", message) == NULL ||
-        cJSON_AddStringToObject(failure, "fix", fix) == NULL) {
-        cJSON_Delete(failure);
-        return service_out_of_memory(out, out_len);
-    }
-    char *printed = cJSON_PrintUnformatted(failure);
-    cJSON_Delete(failure);
-    return emit_printed(printed, SPISOR_STATUS_FAILURE, out, out_len);
-}
-
-void service_discard_call(service_call *call) {
-    cJSON_Delete(call->argument);
-    call->argument = NULL;
-}
-
-int32_t service_refuse(const char *cause, const char *fix, uint8_t **out, size_t *out_len) {
+int32_t service_refuse(const char *cause, const char *fix, service_reply *reply) {
     cJSON *refusal = cJSON_CreateObject();
     if (refusal == NULL || cJSON_AddStringToObject(refusal, "refused", cause) == NULL ||
         cJSON_AddStringToObject(refusal, "fix", fix) == NULL) {
         cJSON_Delete(refusal);
-        return service_out_of_memory(out, out_len);
+        return service_out_of_memory(reply);
     }
-    return service_answer(refusal, out, out_len);
+    return service_answer(refusal, reply);
 }
 
-int32_t service_fail(const char *subject, const char *problem, const char *fix, uint8_t **out, size_t *out_len) {
-    char message[256];
-    snprintf(message, sizeof(message), "%s %s", subject, problem);
-    return fail_with(message, fix, out, out_len);
+int32_t service_fail(const char *subject, const char *problem, const char *fix, service_reply *reply) {
+    snprintf(reply->message, sizeof reply->message, "%s %s", subject, problem);
+    snprintf(reply->fix, sizeof reply->fix, "%s", fix);
+    reply->status = SERVICE_MALFORMED;
+    return reply->status;
 }
 
-int32_t service_open(const uint8_t *in, size_t in_len, service_call *call, uint8_t **out, size_t *out_len) {
-    int out_of_memory = 0;
-    *out = NULL;
-    *out_len = 0;
-    call->argument = spisor_parse_json_reporting(in, in_len, &out_of_memory);
-    if (out_of_memory) {
-        return service_out_of_memory(out, out_len);
+int32_t service_open(const cJSON *argument, service_call *call, service_reply *reply) {
+    call->argument = argument;
+    if (!cJSON_IsObject(argument)) {
+        return service_fail("the argument", "is not an object", "pass the operation's argument struct", reply);
     }
-    if (call->argument == NULL) {
-        return fail_with("the input is not valid JSON", "send exactly one JSON value", out, out_len);
-    }
-    if (!cJSON_IsObject(call->argument)) {
-        service_discard_call(call);
-        return fail_with("the argument is not an object", "send the argument as a JSON object", out, out_len);
-    }
-    return SPISOR_STATUS_SUCCESS;
+    return SERVICE_SUCCESS;
 }
 
 int service_is_object(const cJSON *value) {
@@ -99,7 +63,7 @@ int service_is_boolean(const cJSON *value) {
 }
 
 int service_require(const service_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
-                    const cJSON **member, uint8_t **out, size_t *out_len, int32_t *status) {
+                    const cJSON **member, service_reply *reply, int32_t *status) {
     *member = cJSON_GetObjectItemCaseSensitive(call->argument, name);
     if (*member != NULL && is_type(*member)) {
         return 1;
@@ -107,13 +71,13 @@ int service_require(const service_call *call, const char *name, int (*is_type)(c
     char problem[96];
     char fix[128];
     snprintf(problem, sizeof(problem), "is missing or is not %s", type_name);
-    snprintf(fix, sizeof(fix), "send %s as %s", name, type_name);
-    *status = service_fail(name, problem, fix, out, out_len);
+    snprintf(fix, sizeof(fix), "set %s to %s", name, type_name);
+    *status = service_fail(name, problem, fix, reply);
     return 0;
 }
 
 int service_require_member(const cJSON *object, const char *subject, const char *name, int (*is_type)(const cJSON *),
-                           const char *type_name, const cJSON **member, uint8_t **out, size_t *out_len,
+                           const char *type_name, const cJSON **member, service_reply *reply,
                            int32_t *status) {
     *member = cJSON_GetObjectItemCaseSensitive(object, name);
     if (*member != NULL && is_type(*member)) {
@@ -122,8 +86,8 @@ int service_require_member(const cJSON *object, const char *subject, const char 
     char problem[128];
     char fix[128];
     snprintf(problem, sizeof(problem), "%s is missing or is not %s", name, type_name);
-    snprintf(fix, sizeof(fix), "send %s as %s", name, type_name);
-    *status = service_fail(subject, problem, fix, out, out_len);
+    snprintf(fix, sizeof(fix), "set %s to %s", name, type_name);
+    *status = service_fail(subject, problem, fix, reply);
     return 0;
 }
 

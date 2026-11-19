@@ -105,7 +105,8 @@ static int has_account_on_disk(const cJSON *environment, const char *user_home, 
     spisor_json_file_state state = SPISOR_JSON_FILE_UNREADABLE;
     cJSON *state_file = spisor_read_json_file(path, &state);
     spisor_memory_release(path);
-    int signed_in = state_file != NULL && is_truthy(cJSON_GetObjectItemCaseSensitive(state_file, text_member(state_file_facts, "member")));
+    int signed_in = state_file != NULL &&
+                    is_truthy(cJSON_GetObjectItemCaseSensitive(state_file, text_member(state_file_facts, "member")));
     cJSON_Delete(state_file);
     return signed_in;
 }
@@ -120,12 +121,15 @@ static int any_variable_has_text(const cJSON *environment, const cJSON *names) {
     return 0;
 }
 
-static int has_own_login(const cJSON *environment, const char *user_home, const cJSON *application, int *out_of_memory) {
+static int has_own_login(const cJSON *environment, const char *user_home, const cJSON *application,
+                         int *out_of_memory) {
     const cJSON *placeholder = cJSON_GetObjectItemCaseSensitive(application, "placeholder");
     const cJSON *own_login = cJSON_GetObjectItemCaseSensitive(application, "ownLogin");
     return any_variable_has_text(environment, cJSON_GetObjectItemCaseSensitive(own_login, "variables")) ||
-           is_own_token(variable(environment, text_member(placeholder, "variable")), text_member(placeholder, "value")) ||
-           has_account_on_disk(environment, user_home, cJSON_GetObjectItemCaseSensitive(own_login, "stateFile"), out_of_memory);
+           is_own_token(variable(environment, text_member(placeholder, "variable")),
+                        text_member(placeholder, "value")) ||
+           has_account_on_disk(environment, user_home, cJSON_GetObjectItemCaseSensitive(own_login, "stateFile"),
+                               out_of_memory);
 }
 
 static int add_variable(cJSON *environment, const char *name, const char *value) {
@@ -220,8 +224,11 @@ static cJSON *build_environment(const request *asked) {
     if (ok && asked->providers_enabled) {
         int out_of_memory = 0;
         int own_login = has_own_login(asked->environment, asked->user_home, asked->application, &out_of_memory);
-        ok = !out_of_memory && add_model_pairs(built, cJSON_GetObjectItemCaseSensitive(asked->application, "modelVariables"), asked->map) &&
-             (own_login || add_variable(built, text_member(placeholder, "variable"), text_member(placeholder, "value")));
+        ok =
+            !out_of_memory &&
+            add_model_pairs(built, cJSON_GetObjectItemCaseSensitive(asked->application, "modelVariables"),
+                            asked->map) &&
+            (own_login || add_variable(built, text_member(placeholder, "variable"), text_member(placeholder, "value")));
     }
     if (!ok) {
         cJSON_Delete(built);
@@ -251,12 +258,13 @@ static int is_state_file(const cJSON *state_file) {
 static int is_application_proxy(const cJSON *value) {
     const cJSON *placeholder = cJSON_GetObjectItemCaseSensitive(value, "placeholder");
     const cJSON *own_login = cJSON_GetObjectItemCaseSensitive(value, "ownLogin");
-    return cJSON_IsObject(value) && text_member(value, "baseUrlVariable") != NULL && text_member(placeholder, "variable") != NULL &&
-           text_member(placeholder, "value") != NULL && is_text_list(cJSON_GetObjectItemCaseSensitive(own_login, "variables")) &&
+    return cJSON_IsObject(value) && text_member(value, "baseUrlVariable") != NULL &&
+           text_member(placeholder, "variable") != NULL && text_member(placeholder, "value") != NULL &&
+           is_text_list(cJSON_GetObjectItemCaseSensitive(own_login, "variables")) &&
            is_state_file(cJSON_GetObjectItemCaseSensitive(own_login, "stateFile"));
 }
 
-static int refuses_tier_template(const cJSON *variables, const char *member, uint8_t **out, size_t *out_len,
+static int refuses_tier_template(const cJSON *variables, const char *member, service_reply *reply,
                                   int32_t *status) {
     const char *name_template = text_member(variables, member);
     if (name_template == NULL || strstr(name_template, TIER_PLACEHOLDER) != NULL) {
@@ -265,30 +273,30 @@ static int refuses_tier_template(const cJSON *variables, const char *member, uin
     char cause[96];
     char fix[128];
     snprintf(cause, sizeof(cause), "modelVariables.%s lacks the " TIER_PLACEHOLDER " placeholder", member);
-    snprintf(fix, sizeof(fix), "include " TIER_PLACEHOLDER " in modelVariables.%s where the upper-cased tier goes", member);
-    *status = service_refuse(cause, fix, out, out_len);
+    snprintf(fix, sizeof(fix), "include " TIER_PLACEHOLDER " in modelVariables.%s where the upper-cased tier goes",
+             member);
+    *status = service_refuse(cause, fix, reply);
     return 1;
 }
 
-static int read_request(const service_call *call, request *asked, uint8_t **out, size_t *out_len, int32_t *status) {
+static int read_request(const service_call *call, request *asked, service_reply *reply, int32_t *status) {
     const cJSON *port = NULL;
     const cJSON *enabled = NULL;
     const cJSON *home = NULL;
     memset(asked, 0, sizeof(*asked));
-    if (!service_require(call, "map", service_is_object, "an object", &asked->map, out, out_len, status) ||
-        !service_require(call, "port", routing_is_port, "a port number from 1 to 65535", &port, out, out_len, status) ||
-        !service_require(call, "providersEnabled", service_is_boolean, "a boolean", &enabled, out, out_len,
-                         status) ||
-        !service_require(call, "environment", service_is_object, "an object", &asked->environment, out, out_len,
-                         status) ||
-        !service_require(call, "userHome", service_is_string, "a string", &home, out, out_len, status) ||
+    if (!service_require(call, "map", service_is_object, "an object", &asked->map, reply, status) ||
+        !service_require(call, "port", routing_is_port, "a port number from 1 to 65535", &port, reply, status) ||
+        !service_require(call, "providersEnabled", service_is_boolean, "a boolean", &enabled, reply, status) ||
+        !service_require(call, "environment", service_is_object, "an object", &asked->environment, reply, status) ||
+        !service_require(call, "userHome", service_is_string, "a string", &home, reply, status) ||
         !service_require(call, "application", is_application_proxy,
-                         "an object with baseUrlVariable, placeholder and ownLogin", &asked->application, out, out_len, status)) {
+                         "an object with baseUrlVariable, placeholder and ownLogin", &asked->application, reply,
+                         status)) {
         return 0;
     }
     const cJSON *variables = cJSON_GetObjectItemCaseSensitive(asked->application, "modelVariables");
-    if (refuses_tier_template(variables, "tierModel", out, out_len, status) ||
-        refuses_tier_template(variables, "tierModelName", out, out_len, status)) {
+    if (refuses_tier_template(variables, "tierModel", reply, status) ||
+        refuses_tier_template(variables, "tierModelName", reply, status)) {
         return 0;
     }
     asked->port = (int)port->valuedouble;
@@ -297,16 +305,15 @@ static int read_request(const service_call *call, request *asked, uint8_t **out,
     return 1;
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_environment_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     request asked;
-    if (read_request(&call, &asked, out, out_len, &status)) {
-        status = service_answer(service_wrap("environment", build_environment(&asked)), out, out_len);
+    if (read_request(&call, &asked, reply, &status)) {
+        status = service_answer(service_wrap("environment", build_environment(&asked)), reply);
     }
-    service_discard_call(&call);
     return status;
 }

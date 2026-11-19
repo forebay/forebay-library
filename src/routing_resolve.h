@@ -13,6 +13,6 @@
 cJSON *routing_resolution(const routing_profile *profile, const cJSON *map, const cJSON *models, const char *requested,
                           routing_refusal *refusal);
 
-SERVICE_EXPORT int32_t forebay_library_routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+int32_t routing_resolve_call(const cJSON *argument, service_reply *reply);
 
 #endif

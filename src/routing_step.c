@@ -14,8 +14,7 @@
 #define SERVICE_UNAVAILABLE 503
 #define REPORT_KIND_FIX "report response, streamed, streamFailed, thrown or failure"
 
-typedef int32_t (*report_reader)(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
-                                 size_t *out_len);
+typedef int32_t (*report_reader)(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply);
 
 typedef struct report_reading {
     const char *kind;
@@ -82,19 +81,17 @@ static cJSON *served(step_walk *walk, cJSON *step) {
     return routing_answer_of(walk, step, 0);
 }
 
-static int32_t read_served(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
-                           size_t *out_len) {
+static int32_t read_served(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
     (void)providers;
     (void)report;
-    return service_answer(served(walk, routing_kind_step("done")), out, out_len);
+    return service_answer(served(walk, routing_kind_step("done")), reply);
 }
 
-static int32_t read_thrown(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
-                           size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
+static int32_t read_thrown(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *message = NULL;
-    if (!service_require_member(report, "the report member", "message", service_is_string, "a string", &message, out,
-                                out_len, &status)) {
+    if (!service_require_member(report, "the report member", "message", service_is_string, "a string", &message, reply,
+                                &status)) {
         return status;
     }
     cJSON *answer = NULL;
@@ -105,7 +102,7 @@ static int32_t read_thrown(step_walk *walk, const cJSON *providers, const cJSON 
                          message->valuestring)) {
         answer = next_entry(walk, providers, walk->index + 1);
     }
-    return service_answer(answer, out, out_len);
+    return service_answer(answer, reply);
 }
 
 static cJSON *stream_failed_before_bytes(step_walk *walk, const cJSON *providers, const char *message) {
@@ -125,30 +122,29 @@ static cJSON *stream_failed_after_bytes(step_walk *walk, const char *message) {
     return served(walk, routing_end_stream_step(message));
 }
 
-static int32_t read_stream_failed(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
-                                  size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
+static int32_t read_stream_failed(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *after_bytes = NULL;
     const cJSON *message = NULL;
     if (!service_require_member(report, "the report member", "afterBytes", service_is_boolean, "a boolean",
-                                &after_bytes, out, out_len, &status) ||
-        !service_require_member(report, "the report member", "message", service_is_string, "a string", &message, out,
-                                out_len, &status)) {
+                                &after_bytes, reply, &status) ||
+        !service_require_member(report, "the report member", "message", service_is_string, "a string", &message, reply,
+                                &status)) {
         return status;
     }
     cJSON *answer = cJSON_IsTrue(after_bytes) ? stream_failed_after_bytes(walk, message->valuestring)
                                               : stream_failed_before_bytes(walk, providers, message->valuestring);
-    return service_answer(answer, out, out_len);
+    return service_answer(answer, reply);
 }
 
-static int read_failure_members(const cJSON *report, uint8_t **out, size_t *out_len, int32_t *status) {
+static int read_failure_members(const cJSON *report, service_reply *reply, int32_t *status) {
     const cJSON *member = NULL;
-    return service_require_member(report, "the report member", "status", service_is_number, "a number", &member, out,
-                                  out_len, status) &&
+    return service_require_member(report, "the report member", "status", service_is_number, "a number", &member, reply,
+                                  status) &&
            service_require_member(report, "the report member", "headers", service_is_object, "an object", &member,
-                                  out, out_len, status) &&
-           service_require_member(report, "the report member", "now", service_is_number, "a number", &member, out,
-                                  out_len, status);
+                                  reply, status) &&
+           service_require_member(report, "the report member", "now", service_is_number, "a number", &member, reply,
+                                  status);
 }
 
 static cJSON *rate_limited(step_walk *walk, const cJSON *providers, const cJSON *headers, const cJSON *outcome) {
@@ -162,15 +158,14 @@ static cJSON *rate_limited(step_walk *walk, const cJSON *providers, const cJSON 
 }
 
 /** @implNote A failure that is not rate limiting ends the request with the provider's own answer, no fallback tried. */
-static int32_t read_failure(step_walk *walk, const cJSON *providers, const cJSON *report, uint8_t **out,
-                            size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
-    if (!read_failure_members(report, out, out_len, &status)) {
+static int32_t read_failure(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
+    if (!read_failure_members(report, reply, &status)) {
         return status;
     }
     cJSON *outcome = routing_outcome_of(report);
     if (outcome == NULL) {
-        return service_out_of_memory(out, out_len);
+        return service_out_of_memory(reply);
     }
     const cJSON *headers = cJSON_GetObjectItemCaseSensitive(report, "headers");
     double reply_status = cJSON_GetObjectItemCaseSensitive(report, "status")->valuedouble;
@@ -178,7 +173,7 @@ static int32_t read_failure(step_walk *walk, const cJSON *providers, const cJSON
                         ? rate_limited(walk, providers, headers, outcome)
                         : routing_answer_of(walk, routing_provider_failure_step(reply_status, headers), 0);
     cJSON_Delete(outcome);
-    return service_answer(answer, out, out_len);
+    return service_answer(answer, reply);
 }
 
 static const report_reading report_readings[] = {
@@ -211,28 +206,28 @@ static int is_string_list(const cJSON *value) {
     return 1;
 }
 
-static int32_t continue_walk(const service_call *call, const cJSON *providers, uint8_t **out, size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
+static int32_t continue_walk(const service_call *call, const cJSON *providers, service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *report = NULL;
     const cJSON *kind = NULL;
-    if (!service_require(call, "report", service_is_object, "an object", &report, out, out_len, &status) ||
-        !service_require_member(report, "the report member", "kind", service_is_string, "a string", &kind, out,
-                                out_len, &status)) {
+    if (!service_require(call, "report", service_is_object, "an object", &report, reply, &status) ||
+        !service_require_member(report, "the report member", "kind", service_is_string, "a string", &kind, reply,
+                                &status)) {
         return status;
     }
     report_reader read = reader_for(kind->valuestring);
     if (read == NULL) {
         char cause[160];
         snprintf(cause, sizeof(cause), "the report kind %.64s is not one routing.step reads", kind->valuestring);
-        return service_refuse(cause, REPORT_KIND_FIX, out, out_len);
+        return service_refuse(cause, REPORT_KIND_FIX, reply);
     }
     step_walk walk = {.log = cJSON_CreateArray()};
     routing_refusal refusal = {0, "", NULL};
     const cJSON *handed_back = cJSON_GetObjectItemCaseSensitive(call->argument, "walk");
     if (walk.log == NULL || !routing_walk_read(handed_back, &walk, &refusal)) {
-        status = routing_answer_refusal(&refusal, out, out_len);
+        status = routing_answer_refusal(&refusal, reply);
     } else {
-        status = read(&walk, providers, report, out, out_len);
+        status = read(&walk, providers, report, reply);
     }
     routing_walk_discard(&walk);
     return status;
@@ -296,16 +291,15 @@ static cJSON *walk_over(step_walk *walk, const cJSON *resolution, const cJSON *p
     return routing_answer_of(walk, no_model_step(walk, providers, wording), 0);
 }
 
-static int32_t routed(const service_call *call, const cJSON *providers, step_walk *walk, uint8_t **out,
-                      size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
+static int32_t routed(const service_call *call, const cJSON *providers, step_walk *walk, service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *request = cJSON_GetObjectItemCaseSensitive(call->argument, "request");
     const cJSON *model = NULL;
     routing_profile profile;
-    if (!service_require_member(request, "the request member", "model", service_is_string, "a string", &model, out,
-                                out_len, &status) ||
+    if (!service_require_member(request, "the request member", "model", service_is_string, "a string", &model, reply,
+                                &status) ||
         !routing_read_profile(cJSON_GetObjectItemCaseSensitive(call->argument, "profile"), ROUTING_RESOLUTION_NEEDS,
-                              &profile, out, out_len, &status)) {
+                              &profile, reply, &status)) {
         return status;
     }
     routing_refusal refusal = {0, "", NULL};
@@ -313,10 +307,10 @@ static int32_t routed(const service_call *call, const cJSON *providers, step_wal
                                            cJSON_GetObjectItemCaseSensitive(call->argument, "models"),
                                            model->valuestring, &refusal);
     if (resolution == NULL) {
-        return routing_answer_refusal(&refusal, out, out_len);
+        return routing_answer_refusal(&refusal, reply);
     }
     walk->requested = model->valuestring;
-    status = service_answer(walk_over(walk, resolution, providers, call), out, out_len);
+    status = service_answer(walk_over(walk, resolution, providers, call), reply);
     cJSON_Delete(resolution);
     return status;
 }
@@ -327,49 +321,48 @@ static int is_passed_through(const cJSON *request, const cJSON *providers) {
            cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(request, "passThrough"));
 }
 
-static int read_first_call(const service_call *call, uint8_t **out, size_t *out_len, int32_t *status) {
+static int read_first_call(const service_call *call, service_reply *reply, int32_t *status) {
     const cJSON *member = NULL;
     const cJSON *wording = NULL;
-    return service_require(call, "profile", service_is_object, "an object", &member, out, out_len, status) &&
-           service_require(call, "map", service_is_object, "an object", &member, out, out_len, status) &&
-           service_require(call, "models", service_is_object, "an object", &member, out, out_len, status) &&
-           service_require(call, "request", service_is_object, "an object", &member, out, out_len, status) &&
-           service_require(call, "wording", service_is_object, "an object", &wording, out, out_len, status) &&
+    return service_require(call, "profile", service_is_object, "an object", &member, reply, status) &&
+           service_require(call, "map", service_is_object, "an object", &member, reply, status) &&
+           service_require(call, "models", service_is_object, "an object", &member, reply, status) &&
+           service_require(call, "request", service_is_object, "an object", &member, reply, status) &&
+           service_require(call, "wording", service_is_object, "an object", &wording, reply, status) &&
            service_require_member(wording, "the wording member", "loginCommand", service_is_string, "a string",
-                                  &member, out, out_len, status) &&
+                                  &member, reply, status) &&
            service_require_member(wording, "the wording member", "settingsFile", service_is_string, "a string",
-                                  &member, out, out_len, status);
+                                  &member, reply, status);
 }
 
-static int32_t start_walk(const service_call *call, const cJSON *providers, uint8_t **out, size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
-    if (!read_first_call(call, out, out_len, &status)) {
+static int32_t start_walk(const service_call *call, const cJSON *providers, service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
+    if (!read_first_call(call, reply, &status)) {
         return status;
     }
     step_walk walk = {.log = cJSON_CreateArray()};
     if (walk.log == NULL) {
-        status = service_out_of_memory(out, out_len);
+        status = service_out_of_memory(reply);
     } else if (is_passed_through(cJSON_GetObjectItemCaseSensitive(call->argument, "request"), providers)) {
-        status = service_answer(routing_answer_of(&walk, routing_kind_step("passThrough"), 0), out, out_len);
+        status = service_answer(routing_answer_of(&walk, routing_kind_step("passThrough"), 0), reply);
     } else {
-        status = routed(call, providers, &walk, out, out_len);
+        status = routed(call, providers, &walk, reply);
     }
     routing_walk_discard(&walk);
     return status;
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_step(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_step_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *providers = NULL;
-    if (service_require(&call, "providers", is_string_list, "a list of strings", &providers, out, out_len, &status)) {
+    if (service_require(&call, "providers", is_string_list, "a list of strings", &providers, reply, &status)) {
         status = cJSON_GetObjectItemCaseSensitive(call.argument, "walk") == NULL
-                     ? start_walk(&call, providers, out, out_len)
-                     : continue_walk(&call, providers, out, out_len);
+                     ? start_walk(&call, providers, reply)
+                     : continue_walk(&call, providers, reply);
     }
-    service_discard_call(&call);
     return status;
 }

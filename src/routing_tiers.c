@@ -122,26 +122,25 @@ cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models,
     return tiers;
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_tiers_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *profile_json = NULL;
     const cJSON *models = NULL;
     routing_profile profile;
-    if (service_require(&call, "profile", service_is_object, "an object", &profile_json, out, out_len, &status) &&
-        service_require(&call, "models", service_is_object, "an object", &models, out, out_len, &status) &&
-        routing_read_profile(profile_json, NEEDS_TIERS, &profile, out, out_len, &status)) {
+    if (service_require(&call, "profile", service_is_object, "an object", &profile_json, reply, &status) &&
+        service_require(&call, "models", service_is_object, "an object", &models, reply, &status) &&
+        routing_read_profile(profile_json, NEEDS_TIERS, &profile, reply, &status)) {
         routing_refusal refusal = {0, "", NULL};
         cJSON *tiers = routing_detect_tiers(&profile, models, &refusal);
         if (tiers == NULL) {
-            status = routing_answer_refusal(&refusal, out, out_len);
+            status = routing_answer_refusal(&refusal, reply);
         } else {
-            status = service_answer(service_wrap("tiers", tiers), out, out_len);
+            status = service_answer(service_wrap("tiers", tiers), reply);
         }
     }
-    service_discard_call(&call);
     return status;
 }

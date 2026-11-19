@@ -18,7 +18,7 @@ typedef struct routing_upstream {
  * Parses upstream into parts; a relative URL, another scheme or one carrying userinfo is refused.
  * On a problem answers 0 with the refusal or out of memory already answered into *status.
  */
-int routing_read_upstream(const char *upstream, routing_upstream *parts, uint8_t **out, size_t *out_len,
+int routing_read_upstream(const char *upstream, routing_upstream *parts, service_reply *reply,
                           int32_t *status);
 
 void routing_free_upstream(routing_upstream *parts);

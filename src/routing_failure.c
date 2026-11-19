@@ -57,47 +57,45 @@ static cJSON *request_failed_answer(const char *detail) {
     return answer;
 }
 
-static int32_t answer_unreachable(const service_call *call, const char *detail, uint8_t **out, size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
+static int32_t answer_unreachable(const service_call *call, const char *detail, service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *upstream = NULL;
     routing_upstream parts;
-    if (service_require(call, "upstream", service_is_string, "a string", &upstream, out, out_len, &status) &&
-        routing_read_upstream(upstream->valuestring, &parts, out, out_len, &status)) {
-        status = service_answer(unreachable_answer(parts.origin, detail), out, out_len);
+    if (service_require(call, "upstream", service_is_string, "a string", &upstream, reply, &status) &&
+        routing_read_upstream(upstream->valuestring, &parts, reply, &status)) {
+        status = service_answer(unreachable_answer(parts.origin, detail), reply);
         routing_free_upstream(&parts);
     }
     return status;
 }
 
-static int32_t refuse_reason(const char *reason, uint8_t **out, size_t *out_len) {
+static int32_t refuse_reason(const char *reason, service_reply *reply) {
     char cause[160];
     snprintf(cause, sizeof(cause), "the reason %.64s is not one routing.failure words", reason);
-    return service_refuse(cause, REASON_FIX, out, out_len);
+    return service_refuse(cause, REASON_FIX, reply);
 }
 
-static int32_t answer_failure(const service_call *call, const char *reason, const char *detail, uint8_t **out,
-                              size_t *out_len) {
+static int32_t answer_failure(const service_call *call, const char *reason, const char *detail, service_reply *reply) {
     if (strcmp(reason, "upstreamUnreachable") == 0) {
-        return answer_unreachable(call, detail, out, out_len);
+        return answer_unreachable(call, detail, reply);
     }
     if (strcmp(reason, "requestFailed") == 0) {
-        return service_answer(request_failed_answer(detail), out, out_len);
+        return service_answer(request_failed_answer(detail), reply);
     }
-    return refuse_reason(reason, out, out_len);
+    return refuse_reason(reason, reply);
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_failure(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_failure_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *reason = NULL;
     const cJSON *detail = NULL;
-    if (service_require(&call, "reason", service_is_string, "a string", &reason, out, out_len, &status) &&
-        service_require(&call, "detail", service_is_string, "a string", &detail, out, out_len, &status)) {
-        status = answer_failure(&call, reason->valuestring, detail->valuestring, out, out_len);
+    if (service_require(&call, "reason", service_is_string, "a string", &reason, reply, &status) &&
+        service_require(&call, "detail", service_is_string, "a string", &detail, reply, &status)) {
+        status = answer_failure(&call, reason->valuestring, detail->valuestring, reply);
     }
-    service_discard_call(&call);
     return status;
 }

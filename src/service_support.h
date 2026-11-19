@@ -5,45 +5,54 @@
 #include <stdint.h>
 
 #include "cJSON.h"
-#include "spisor/json_kind.h"
 
 #if defined(_WIN32)
-#define SERVICE_EXPORT __declspec(dllexport)
 #define SERVICE_WINDOWS 1
 #else
-#define SERVICE_EXPORT __attribute__((visibility("default")))
 #define SERVICE_WINDOWS 0
 #endif
 
-/** A parsed call: its argument, owned until service_discard_call. */
+#define SERVICE_SUCCESS 0
+#define SERVICE_MALFORMED 1
+#define SERVICE_OUT_OF_MEMORY 2
+
+/**
+ * What one of routing's decisions answered, over the cJSON tree its definition built from the caller's structs: a
+ * result it owns on SUCCESS, which may be a refusal {"refused", "fix"}, or the reason the call is malformed.
+ */
+typedef struct service_reply {
+    int32_t status;
+    cJSON *result;
+    char message[320];
+    char fix[256];
+} service_reply;
+
+/** The argument a decision reads, borrowed from its definition for the call. */
 typedef struct service_call {
-    cJSON *argument;
+    const cJSON *argument;
 } service_call;
 
-void service_discard_call(service_call *call);
-
-int32_t service_out_of_memory(uint8_t **out, size_t *out_len);
+int32_t service_out_of_memory(service_reply *reply);
 
 /** A semantic refusal, answered as a successful call: {"refused": cause, "fix": fix}. */
-int32_t service_refuse(const char *cause, const char *fix, uint8_t **out, size_t *out_len);
+int32_t service_refuse(const char *cause, const char *fix, service_reply *reply);
 
 /** Answers result and consumes it; NULL answers out of memory. */
-int32_t service_answer(cJSON *result, uint8_t **out, size_t *out_len);
+int32_t service_answer(cJSON *result, service_reply *reply);
 
-/** Fails a malformed call as "<subject> <problem>", the standard failure object. */
-int32_t service_fail(const char *subject, const char *problem, const char *fix, uint8_t **out, size_t *out_len);
+/** Fails a malformed call as "<subject> <problem>". */
+int32_t service_fail(const char *subject, const char *problem, const char *fix, service_reply *reply);
 
-/** Parses a plain call whose argument must be an object. */
-int32_t service_open(const uint8_t *in, size_t in_len, service_call *call, uint8_t **out, size_t *out_len);
+/** Opens a call over an argument that must be an object. */
+int32_t service_open(const cJSON *argument, service_call *call, service_reply *reply);
 
 /** Reads the named argument member of the type asked for; answers 0 with the call already failed. */
 int service_require(const service_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
-                    const cJSON **member, uint8_t **out, size_t *out_len, int32_t *status);
+                    const cJSON **member, service_reply *reply, int32_t *status);
 
 /** service_require for a member of a nested object, failed as "<subject> <name> is missing or is not <type>". */
 int service_require_member(const cJSON *object, const char *subject, const char *name, int (*is_type)(const cJSON *),
-                           const char *type_name, const cJSON **member, uint8_t **out, size_t *out_len,
-                           int32_t *status);
+                           const char *type_name, const cJSON **member, service_reply *reply, int32_t *status);
 
 /** {name: item} with item consumed, or NULL when memory runs out. */
 cJSON *service_wrap(const char *name, cJSON *item);

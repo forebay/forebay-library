@@ -8,11 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-int32_t routing_answer_refusal(const routing_refusal *refusal, uint8_t **out, size_t *out_len) {
+int32_t routing_answer_refusal(const routing_refusal *refusal, service_reply *reply) {
     if (!refusal->refused) {
-        return service_out_of_memory(out, out_len);
+        return service_out_of_memory(reply);
     }
-    return service_refuse(refusal->cause, refusal->fix, out, out_len);
+    return service_refuse(refusal->cause, refusal->fix, reply);
 }
 
 static int all_strings(const cJSON *list) {
@@ -25,64 +25,63 @@ static int all_strings(const cJSON *list) {
     return 1;
 }
 
-static int profile_string(const cJSON *profile, const char *name, const char **value, uint8_t **out, size_t *out_len,
+static int profile_string(const cJSON *profile, const char *name, const char **value, service_reply *reply,
                           int32_t *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, name);
     if (!cJSON_IsString(member)) {
-        *status = service_fail("the profile member", name, "send the profile with this member as a string", out,
-                               out_len);
+        *status = service_fail("the profile member", name, "set this member of the profile to text", reply);
         return 0;
     }
     *value = member->valuestring;
     return 1;
 }
 
-static int profile_list(const cJSON *profile, const char *name, const cJSON **value, uint8_t **out, size_t *out_len,
+static int profile_list(const cJSON *profile, const char *name, const cJSON **value, service_reply *reply,
                         int32_t *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, name);
     if (!cJSON_IsArray(member) || !all_strings(member)) {
-        *status = service_fail("the profile member", name, "send the profile with this member as a list of strings",
-                               out, out_len);
+        *status = service_fail("the profile member", name, "set this member of the profile to a list of texts",
+                               reply);
         return 0;
     }
     *value = member;
     return 1;
 }
 
-static int read_tier_members(const cJSON *profile, routing_profile *read, uint8_t **out, size_t *out_len,
+static int read_tier_members(const cJSON *profile, routing_profile *read, service_reply *reply,
                              int32_t *status) {
-    return profile_string(profile, "tierSourceProvider", &read->tier_source_provider, out, out_len, status) &&
-           profile_list(profile, "tierOrder", &read->tier_order, out, out_len, status) &&
-           profile_list(profile, "tierFallback", &read->tier_fallback, out, out_len, status) &&
-           profile_string(profile, "tierRegex", &read->tier_regex, out, out_len, status);
+    return profile_string(profile, "tierSourceProvider", &read->tier_source_provider, reply, status) &&
+           profile_list(profile, "tierOrder", &read->tier_order, reply, status) &&
+           profile_list(profile, "tierFallback", &read->tier_fallback, reply, status) &&
+           profile_string(profile, "tierRegex", &read->tier_regex, reply, status);
 }
 
-static int read_native_pattern(const cJSON *profile, routing_profile *read, uint8_t **out, size_t *out_len,
+static int read_native_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
                                int32_t *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, "nativeModelPattern");
     if (member == NULL || cJSON_IsNull(member)) {
         read->native_model_pattern = NULL;
         return 1;
     }
-    return profile_string(profile, "nativeModelPattern", &read->native_model_pattern, out, out_len, status);
+    return profile_string(profile, "nativeModelPattern", &read->native_model_pattern, reply, status);
 }
 
-static int read_unserved_pattern(const cJSON *profile, routing_profile *read, uint8_t **out, size_t *out_len,
+static int read_unserved_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
                                  int32_t *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, "unservedModelPattern");
     if (member == NULL || cJSON_IsNull(member)) {
         read->unserved_model_pattern = NULL;
         return 1;
     }
-    return profile_string(profile, "unservedModelPattern", &read->unserved_model_pattern, out, out_len, status);
+    return profile_string(profile, "unservedModelPattern", &read->unserved_model_pattern, reply, status);
 }
 
-int routing_read_profile(const cJSON *profile, int need, routing_profile *read, uint8_t **out, size_t *out_len,
+int routing_read_profile(const cJSON *profile, int need, routing_profile *read, service_reply *reply,
                          int32_t *status) {
     memset(read, 0, sizeof(*read));
-    return (!(need & NEEDS_TIERS) || read_tier_members(profile, read, out, out_len, status)) &&
-           (!(need & NEEDS_NATIVE_PATTERN) || read_native_pattern(profile, read, out, out_len, status)) &&
-           (!(need & NEEDS_UNSERVED_PATTERN) || read_unserved_pattern(profile, read, out, out_len, status));
+    return (!(need & NEEDS_TIERS) || read_tier_members(profile, read, reply, status)) &&
+           (!(need & NEEDS_NATIVE_PATTERN) || read_native_pattern(profile, read, reply, status)) &&
+           (!(need & NEEDS_UNSERVED_PATTERN) || read_unserved_pattern(profile, read, reply, status));
 }
 
 cJSON *routing_assignment(const char *provider, const char *model, const char *name, int derived) {
@@ -191,7 +190,8 @@ static int add_provider_models(cJSON *catalog, const cJSON *provider_entry, cons
     const cJSON *id = NULL;
     cJSON_ArrayForEach(id, ids) {
         const cJSON *raw = cJSON_GetObjectItemCaseSensitive(models, id->valuestring);
-        if (raw == NULL || cJSON_IsNull(raw) || (unserved != NULL && routing_pattern_find(unserved, id->valuestring, NULL, NULL))) {
+        if (raw == NULL || cJSON_IsNull(raw) ||
+            (unserved != NULL && routing_pattern_find(unserved, id->valuestring, NULL, NULL))) {
             continue;
         }
         if (!service_push(catalog, routing_assignment(provider, id->valuestring,

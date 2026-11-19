@@ -8,7 +8,6 @@
 #include "cJSON.h"
 #include "routing_pattern.h"
 #include "service_support.h"
-#include "spisor/json_kind.h"
 
 /** The cause of a refusal; a NULL return with refused clear means memory ran out. */
 typedef struct routing_refusal {
@@ -33,10 +32,10 @@ typedef enum routing_profile_need {
     NEEDS_UNSERVED_PATTERN = 8
 } routing_profile_need;
 
-int32_t routing_answer_refusal(const routing_refusal *refusal, uint8_t **out, size_t *out_len);
+int32_t routing_answer_refusal(const routing_refusal *refusal, service_reply *reply);
 
 /** Validates the profile members named by need; on a problem answers 0 with the call already failed. */
-int routing_read_profile(const cJSON *profile, int need, routing_profile *read, uint8_t **out, size_t *out_len,
+int routing_read_profile(const cJSON *profile, int need, routing_profile *read, service_reply *reply,
                          int32_t *status);
 
 /** {provider, model, name, derived}, or NULL when memory runs out. */
@@ -45,7 +44,8 @@ cJSON *routing_assignment(const char *provider, const char *model, const char *n
 /** One assignment becomes a chain of one, a list keeps its valid entries. */
 cJSON *routing_normalize_chain(const cJSON *raw);
 
-/** Every model of every provider in models.json shape, best first, without the ids the unserved pattern matches (NULL serves all). */
+/** Every model of every provider in models.json shape, best first, without the ids the unserved pattern matches (NULL
+ * serves all). */
 cJSON *routing_catalog(const cJSON *models, const routing_pattern *unserved);
 
 /** The ranking of one provider when it has one, else its model ids in catalog order. */
@@ -71,7 +71,8 @@ int routing_equals_ignoring_case(const char *left, const char *right);
 /** Whether text begins with prefix, comparing ASCII letters without regard to case. */
 int routing_starts_with_ignoring_case(const char *text, const char *prefix);
 
-/** The exact key first, then the first key matching ignoring case, as the JavaScript Headers API reads; NULL when absent or not a string. */
+/** The exact key first, then the first key matching ignoring case, as the JavaScript Headers API reads; NULL when
+ * absent or not a string. */
 const char *routing_header(const cJSON *headers, const char *name);
 
 /** Whether value is an integer from 1 to 65535. */
