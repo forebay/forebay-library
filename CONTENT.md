@@ -1,95 +1,106 @@
 ## What this is
 
-The forebay ecosystem's C library, `forebay-library`. It declares two services in `library.json`,
-`routing` and `accounts`, each a set of synchronous `json` functions that read nothing of the process
-they run in: time, randomness and every path arrive as arguments. Every answer is a buffer the caller
-frees with `forebay_library_release`, the library's one release symbol.
+The forebay ecosystem's C library, `forebay-library`. `library.json` declares it in the weivel standard's
+format, `forebay-library` 0.2.0, with two services, `routing` and `accounts`, each one function of kind
+`definition`: its exported symbol (`forebay_library_routing_definition`, `forebay_library_accounts_definition`)
+answers a static C struct that begins with its `size`, then the provider's `context`, then one function pointer
+per operation and one release per kind of answer, living until the library is unloaded. The structs are declared
+in `include/forebay/routing.h` and `include/forebay/accounts.h`, which document every operation, what it takes
+and answers, and every refusal; this file says what they decide. No JSON crosses the boundary.
+
+An operation takes the `context` and a size-prefixed argument struct, fills the caller's empty answer or, when it
+refuses, the caller's `spisor_refusal`, and answers a `spisor_status`, both from `spisor/library`'s
+`spisor/status.h`. A size-prefixed struct is read only up to its `size` and only grows at its end; an array
+element has no size and never grows. Text handed in is NUL-terminated UTF-8 borrowed for the call, and what an
+answer points at is the provider's until the release for its kind. Data whose shape belongs to someone else (a
+user's settings record, an account, a quota reading) crosses as a `spisor_value`. The operations read nothing of
+the process they run in: time, randomness and every path arrive as arguments. Names are the operations' own,
+in snake case.
 
 ## The routing service
 
-`routing` holds the decisions of basekit's model map and router as synchronous `json` functions that
-read nothing of the process: time and the filesystem are arguments. `profile` has the shape of
-`contracts/front-door.schema.json#/definitions/Profile`, `models` is basekit's `models.json`
-(`{ <provider>: { models, ranking } }`) and `map` is `{ <tier>|default: Assignment[] }` with
-`Assignment = { provider, model, name, derived }`.
+`routing` holds the decisions of basekit's model map and router. The profile members it reads are
+`forebay_routing_profile`, the providers' models a catalog of `forebay_catalog_model`, and the model map a slot
+per tier and the default, each served by `forebay_assignment`s (`provider`, `model`, `name`, `derived`).
 
-| function | answer |
+| operation | decides |
 | --- | --- |
-| `tiers({ profile, models })` | `{ tiers }`: `tierRegex` group 1 over the tier source's ranking, ordered by `tierOrder`, unknown last |
-| `modelMap({ profile, settings, models })` | `{ map, healed }`: the map stored at `settings.routing.modelMap`, its entries kept, healed within their provider, or derived |
-| `resolve({ profile, map, models, requestedModel })` | `{ chain, notices }`: exact id, tier keyword, an offered model, then the default |
-| `outcome({ status, headers, now, retryAfterMilliseconds? })` | `{ rateLimited, resetAt? }`: rate limited on 429; the reset is `retryAfterMilliseconds` when given, else the `retry-after` header in seconds |
-| `step({ profile, map, models, providers, request, refreshed?, wording })`, then `step({ walk, providers, report })` | `{ step, walk?, log }`: the next thing a proxy plugin does for one request, and the log lines to write |
-| `passThrough({ upstream, url, headers, bodyLength, placeholderAuthorization })` | `{ target, headers }`: `url` appended to the upstream's origin and path (trailing slashes dropped); the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to `placeholderAuthorization`, then `host` (with the port only when the upstream names one) and `content-length` set; a relative, non-http(s) or userinfo-carrying `upstream`, and a `url` not starting with `/`, are refused |
-| `replyHeaders({ headers, rewritten })` | `{ headers }`: the reply headers without the hop-by-hop set, and with `rewritten` also without `content-encoding` and `content-length` |
-| `arrival({ path, headers, port })` | `{ kind }`: `refuse` (with a 403 `proxyError` reply) when an `origin` header is present, whatever its value, or `host`, ignoring case, is neither `127.0.0.1:<port>` nor `localhost:<port>`; else `health` (200, `text/plain`, `ok`) for the path `/health` without its query; else `route` |
-| `limits({})` | `{ maxRequestBytes, tooLarge, modelsBudgetMilliseconds, rederiveIntervalMilliseconds, refreshEveryMilliseconds }`: the largest request body, the 413 `proxyError` reply for a larger one, the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
-| `port({ value, settingsFile, failure? })` | `{ port, address }` for an integer 1 to 65535, with the loopback `address`; else a refusal that the setting is no port, or, with `failure` `{ inUse, detail }`, that the port cannot be listened on |
-| `failure({ reason, upstream?, detail })` | `{ reply, log? }`: for `upstreamUnreachable` a 502 `proxyError` naming the `upstream`'s origin (scheme, host and port) and `detail`, an unusable `upstream` refused as `passThrough` refuses it; for `requestFailed` a 500 `proxyError` whose message is `detail`, with a `warn` line `a request failed: <detail>`; another `reason` is refused |
-| `environment({ map, port, providersEnabled, environment, userHome, application })` | `{ environment }`: the base URL, and with providers the model pairs named by the application's `modelVariables` and the placeholder token unless the application has a login of its own |
+| `tiers` | the tiers: `tier_regex` group 1 over the tier source's ranking, ordered by `tier_order`, unknown last |
+| `model_map` | the map stored in the user's settings, its entries kept, healed within their provider, or derived, and whether it healed |
+| `resolve` | the chain and its notices for a requested model: exact id, tier keyword, an offered model, then the default |
+| `outcome` | whether a response was rate limited (on 429) and its reset: the retry hint in milliseconds when given, else the `retry-after` header in seconds |
+| `step` | the next thing a proxy plugin does for one request, the log lines to write, and the walk to hand back with the report of what happened |
+| `pass_through` | the target (the request path appended to the upstream's origin and path, trailing slashes dropped) and the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to the placeholder, then `host` (with the port only when the upstream names one) and `content-length` set; a relative, non-http(s) or userinfo-carrying upstream, and a path not starting with `/`, are refused |
+| `reply_headers` | the reply headers without the hop-by-hop set, and for a rewritten body also without `content-encoding` and `content-length` |
+| `arrival` | refuse (with a 403 `proxyError` reply) when an `origin` header is present, whatever its value, or `host`, ignoring case, is neither `127.0.0.1:<port>` nor `localhost:<port>`; else health (200, `text/plain`, `ok`) for the path `/health` without its query; else route |
+| `limits` | the largest request body, the 413 `proxyError` reply for a larger one, the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
+| `port` | the port and the loopback address for an integer 1 to 65535; else a refusal that the setting is no port, or, given a listen failure, that the port cannot be listened on |
+| `failure` | the reply: for an unreachable upstream a 502 `proxyError` naming the upstream's origin (scheme, host and port) and the detail, an unusable upstream refused as `pass_through` refuses it; for a failed request a 500 `proxyError` whose message is the detail, with a `warn` line `a request failed: <detail>` |
+| `environment` | the environment an application starts with: the base URL, and with providers the model pairs named by the application's model variables and the placeholder token unless the application has a login of its own |
 
-A refusal is a successful answer `{ "refused", "fix" }`. Windows has no `regcomp`, so one matcher
+A refusal answers REFUSED with the refusal saying what to repair. Windows has no `regcomp`, so one matcher
 serves every platform: `^ $`, literals, `.`, classes, `\d \w \s`, `* + ?` on one atom and at most one
 capture group. A pattern using anything else is refused naming the construct. `notices` lists
-`model_switched` when the default tier serves a model nothing offers (unless `nativeModelPattern`
+`model_switched` when the default tier serves a model nothing offers (unless `native_model_pattern`
 says it is the application's own), then `healed` when the chain's primary is derived; both are
-listed when both apply, in that order. A model `unservedModelPattern` matches counts as not offered, since the
+listed when both apply, in that order. A model `unserved_model_pattern` matches counts as not offered, since the
 profile never serves it.
 The application is described to the library as data, and the library names no application: its `placeholder`
-(variable and value), `ownLogin` (the variables that mean a login of its own and the state file that records
-one) and `modelVariables` (`model` for the default, and `tierModel` and `tierModelName` templates in which every `{{TIER}}`
+(variable and value), `own_login` (the variables that mean a login of its own and the state file that records
+one) and the model variables (`model` for the default, and `tier_model` and `tier_model_name` templates in which every `{{TIER}}`
 stands for the upper-cased tier, and a template without one is refused) arrive in the call.
 It has a login of its own when one of those variables is non-blank, the placeholder variable holds anything
 but the placeholder value, or the state file records an account.
 `step` walks a request's chain without ever calling into the plugin: the plugin performs each step,
-reports what happened, and hands back the `walk` it was given, which is present exactly when a report is
-expected. A step is `passThrough` (no provider runs, or the request decoded as a pass-through),
-`refreshModels` (the chain is empty and the call was not `refreshed`), `callProvider` (`provider`, `model`),
-`endStream` (an IR error `event` to write after a stream failed past its first byte), `reply` or `done`.
-A `reply` is `proxyError` 502 once every entry failed, or `apiError` 503 when nothing serves the model after a
-refresh, each with a `message` the wire format encodes; `providerFailure` (`status`, and the `headers`
-`replyHeaders` answers for a rewritten body) when a provider fails without rate limiting, sent with the
-failure's own body; or `rateLimited` (`headers`, `resetAt?`) in place of the 502 once any entry was rate
+reports what happened, and hands back the walk it was given, an opaque `forebay_walk` the library owns, present
+exactly when a report is expected. A walk never changes once answered, so it may be handed back more than once
+and from any thread, and `release_walk` frees it only after every step it was handed to has returned. A step is pass through (no provider runs, or the request decoded as a pass-through),
+refresh models (the chain is empty and the call was not `refreshed`), call provider (`provider`, `model`),
+end stream (an IR error `event` to write after a stream failed past its first byte), reply or done.
+A reply is `proxyError` 502 once every entry failed, or `apiError` 503 when nothing serves the model after a
+refresh, each with a `message` the wire format encodes; provider failure (`status`, and the `headers`
+`reply_headers` answers for a rewritten body) when a provider fails without rate limiting, sent with the
+failure's own body; or rate limited (`headers`, its reset) in place of the 502 once any entry was rate
 limited, carrying the last limited entry's headers and the latest reset any of them named. A report is
-`response`, `streamed`, `streamFailed` (`afterBytes`, `message`), `thrown` (`message`) or `failure`
-(`status`, `headers`, `retryAfterMilliseconds?`, `now`, read as `outcome` reads them); a stream failing
+`response`, `streamed`, stream failed (`after_bytes`, `message`), `thrown` (`message`) or `failure`
+(`status`, `headers`, `retry_after_milliseconds`, `now`, read as `outcome` reads them); a stream failing
 before its first byte, a thrown call or a rate-limited failure falls to the next entry. An entry whose
 provider is not in `providers` is skipped and logged, never called.
-`wording` gives the login command and settings file the 503 names. A walk handed back malformed is refused.
-The hop-by-hop set is one policy for both directions: `connection`, `keep-alive`, `proxy-connection`,
+The step argument gives the login command and settings file the 503 names. The hop-by-hop set is one policy for both directions: `connection`, `keep-alive`, `proxy-connection`,
 `transfer-encoding`, `upgrade`, `te`, `trailer`, every name starting `proxy-` and every name the `connection`
 header lists, all compared ignoring case.
 `test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
 `Router.java`; `routing_step_test` drives `step` call by call. A vector's `files` are laid out in a fresh
 directory that becomes its `userHome`, or with `filesUnder` the value of the environment variable it names.
-A vector expects status 0 unless it names another `status`, as one for a malformed call names 1.
+The vectors are JSON test data, turned into the definition's structs by a test-only reader that no shipped
+binary links; a vector naming `"status": 1` is a call the definition refuses as MALFORMED.
 
 ## The accounts service
 
 `accounts` holds the account selection, health reporting, backoff and store of basekit's `AccountManager` as
-synchronous `json` functions a provider plugin calls once per attempt; the attempt loop, the network and every
+operations a provider plugin calls once per attempt; the attempt loop, the network and every
 token stay in the provider. Every store function takes `store`, the path of the provider's `accounts.json`
 (its `ctx.paths.state`). The file is `{ version: 1, accounts, activeIndex, activeIndexByLane }`, one pool per
 provider. Time and randomness are arguments (`now`, `random` in [0, 1)).
 
-| function | answer |
+| operation | answer |
 | --- | --- |
-| `list({ store })` | `{ accounts }`; a missing or unreadable store lists as empty |
-| `upsert({ store, account })` | `{ outcome: "added" or "updated" or "unchanged" }`, matched by `id`, members the store does not know kept, compared with key order ignored and array order kept |
-| `remove({ store, id })` | `{ removed }` |
-| `acquire({ store, lane?, strategy, now })` | `{ id, available, availableAt? }` after writing the cursor and `lastUsed` (`available: false` with the account's `availableAt` when hybrid claimed the soonest-free account while every account is cooling), else `{ none: true, nextAvailableAt? }`; `round-robin`, `sticky`, `hybrid`, anything else as `hybrid` |
-| `report({ store, id, lane?, outcome, now, ... })` | `{ changed }` for `success`, `rate-limited` (`resetAt`, else the backoff), `error`, `disabled` (`reason`) or `quota` (`quota`) |
-| `tokenExpired({ expires?, now, skewMilliseconds? })` | `{ expired }`, 60000 ms of skew by default |
-| `hasCapacity({ pools })` | `{ capacity }`: any pool with `remainingFraction` above 0 |
+| `list` | the accounts; a missing or unreadable store lists as empty |
+| `upsert` | whether the account was added, updated or unchanged, matched by `id`, members the store does not know kept, compared with key order ignored and array order kept |
+| `remove` | whether an account was removed |
+| `acquire` | the claimed account's `id` and whether it is available now, after writing the cursor and `lastUsed` (not available, with its time, when hybrid claimed the soonest-free account while every account is cooling), else none and the next time any account frees, when one ever does; round-robin, sticky, hybrid, and any other strategy as hybrid |
+| `report` | whether a success, a rate limit (its reset, else the backoff), an error, a disable (with its reason) or a quota reading changed the store |
+| `token_expired` | whether a token has no expiry or expires within the skew of now, 60000 ms by default |
+| `has_capacity` | whether any pool has a remaining fraction above 0 |
 
 Backoff is `floor(raw / 2 + random * raw / 2)` with `raw = min(maxMilliseconds, baseMilliseconds * 2^attempt)`;
 `random` defaults to 0.5. An `error` on a lane that holds an active reset changes nothing, and no `error` or `rate-limited` report shortens a cooldown already running, and a
 `rate-limited` report with no lane becomes an account-wide cooldown, because selection only reads a lane's
 reset for a named lane.
 
-Tokens never reach the store: `upsert` refuses an account, and `report` refuses a `quota`, carrying a member named exactly `access`, `refresh`, `accessToken`, `refreshToken`, `idToken` or `apiKey` (case-sensitive, at any depth) as a successful `{ refused, fix }` answer; quota members such as `tokensRemaining` are stored. Every read-modify-write holds
+Tokens never reach the store: `upsert` refuses an account, and `report` refuses a quota reading, carrying a member named exactly `access`, `refresh`, `accessToken`, `refreshToken`, `idToken` or `apiKey` (case-sensitive, at any depth), before any copy of it exists; quota members such as `tokensRemaining` are stored. Every read-modify-write holds
 `<store>.lock`, the OS file lock the runtime's registry takes, once, and the file is replaced atomically, so
-two processes sharing one store lose no update. A store that is not a JSON object answers a refusal and is
+two processes sharing one store lose no update. The store stays a JSON file, its format above; one that is not a JSON object answers a refusal and is
 never overwritten. `test/vectors/accounts/` holds the vectors; `before` and `after` are the store, and `then`
 chains further calls against it.
 
@@ -102,13 +113,18 @@ ctest --test-dir build --output-on-failure -C Debug
 ```
 
 The shared C conventions come from `spisor/library`, built from the checkout under `siblings/library`
-at the commit `.weivel/repo.json` declares (CI checks it out; locally a link to the checkout does). The
-tests call the exported functions through the built shared library, one CTest executable per concern,
-on Windows, Linux and macOS in CI; `release_test` runs under the address sanitizer where the compiler
-has one.
+at the commit `.weivel/repo.json` declares (CI checks it out; locally a link to the checkout does), and so do
+weivel's `core`, `standard` and `c` under `siblings/`. The tests call the definitions through the built shared
+library, one CTest executable per concern; `declaration_test` reads `library.json` with the weivel standard and
+`weivel_host_load_test` loads the library through `weivel/c`'s host. The `layouts` program prints every public
+struct's fields with offset, size and `sizeof`, held to the headers by `spisor/library`'s
+`cmake/layouts_check.cmake`, and a translation of a header in another language is checked against it. The shared
+library links `spisor_allocator`, the tests may take `spisor_allocator_counting`, and every out-of-memory test
+requires an empty answer. CI runs six jobs: Debug under ASan and UBSan on Linux and macOS, Release on all three,
+and Debug on Windows.
 
-`parity/typescript` holds the contract schemas in `contracts/` to their vectors in `test/vectors/ir/`
-(`parity.yml`):
+`parity/typescript` holds the plugin contract schemas in `contracts/` to their vectors in `test/vectors/ir/`
+(`parity.yml`); it tests no C:
 
 ```
 npm ci --prefix parity/typescript
@@ -119,6 +135,8 @@ npm test --prefix parity/typescript
 
 A `v*` tag runs `intisy/workflows`' `library.yml`, which builds `forebay_library-linux-x64.so` and
 `forebay_library-win32-x64.dll`, and publishes them with `library.json` and `SHA256SUMS` as a GitHub release.
+Publishing is halted, and that workflow cannot release the 0.2.0 declaration yet: it reads a top-level
+`binary` the weivel standard's format does not have (spisor S-92). The releases below are the JSON builds.
 
 ### Released
 
