@@ -178,3 +178,30 @@ spisor_status anthropic_check_response(const forebay_ir_response *response, anth
     }
     return status == SPISOR_OK ? check_blocks(response->content, response->content_count, problem) : status;
 }
+
+static int is_started_block_kind(uint32_t kind) {
+    return kind == FOREBAY_IR_BLOCK_TEXT || kind == FOREBAY_IR_BLOCK_TOOL_USE || kind == FOREBAY_IR_BLOCK_THINKING;
+}
+
+static spisor_status check_event(const forebay_ir_event *event, anthropic_problem *problem) {
+    if (event->kind < FOREBAY_IR_EVENT_MESSAGE_START || event->kind > FOREBAY_IR_EVENT_ERROR) {
+        return refuse(problem, "an event's kind", "a forebay_ir_event_kind");
+    }
+    if (event->kind == FOREBAY_IR_EVENT_CONTENT_BLOCK_START && !is_started_block_kind(event->block_kind)) {
+        return refuse(problem, "a content block start's block_kind", "text, tool use or thinking");
+    }
+    return check_value(event->extensions, "an event's extensions", problem);
+}
+
+spisor_status anthropic_check_events(const forebay_ir_event *events, size_t count, anthropic_problem *problem) {
+    if (!is_array(events, count)) {
+        return refuse(problem, "events", "present beside a nonzero event_count");
+    }
+    for (size_t index = 0; index < count; index++) {
+        spisor_status status = check_event(&events[index], problem);
+        if (status != SPISOR_OK) {
+            return status;
+        }
+    }
+    return SPISOR_OK;
+}

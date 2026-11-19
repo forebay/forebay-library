@@ -116,14 +116,37 @@ static inline int anthropic_body_equals(const forebay_anthropic_body_answer *ans
     return same;
 }
 
-/** What a direction is called on: a decode's wire text, or an encode's IR read into the arena. */
+/** One feed of a stream's text: `length` bytes at `bytes`. */
+typedef struct anthropic_piece {
+    const char *bytes;
+    size_t length;
+} anthropic_piece;
+
+/**
+ * What a direction is called on: a decode's wire text, a stream decode's whole text `joined` and the pieces it is fed
+ * in, or an encode's IR, a stream encode's events among it, read into the arena.
+ */
 typedef struct anthropic_input {
     const char *text;
     char *printed;
+    char *joined;
+    size_t joined_length;
+    anthropic_piece *pieces;
+    size_t piece_count;
     ir_json_arena arena;
     forebay_ir_request request;
     forebay_ir_response response;
+    const forebay_ir_event *events;
+    size_t event_count;
 } anthropic_input;
+
+/** Every answer a whole stream through one handle gave, each feed's and the finish's, held until released. */
+typedef struct anthropic_stream_answer {
+    uint32_t size;
+    forebay_anthropic_events_answer *events;
+    forebay_anthropic_body_answer *texts;
+    size_t count;
+} anthropic_stream_answer;
 
 /** Any answer a direction fills, begun empty with the size of its own kind by anthropic_start_answer. */
 typedef union anthropic_answer {
@@ -131,6 +154,7 @@ typedef union anthropic_answer {
     forebay_anthropic_request_answer request;
     forebay_anthropic_response_answer response;
     forebay_anthropic_body_answer body;
+    anthropic_stream_answer stream;
 } anthropic_answer;
 
 /**
@@ -155,6 +179,8 @@ static inline anthropic_input anthropic_input_of_text(const char *text) {
 
 static inline void anthropic_input_release(anthropic_input *input) {
     cJSON_free(input->printed);
+    free(input->joined);
+    free(input->pieces);
     ir_json_arena_release(&input->arena);
     *input = (anthropic_input){0};
 }
@@ -226,6 +252,221 @@ static inline void anthropic_release_body(anthropic_answer *answer) {
     anthropic_definition()->release_body(NULL, &answer->body);
 }
 
+/** Cuts the input's `joined` text into consecutive pieces of the `count` lengths; 0 when memory runs out. */
+static inline int anthropic_input_cut(anthropic_input *input, const size_t *lengths, size_t count) {
+    free(input->pieces);
+    input->pieces = calloc(count == 0 ? 1 : count, sizeof *input->pieces);
+    input->piece_count = input->pieces == NULL ? 0 : count;
+    size_t offset = 0;
+    for (size_t index = 0; index < input->piece_count; index++) {
+        input->pieces[index].bytes = input->joined + offset;
+        input->pieces[index].length = lengths[index];
+        offset += lengths[index];
+    }
+    return input->pieces != NULL;
+}
+
+/** A stream decode vector's input: its text chunks, joined, and fed as the vector lists them. */
+static inline int anthropic_read_stream_text(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    size_t count = (size_t)cJSON_GetArraySize(json);
+    size_t *lengths = calloc(count == 0 ? 1 : count, sizeof *lengths);
+    size_t total = 0;
+    size_t index = 0;
+    const cJSON *chunk = NULL;
+    cJSON_ArrayForEach(chunk, json) {
+        const char *text = cJSON_GetStringValue(chunk);
+        lengths[index] = text == NULL ? 0 : strlen(text);
+        total += lengths[index++];
+    }
+    input->joined = malloc(total + 1);
+    input->joined_length = total;
+    size_t offset = 0;
+    index = 0;
+    cJSON_ArrayForEach(chunk, json) {
+        if (lengths[index] > 0) {
+            memcpy(input->joined + offset, cJSON_GetStringValue(chunk), lengths[index]);
+        }
+        offset += lengths[index++];
+    }
+    input->joined[total] = '\0';
+    int cut = anthropic_input_cut(input, lengths, count);
+    free(lengths);
+    return cut && cJSON_IsArray(json);
+}
+
+/** A stream encode vector's input: its IR events, in the arena. */
+static inline int anthropic_read_events_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    cJSON *form = ir_json_schema_form(json);
+    spisor_status status = form == NULL ? SPISOR_OUT_OF_MEMORY
+                                        : ir_json_read_events(form, &input->arena, &input->events, &input->event_count);
+    cJSON_Delete(form);
+    return status == SPISOR_OK;
+}
+
+static inline void anthropic_release_stream_answers(anthropic_answer *answer) {
+    anthropic_stream_answer *stream = &answer->stream;
+    for (size_t index = 0; stream->events != NULL && index < stream->count; index++) {
+        anthropic_definition()->release_events(NULL, &stream->events[index]);
+    }
+    for (size_t index = 0; stream->texts != NULL && index < stream->count; index++) {
+        anthropic_definition()->release_body(NULL, &stream->texts[index]);
+    }
+    free(stream->events);
+    free(stream->texts);
+    stream->events = NULL;
+    stream->texts = NULL;
+    stream->count = 0;
+}
+
+/**
+ * Feeds one piece, the last when `finish` is 1, and feeds it once more after OUT_OF_MEMORY, which the header says
+ * leaves the decoder as it was; so a single failed allocation still decodes the whole stream.
+ */
+static inline spisor_status anthropic_feed_decoder(forebay_anthropic_stream_decoder *decoder,
+                                                   const anthropic_piece *piece, int finish,
+                                                   forebay_anthropic_events_answer *answer, spisor_refusal *refusal) {
+    forebay_anthropic_stream_decode_argument argument = SPISOR_INIT(forebay_anthropic_stream_decode_argument);
+    argument.decoder = decoder;
+    argument.bytes = (const uint8_t *)piece->bytes;
+    argument.length = piece->length;
+    spisor_status status = SPISOR_OUT_OF_MEMORY;
+    for (int attempt = 0; attempt < 2 && status == SPISOR_OUT_OF_MEMORY; attempt++) {
+        *answer = (forebay_anthropic_events_answer)SPISOR_INIT(forebay_anthropic_events_answer);
+        status = finish ? anthropic_definition()->stream_decode_finish(NULL, &argument, answer, refusal)
+                        : anthropic_definition()->stream_decode(NULL, &argument, answer, refusal);
+        if (status == SPISOR_OUT_OF_MEMORY &&
+            (answer->events != NULL || answer->event_count != 0 || answer->storage != NULL)) {
+            support_fail("a stream decode", "an out-of-memory feed did not leave its answer empty");
+        }
+    }
+    return status;
+}
+
+/** Opens a decoder, feeds it every piece, then finishes it with nothing more, keeping every answer. */
+static inline spisor_status anthropic_call_decode_stream(const anthropic_input *input, anthropic_answer *answer,
+                                                         spisor_refusal *refusal) {
+    static const anthropic_piece nothing = {"", 0};
+    forebay_anthropic_stream_decoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_decoder_answer);
+    spisor_status status = anthropic_definition()->stream_decoder_open(NULL, &opened, refusal);
+    anthropic_stream_answer *stream = &answer->stream;
+    stream->events = calloc(input->piece_count + 1, sizeof *stream->events);
+    stream->count = input->piece_count + 1;
+    for (size_t index = 0; status == SPISOR_OK && index <= input->piece_count; index++) {
+        int finish = index == input->piece_count;
+        status = anthropic_feed_decoder(opened.decoder, finish ? &nothing : &input->pieces[index], finish,
+                                        &stream->events[index], refusal);
+    }
+    anthropic_definition()->release_stream_decoder(NULL, opened.decoder);
+    if (status != SPISOR_OK) {
+        anthropic_release_stream_answers(answer);
+    }
+    return status;
+}
+
+/** Writes one feed's events, the last when `finish` is 1, once more after OUT_OF_MEMORY, as the decoder's feed is. */
+static inline spisor_status anthropic_feed_encoder(forebay_anthropic_stream_encoder *encoder,
+                                                   const forebay_ir_event *events, size_t count, int finish,
+                                                   forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
+    forebay_anthropic_stream_encode_argument argument = SPISOR_INIT(forebay_anthropic_stream_encode_argument);
+    argument.encoder = encoder;
+    argument.events = events;
+    argument.event_count = count;
+    spisor_status status = SPISOR_OUT_OF_MEMORY;
+    for (int attempt = 0; attempt < 2 && status == SPISOR_OUT_OF_MEMORY; attempt++) {
+        *answer = (forebay_anthropic_body_answer)SPISOR_INIT(forebay_anthropic_body_answer);
+        status = finish ? anthropic_definition()->stream_encode_finish(NULL, &argument, answer, refusal)
+                        : anthropic_definition()->stream_encode(NULL, &argument, answer, refusal);
+        if (status == SPISOR_OUT_OF_MEMORY &&
+            (answer->bytes != NULL || answer->length != 0 || answer->storage != NULL)) {
+            support_fail("a stream encode", "an out-of-memory feed did not leave its answer empty");
+        }
+    }
+    return status;
+}
+
+/** Opens an encoder, writes the events one feed each, as the translator's transform does, then finishes it. */
+static inline spisor_status anthropic_call_encode_stream(const anthropic_input *input, anthropic_answer *answer,
+                                                         spisor_refusal *refusal) {
+    forebay_anthropic_stream_encoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_encoder_answer);
+    spisor_status status = anthropic_definition()->stream_encoder_open(NULL, &opened, refusal);
+    anthropic_stream_answer *stream = &answer->stream;
+    stream->texts = calloc(input->event_count + 1, sizeof *stream->texts);
+    stream->count = input->event_count + 1;
+    for (size_t index = 0; status == SPISOR_OK && index <= input->event_count; index++) {
+        int finish = index == input->event_count;
+        status = anthropic_feed_encoder(opened.encoder, finish ? NULL : &input->events[index], finish ? 0 : 1, finish,
+                                        &stream->texts[index], refusal);
+    }
+    anthropic_definition()->release_stream_encoder(NULL, opened.encoder);
+    if (status != SPISOR_OK) {
+        anthropic_release_stream_answers(answer);
+    }
+    return status;
+}
+
+/** Every event the stream's answers hold, in order, as one array freed with free; NULL when memory runs out. */
+static inline forebay_ir_event *anthropic_stream_events(const anthropic_stream_answer *stream, size_t *total) {
+    *total = 0;
+    for (size_t index = 0; index < stream->count; index++) {
+        *total += stream->events[index].event_count;
+    }
+    forebay_ir_event *events = calloc(*total == 0 ? 1 : *total, sizeof *events);
+    size_t filled = 0;
+    for (size_t index = 0; events != NULL && index < stream->count; index++) {
+        for (size_t event = 0; event < stream->events[index].event_count; event++) {
+            events[filled++] = stream->events[index].events[event];
+        }
+    }
+    return events;
+}
+
+/** Whether every event the stream's answers hold, in order, is the IR JSON list `expected`. */
+static inline int anthropic_stream_events_match(const anthropic_answer *answer, const cJSON *expected) {
+    size_t total = 0;
+    forebay_ir_event *events = anthropic_stream_events(&answer->stream, &total);
+    cJSON *written = NULL;
+    int same = events != NULL && ir_json_write_events(events, total, &written) == SPISOR_OK &&
+               anthropic_ir_json_equals(written, expected);
+    cJSON_Delete(written);
+    free(events);
+    return same;
+}
+
+/** The texts of `count` body answers joined, freed with free. */
+static inline char *anthropic_joined_texts(const forebay_anthropic_body_answer *texts, size_t count, size_t *length) {
+    *length = 0;
+    for (size_t index = 0; index < count; index++) {
+        *length += texts[index].length;
+    }
+    char *joined = malloc(*length + 1);
+    size_t offset = 0;
+    for (size_t index = 0; joined != NULL && index < count; index++) {
+        memcpy(joined + offset, texts[index].bytes, texts[index].length);
+        offset += texts[index].length;
+    }
+    if (joined != NULL) {
+        joined[*length] = '\0';
+    }
+    return joined;
+}
+
+/** Whether the stream's texts, joined, are the vector's `expected` strings joined, byte for byte. */
+static inline int anthropic_stream_text_matches(const anthropic_answer *answer, const cJSON *expected) {
+    size_t length = 0;
+    char *actual = anthropic_joined_texts(answer->stream.texts, answer->stream.count, &length);
+    anthropic_input wanted;
+    int same = anthropic_read_stream_text(expected, &wanted) && actual != NULL && length == wanted.joined_length &&
+               memcmp(actual, wanted.joined, length) == 0;
+    if (!same) {
+        fprintf(stderr, "  expected %s\n  actual   %s\n", wanted.joined, actual == NULL ? "(none)" : actual);
+    }
+    anthropic_input_release(&wanted);
+    free(actual);
+    return same;
+}
+
 /** The direction a vector's `direction` member names, NULL for one this service does not have. */
 static inline const anthropic_direction *anthropic_direction_named(const char *name) {
     static const anthropic_direction directions[] = {
@@ -237,6 +478,10 @@ static inline const anthropic_direction *anthropic_direction_named(const char *n
          anthropic_call_decode_response, anthropic_response_matches, anthropic_release_response},
         {"encodeResponse", (uint32_t)sizeof(forebay_anthropic_body_answer), anthropic_read_response_input,
          anthropic_call_encode_response, anthropic_body_matches, anthropic_release_body},
+        {"decodeStream", (uint32_t)sizeof(anthropic_stream_answer), anthropic_read_stream_text,
+         anthropic_call_decode_stream, anthropic_stream_events_match, anthropic_release_stream_answers},
+        {"encodeStream", (uint32_t)sizeof(anthropic_stream_answer), anthropic_read_events_input,
+         anthropic_call_encode_stream, anthropic_stream_text_matches, anthropic_release_stream_answers},
     };
     for (size_t index = 0; name != NULL && index < sizeof directions / sizeof directions[0]; index++) {
         if (strcmp(directions[index].name, name) == 0) {

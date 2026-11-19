@@ -6,10 +6,12 @@
 
 /**
  * @file
- * Fails every allocation of decoding and of encoding each `request-*` and `response-*` vector, one at a time and from
- * that one on, and requires each failure to answer OUT_OF_MEMORY with every block released and the answer empty, or,
- * where the failed allocation was not one the call needed, the answer it gives without one. A failure is never read as
- * a refusal or a malformed call.
+ * Fails every allocation of decoding and of encoding each vector, a request, a response or a whole stream fed as the
+ * vector lists it, one at a time and from that one on, and requires each failure to answer OUT_OF_MEMORY with every
+ * block released and the answer empty, or, where the failed allocation was not one the call needed, the answer it
+ * gives without one. A failure is never read as a refusal or a malformed call. A stream feed that answers
+ * OUT_OF_MEMORY is fed again, since the header says it leaves its handle as it was, so a single failure must still give
+ * the whole stream.
  *
  * @implNote The cases a vector does not write are not repeated here; the vectors, among them the golden request and
  * response and the ones holding every block kind, reach every allocation site of both directions.
@@ -81,9 +83,7 @@ static void every_failure_of_the_vectors(allocation_failure_mode mode) {
         return;
     }
     for (char *line = strtok(list, "\r\n"); line != NULL; line = strtok(NULL, "\r\n")) {
-        if (strstr(line, "request-") != NULL || strstr(line, "response-") != NULL) {
-            every_failure_of_vector(line, mode);
-        }
+        every_failure_of_vector(line, mode);
     }
     free(list);
 }

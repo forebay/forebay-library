@@ -26,4 +26,11 @@ spisor_status anthropic_check_request(const forebay_ir_request *request, anthrop
  */
 spisor_status anthropic_check_response(const forebay_ir_response *response, anthropic_problem *problem);
 
+/**
+ * Whether IR events keep the rules of forebay/ir.h that writing them needs: present beside a nonzero count, a kind the
+ * header names, a content block start's `block_kind` one of text, tool use or thinking, and every `extensions` record
+ * walked with spisor_value_check.
+ */
+spisor_status anthropic_check_events(const forebay_ir_event *events, size_t count, anthropic_problem *problem);
+
 #endif

@@ -35,11 +35,17 @@ add_library(forebay_objects OBJECT
     src/anthropic_decode_blocks.c
     src/anthropic_decode_request.c
     src/anthropic_decode_response.c
+    src/anthropic_decode_stream.c
     src/anthropic_definition.c
     src/anthropic_encode_blocks.c
     src/anthropic_encode_request.c
     src/anthropic_encode_response.c
+    src/anthropic_encode_stream.c
+    src/anthropic_frames.c
     src/anthropic_reader.c
+    src/anthropic_refusal.c
+    src/anthropic_stream_decoder.c
+    src/anthropic_stream_encoder.c
     src/anthropic_stringify.c
     src/anthropic_usage.c
     src/anthropic_wire.c

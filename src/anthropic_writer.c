@@ -61,6 +61,14 @@ void anthropic_set_text(anthropic_writer *writer, cJSON *object, const char *key
     anthropic_set(writer, object, key, is_failed(writer) ? NULL : cJSON_CreateString(text));
 }
 
+void anthropic_set_text_or_null(anthropic_writer *writer, cJSON *object, const char *key, const char *text) {
+    if (text == NULL) {
+        anthropic_set(writer, object, key, is_failed(writer) ? NULL : cJSON_CreateNull());
+    } else {
+        anthropic_set_text(writer, object, key, text);
+    }
+}
+
 void anthropic_set_count(anthropic_writer *writer, cJSON *object, const char *key, uint64_t count) {
     anthropic_set_number(writer, object, key, (double)count);
 }
