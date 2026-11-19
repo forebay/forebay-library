@@ -113,7 +113,7 @@ ctest --test-dir build --output-on-failure -C Debug
 ```
 
 The shared C conventions come from `spisor/library`, built from the checkout under `siblings/library`
-at the commit `.weivel/repo.json` declares (CI checks it out; locally a link to the checkout does), and so do
+at the commit `repo.json` declares (CI checks it out; locally a link to the checkout does), and so do
 weivel's `core`, `standard` and `c` under `siblings/`. The tests call the definitions through the built shared
 library, one CTest executable per concern; `declaration_test` reads `library.json` with the weivel standard and
 `weivel_host_load_test` loads the library through `weivel/c`'s host. The `layouts` program prints every public

@@ -7,7 +7,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 set(forebay_siblings ${CMAKE_CURRENT_SOURCE_DIR}/siblings)
 if(NOT EXISTS ${forebay_siblings}/library/CMakeLists.txt)
-    message(FATAL_ERROR "siblings/library is missing: check out the dependency .weivel/repo.json declares")
+    message(FATAL_ERROR "siblings/library is missing: check out the dependency repo.json declares")
 endif()
 
 include(${forebay_siblings}/library/cmake/sanitizers.cmake)
