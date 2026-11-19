@@ -5,6 +5,11 @@
 #include "spisor/allocation.h"
 #include "spisor/javascript.h"
 
+/** $contentIsString. */
+#define MESSAGE_TRANSLATOR_KEYS 1
+/** $systemIsString and $thinkingType. */
+#define REQUEST_TRANSLATOR_KEYS 2
+
 static const char *const REQUEST_CONSUMED[] = {
     "model",   "system",     "messages", "tools", "tool_choice",    "max_tokens", "temperature",
     "top_p",   "top_k",      "stop_sequences",    "stream",         "thinking",   "metadata"};
@@ -14,7 +19,7 @@ static const char *const TOOL_CHOICE_CONSUMED[] = {"type", "name"};
 
 static void decode_message(anthropic_reader *reader, const cJSON *wire, forebay_ir_message *message) {
     anthropic_extension_list extensions;
-    anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(wire));
+    anthropic_extensions_begin(reader, &extensions, MESSAGE_TRANSLATOR_KEYS, (size_t)cJSON_GetArraySize(wire));
     message->role = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "role")));
     anthropic_decode_content(reader, anthropic_wire_member(wire, "content"), ANTHROPIC_EXTENSION_CONTENT_IS_STRING,
                              &message->content, &message->content_count, &extensions);
@@ -36,7 +41,7 @@ static const forebay_ir_message *decode_messages(anthropic_reader *reader, const
 
 static void decode_tool(anthropic_reader *reader, const cJSON *wire, forebay_ir_tool *tool) {
     anthropic_extension_list extensions;
-    anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(wire));
+    anthropic_extensions_begin(reader, &extensions, 0, (size_t)cJSON_GetArraySize(wire));
     const cJSON *input_schema = anthropic_wire_member(wire, "input_schema");
     tool->name = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "name")));
     tool->description = anthropic_copy_text(reader, anthropic_wire_string(anthropic_wire_member(wire, "description")));
@@ -65,7 +70,7 @@ static const forebay_ir_tool_choice *decode_tool_choice(anthropic_reader *reader
         return NULL;
     }
     anthropic_extension_list extensions;
-    anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(wire));
+    anthropic_extensions_begin(reader, &extensions, 0, (size_t)cJSON_GetArraySize(wire));
     choice->type = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "type")));
     choice->name = anthropic_copy_text(reader, anthropic_wire_string(anthropic_wire_member(wire, "name")));
     anthropic_extensions_put_unconsumed(reader, &extensions, wire, ANTHROPIC_KEYS_OF(TOOL_CHOICE_CONSUMED));
@@ -134,7 +139,7 @@ static void decode_scalars(anthropic_reader *reader, const cJSON *root, forebay_
 
 static void decode_members(anthropic_reader *reader, const cJSON *root, forebay_ir_request *request) {
     anthropic_extension_list extensions;
-    anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(root));
+    anthropic_extensions_begin(reader, &extensions, REQUEST_TRANSLATOR_KEYS, (size_t)cJSON_GetArraySize(root));
     request->model = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(root, "model")));
     request->messages = decode_messages(reader, anthropic_wire_member(root, "messages"), &request->message_count);
     anthropic_wire_boolean(anthropic_wire_member(root, "stream"), &request->stream);

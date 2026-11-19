@@ -50,8 +50,12 @@ typedef struct anthropic_extension_list {
     size_t translator_count;
 } anthropic_extension_list;
 
-/** An empty list with room for the translator's own members and `wire_members` more. */
-void anthropic_extensions_begin(anthropic_reader *reader, anthropic_extension_list *list, size_t wire_members);
+/**
+ * An empty list with room for `translator_keys` of the translator's own members and `wire_members` more. A put
+ * past that room is dropped, so `translator_keys` counts every translator key the owner's decoder can put.
+ */
+void anthropic_extensions_begin(anthropic_reader *reader, anthropic_extension_list *list, size_t translator_keys,
+                                size_t wire_members);
 
 void anthropic_extensions_put_flag(anthropic_reader *reader, anthropic_extension_list *list, const char *key);
 

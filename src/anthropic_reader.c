@@ -5,8 +5,6 @@
 
 #include "answer_storage.h"
 
-#define TRANSLATOR_KEY_LIMIT 4
-
 static const spisor_value null_value = {SPISOR_VALUE_NULL, 0, 0, NULL, 0, NULL, NULL, 0};
 
 const spisor_value *anthropic_null_value(void) {
@@ -126,8 +124,9 @@ const spisor_value *anthropic_copy_record_without(anthropic_reader *reader, cons
     return value;
 }
 
-void anthropic_extensions_begin(anthropic_reader *reader, anthropic_extension_list *list, size_t wire_members) {
-    list->capacity = wire_members + TRANSLATOR_KEY_LIMIT;
+void anthropic_extensions_begin(anthropic_reader *reader, anthropic_extension_list *list, size_t translator_keys,
+                                size_t wire_members) {
+    list->capacity = translator_keys + wire_members;
     list->entries = anthropic_take(reader, list->capacity, sizeof *list->entries);
     list->count = 0;
     list->translator_count = 0;

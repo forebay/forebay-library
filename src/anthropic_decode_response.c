@@ -2,6 +2,9 @@
 #include "anthropic_stop_reason.h"
 #include "anthropic_wire.h"
 
+/** $stopReasonRaw, $stopSequenceRaw, $typeRaw and $roleRaw. */
+#define RESPONSE_TRANSLATOR_KEYS 4
+
 static const char *const RESPONSE_CONSUMED[] = {"id",    "type",        "role",          "content",
                                                 "model", "stop_reason", "stop_sequence", "usage"};
 
@@ -20,7 +23,7 @@ static void put_raw_members(anthropic_reader *reader, const cJSON *root, anthrop
 
 static void decode_members(anthropic_reader *reader, const cJSON *root, forebay_ir_response *response) {
     anthropic_extension_list extensions;
-    anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(root));
+    anthropic_extensions_begin(reader, &extensions, RESPONSE_TRANSLATOR_KEYS, (size_t)cJSON_GetArraySize(root));
     response->id = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(root, "id")));
     response->model = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(root, "model")));
     anthropic_decode_blocks(reader, anthropic_wire_member(root, "content"), &response->content,

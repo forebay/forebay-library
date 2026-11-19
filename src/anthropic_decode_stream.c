@@ -4,6 +4,9 @@
 #include "anthropic_stop_reason.h"
 #include "anthropic_wire.h"
 
+/** $stopSequenceRaw. */
+#define MESSAGE_DELTA_TRANSLATOR_KEYS 1
+
 static const char *const MESSAGE_START_CONSUMED[] = {"id",          "type",          "role",  "content", "model",
                                                      "stop_reason", "stop_sequence", "usage"};
 static const char *const MESSAGE_DELTA_CONSUMED[] = {"stop_reason", "stop_sequence"};
@@ -34,7 +37,7 @@ static int decode_message_start(anthropic_reader *reader, const cJSON *frame, fo
         return 0;
     }
     anthropic_extension_list extensions;
-    anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(message));
+    anthropic_extensions_begin(reader, &extensions, 0, (size_t)cJSON_GetArraySize(message));
     event->kind = FOREBAY_IR_EVENT_MESSAGE_START;
     event->id = copy_string(reader, message, "id");
     event->model = copy_string(reader, message, "model");
@@ -113,7 +116,8 @@ static int decode_message_delta(anthropic_reader *reader, const cJSON *frame, fo
     event->kind = FOREBAY_IR_EVENT_MESSAGE_DELTA;
     if (delta != NULL) {
         anthropic_extension_list extensions;
-        anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(delta));
+        anthropic_extensions_begin(reader, &extensions, MESSAGE_DELTA_TRANSLATOR_KEYS,
+                                   (size_t)cJSON_GetArraySize(delta));
         event->stop_reason =
             anthropic_stop_reason_to_ir(anthropic_wire_string(anthropic_wire_member(delta, "stop_reason")));
         anthropic_extensions_put_json(reader, &extensions, ANTHROPIC_EXTENSION_STOP_SEQUENCE_RAW,

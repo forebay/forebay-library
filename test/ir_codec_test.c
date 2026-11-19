@@ -207,6 +207,20 @@ static void refuses_a_repeated_header_name(void) {
                        SPISOR_OK, "two different header names");
 }
 
+static void reads_a_failure_as_a_sized_value(void) {
+    cJSON *json = parse("{\"status\":429,\"headers\":{},\"body\":\"\",\"retryAfterMilliseconds\":1500}");
+    ir_json_arena arena = {0};
+    forebay_ir_failure failure = {0};
+    spisor_status status = json == NULL ? SPISOR_OUT_OF_MEMORY : ir_json_read_failure(json, &arena, &failure);
+    if (status != SPISOR_OK || failure.size != sizeof(forebay_ir_failure) || failure.has_retry_after != 1 ||
+        failure.retry_after_milliseconds != 1500.0) {
+        support_failf("a failure", "read with status %d, size %u and a wait of %g", (int)status,
+                      (unsigned)failure.size, failure.retry_after_milliseconds);
+    }
+    ir_json_arena_release(&arena);
+    cJSON_Delete(json);
+}
+
 static void refuses_extensions_that_are_not_a_record(void) {
     const char *const bad[] = {
         "{\"model\":\"m\",\"stream\":false,\"messages\":[],\"extensions\":\"x\"}",
@@ -239,6 +253,7 @@ int main(void) {
     keeps_a_null_opaque_member();
     reads_a_null_member_as_absent();
     refuses_a_repeated_header_name();
+    reads_a_failure_as_a_sized_value();
     refuses_extensions_that_are_not_a_record();
     printf("ir_codec_test: %d schema documents, %d anthropic vectors\n", documents, vectors);
     return support_summary("ir_codec_test");

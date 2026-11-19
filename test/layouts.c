@@ -472,25 +472,25 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_definition, context);
     FIELD(forebay_anthropic_definition, decode_request);
     FIELD(forebay_anthropic_definition, encode_request);
-    FIELD(forebay_anthropic_definition, release_request);
-    FIELD(forebay_anthropic_definition, release_body);
-    FIELD(forebay_anthropic_definition, release_refusal);
     FIELD(forebay_anthropic_definition, decode_response);
     FIELD(forebay_anthropic_definition, encode_response);
-    FIELD(forebay_anthropic_definition, release_response);
     FIELD(forebay_anthropic_definition, stream_decoder_open);
     FIELD(forebay_anthropic_definition, stream_decode);
     FIELD(forebay_anthropic_definition, stream_decode_finish);
-    FIELD(forebay_anthropic_definition, release_events);
-    FIELD(forebay_anthropic_definition, release_stream_decoder);
     FIELD(forebay_anthropic_definition, stream_encoder_open);
     FIELD(forebay_anthropic_definition, stream_encode);
     FIELD(forebay_anthropic_definition, stream_encode_finish);
-    FIELD(forebay_anthropic_definition, release_stream_encoder);
     FIELD(forebay_anthropic_definition, error_envelope);
     FIELD(forebay_anthropic_definition, model_listing);
     FIELD(forebay_anthropic_definition, model_lookup);
+    FIELD(forebay_anthropic_definition, release_request);
+    FIELD(forebay_anthropic_definition, release_body);
+    FIELD(forebay_anthropic_definition, release_response);
+    FIELD(forebay_anthropic_definition, release_events);
+    FIELD(forebay_anthropic_definition, release_stream_decoder);
+    FIELD(forebay_anthropic_definition, release_stream_encoder);
     FIELD(forebay_anthropic_definition, release_model_lookup);
+    FIELD(forebay_anthropic_definition, release_refusal);
     SIZE(forebay_anthropic_definition);
 }
 
@@ -597,6 +597,7 @@ static void print_ir_layouts(void) {
     FIELD(forebay_ir_event, error_type);
     FIELD(forebay_ir_event, message);
     SIZE(forebay_ir_event);
+    FIELD(forebay_ir_failure, size);
     FIELD(forebay_ir_failure, status);
     FIELD(forebay_ir_failure, headers);
     FIELD(forebay_ir_failure, header_count);

@@ -126,6 +126,8 @@ static const stream_case DECODE_CASES[] = {
      ": hi\nid: 3\nretry: 5\nevent: x\ndata:\n\ndata: \n\n", "[]"},
     {"a JSON string holding NUL yields nothing", "data: {\"type\":\"error\",\"error\":{\"type\":\"a\\u0000\"}}\n\n",
      "[]"},
+    {"a frame that is not valid UTF-8 yields nothing", "data: {\"type\":\"error\",\"error\":{\"type\":\"a\xff\"}}\n\n",
+     "[]"},
     {"an index that is no count reads as 0",
      "data: {\"type\":\"content_block_stop\",\"index\":-3}\n\ndata: {\"type\":\"content_block_stop\",\"index\":2.7}\n\n"
      "data: {\"type\":\"content_block_stop\",\"index\":\"1\"}\n\n",

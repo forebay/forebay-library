@@ -1,10 +1,11 @@
 #include <string.h>
 
+#include "anthropic_byte_buffer.h"
 #include "anthropic_encode.h"
 #include "anthropic_operations.h"
-#include "anthropic_stringify.h"
 #include "definition_support.h"
 #include "spisor/allocation.h"
+#include "spisor/json_write.h"
 
 #define ENCODER_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_stream_encoder_answer, encoder)
 #define ENCODE_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_stream_encode_argument, event_count)
@@ -20,13 +21,6 @@ struct forebay_anthropic_stream_encoder {
     uint32_t reserved;
 };
 
-/** SSE text being built, from the binary's one allocator. */
-typedef struct stream_text {
-    char *bytes;
-    size_t length;
-    size_t capacity;
-} stream_text;
-
 spisor_status anthropic_stream_encoder_open(void *context, forebay_anthropic_stream_encoder_answer *answer,
                                             spisor_refusal *refusal) {
     (void)context;
@@ -41,45 +35,23 @@ spisor_status anthropic_stream_encoder_open(void *context, forebay_anthropic_str
     return SPISOR_OK;
 }
 
-/** Appends `length` bytes; 0 when memory runs out, the text kept as it was. */
-static int append(stream_text *text, const char *bytes, size_t length) {
-    if (length > SIZE_MAX - 1 - text->length) {
-        return 0;
-    }
-    if (text->length + length + 1 > text->capacity) {
-        size_t capacity = text->capacity > (SIZE_MAX - 1) / 2 ? SIZE_MAX : text->capacity * 2;
-        capacity = capacity > text->length + length + 1 ? capacity : text->length + length + 1;
-        char *grown = spisor_memory_reallocate(text->bytes, capacity);
-        if (grown == NULL) {
-            return 0;
-        }
-        text->bytes = grown;
-        text->capacity = capacity;
-    }
-    memcpy(text->bytes + text->length, bytes, length);
-    text->length += length;
-    text->bytes[text->length] = '\0';
-    return 1;
-}
-
-static int append_text(stream_text *text, const char *bytes) {
-    return append(text, bytes, strlen(bytes));
+static int append_text(anthropic_byte_buffer *text, const char *bytes) {
+    return anthropic_byte_buffer_append(text, bytes, strlen(bytes));
 }
 
 /** Appends one event's frame: `event:` naming the data's type, `data:` holding its JSON, and a blank line. */
-static int append_frame(stream_text *text, const cJSON *data) {
-    size_t length = 0;
-    char *json = anthropic_stringify(data, &length);
+static int append_frame(anthropic_byte_buffer *text, const cJSON *data) {
+    char *json = spisor_json_stringify(data);
     int appended = json != NULL && append_text(text, "event: ") &&
                    append_text(text, cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(data, "type"))) &&
-                   append_text(text, "\ndata: ") && append(text, json, length) && append_text(text, "\n\n");
+                   append_text(text, "\ndata: ") && append_text(text, json) && append_text(text, "\n\n");
     spisor_memory_release(json);
     return appended;
 }
 
 /** Writes every event's frame into `text`; OK, MALFORMED with the writer's problem, or OUT_OF_MEMORY. */
-static spisor_status write_frames(const forebay_anthropic_stream_encode_argument *argument, stream_text *text,
-                                  anthropic_problem *problem) {
+static spisor_status write_frames(const forebay_anthropic_stream_encode_argument *argument,
+                                  anthropic_byte_buffer *text, anthropic_problem *problem) {
     for (size_t index = 0; index < argument->event_count; index++) {
         anthropic_writer writer = {SPISOR_OK, NULL};
         cJSON *data = anthropic_encode_stream_event(&writer, &argument->events[index]);
@@ -97,7 +69,7 @@ static spisor_status write_frames(const forebay_anthropic_stream_encode_argument
 }
 
 /** Fills the answer with a copy of the text, "" for none; 0 when memory runs out, the answer left empty. */
-static int fill_body(const stream_text *text, forebay_anthropic_body_answer *answer) {
+static int fill_body(const anthropic_byte_buffer *text, forebay_anthropic_body_answer *answer) {
     void *storage = NULL;
     char *body = forebay_storage_allocate(&storage, text->length + 1);
     if (body == NULL) {
@@ -124,7 +96,7 @@ static spisor_status encode_events(const forebay_anthropic_stream_encode_argumen
     }
     anthropic_problem problem;
     spisor_status status = anthropic_check_events(argument->events, argument->event_count, &problem);
-    stream_text text = {NULL, 0, 0};
+    anthropic_byte_buffer text = {NULL, 0, 0};
     if (status == SPISOR_OK) {
         status = write_frames(argument, &text, &problem);
     }
