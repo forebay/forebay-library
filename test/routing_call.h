@@ -69,7 +69,7 @@ typedef struct routing_answers {
 #define ROUTING_INIT_INTO(target, type) ((target).size = (uint32_t)sizeof(type))
 
 static inline const forebay_routing_definition *routing_definition(void) {
-    return forebay_library_routing_definition();
+    return forebay_routing_definition_of();
 }
 
 static inline routing_operation routing_operation_named(const char *name) {

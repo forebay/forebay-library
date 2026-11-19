@@ -13,6 +13,6 @@ static const forebay_accounts_definition definition = {
     accounts_release_acquire_answer, spisor_release_refusal,
 };
 
-FOREBAY_DEFINITION_API const void *forebay_library_accounts_definition(void) {
+FOREBAY_DEFINITION_API const void *forebay_accounts_definition_of(void) {
     return &definition;
 }

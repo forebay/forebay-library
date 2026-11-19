@@ -54,7 +54,7 @@ typedef struct accounts_answers {
 } accounts_answers;
 
 static inline const forebay_accounts_definition *accounts_definition(void) {
-    return forebay_library_accounts_definition();
+    return forebay_accounts_definition_of();
 }
 
 static inline accounts_operation accounts_operation_named(const char *name) {

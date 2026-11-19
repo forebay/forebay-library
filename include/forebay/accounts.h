@@ -247,7 +247,7 @@ typedef struct forebay_accounts_definition {
 } forebay_accounts_definition;
 
 /** The static forebay_accounts_definition, living until the library is unloaded. */
-FOREBAY_DEFINITION_API const void *forebay_library_accounts_definition(void);
+FOREBAY_DEFINITION_API const void *forebay_accounts_definition_of(void);
 
 #ifdef __cplusplus
 }

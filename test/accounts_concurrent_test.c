@@ -15,7 +15,7 @@
 #define WORKER_ARGUMENT "worker"
 
 static const forebay_accounts_definition *accounts(void) {
-    return forebay_library_accounts_definition();
+    return forebay_accounts_definition_of();
 }
 
 static spisor_status report(const char *store, const char *id, uint32_t outcome, int now, const char *lane,
