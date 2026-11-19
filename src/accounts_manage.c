@@ -3,7 +3,7 @@
 #include "accounts_secrets.h"
 #include "accounts_support.h"
 #include "definition_support.h"
-#include "json_value.h"
+#include "spisor/json_value.h"
 #include "spisor/allocation.h"
 
 #define LIST_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_list_argument, store)

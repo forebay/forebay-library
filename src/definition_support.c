@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "json_value.h"
+#include "spisor/json_value.h"
 
 int forebay_has_shape(uint32_t size, size_t shape) {
     return (size_t)size >= shape;

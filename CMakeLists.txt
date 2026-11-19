@@ -52,14 +52,13 @@ add_library(forebay_objects OBJECT
     src/routing_tiers.c
     src/routing_upstream.c
     src/service_support.c)
-target_include_directories(forebay_objects PUBLIC include PRIVATE src ${spisor_library_SOURCE_DIR}/src)
+target_include_directories(forebay_objects PUBLIC include PRIVATE src)
 target_link_libraries(forebay_objects PUBLIC spisor_library)
 target_compile_definitions(forebay_objects PRIVATE FOREBAY_LIBRARY_BUILDING)
 set_target_properties(forebay_objects PROPERTIES POSITION_INDEPENDENT_CODE ON C_VISIBILITY_PRESET hidden)
 spisor_strict_warnings(forebay_objects)
 
 add_library(forebay_library SHARED src/library_load.c)
-target_include_directories(forebay_library PRIVATE ${spisor_library_SOURCE_DIR}/src)
 target_link_libraries(forebay_library PRIVATE forebay_objects spisor_allocator)
 set_target_properties(forebay_library PROPERTIES C_VISIBILITY_PRESET hidden)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

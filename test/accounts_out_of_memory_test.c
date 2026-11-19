@@ -3,7 +3,7 @@
 #include "accounts_call.h"
 #include "allocation.h"
 #include "allocation_failure.h"
-#include "json_allocation.h"
+#include "spisor/json_allocation.h"
 
 /**
  * @file
