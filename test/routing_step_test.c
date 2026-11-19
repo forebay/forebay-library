@@ -139,7 +139,7 @@ static void read_report(const cJSON *json, forebay_report *report) {
     report->after_bytes = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "afterBytes")) ? 1u : 0u;
     report->message = routing_text_of(json, "message");
     report->status = cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(json, "status"))
-                         ? cJSON_GetObjectItemCaseSensitive(json, "status")->valuedouble
+                         ? (uint32_t)cJSON_GetObjectItemCaseSensitive(json, "status")->valuedouble
                          : 0;
     report->has_retry_after = cJSON_IsNumber(retry) ? 1u : 0u;
     report->retry_after_milliseconds = cJSON_IsNumber(retry) ? retry->valuedouble : 0;
@@ -492,6 +492,10 @@ static void refuses_a_malformed_call(void) {
     forebay_walk *walk = walk_calling_alpha("refuses_a_malformed_call");
     step_result unknown = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"vanished\"}");
     expect_malformed(&unknown, "step with a report kind the header does not name");
+    step_result below = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"failure\",\"status\":99,\"headers\":{}}");
+    expect_malformed(&below, "step with a report status below 100 and not 0");
+    step_result above = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"failure\",\"status\":600,\"headers\":{}}");
+    expect_malformed(&above, "step with a report status above 599");
     release_walk(walk);
 }
 

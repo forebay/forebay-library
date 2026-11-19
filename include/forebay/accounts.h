@@ -126,7 +126,7 @@ typedef enum forebay_accounts_report_outcome {
 /**
  * `outcome` a forebay_accounts_report_outcome; `lane` and `reason` NULL for none. `reset_at` is read when
  * `has_reset_at` is 1, and `random`, the jitter in [0, 1), when `has_random` is 1, else 0.5. An error, and a rate
- * limit without a reset, back off by `base_milliseconds` doubled per `attempt` (a negative attempt counts as 0), up
+ * limit without a reset, back off by `base_milliseconds` doubled per `attempt`, up
  * to `max_milliseconds`, both from 0. `quota` is the reading a QUOTA outcome stores, a record, and read for no other.
  * First shape ends at `quota`.
  */
@@ -142,7 +142,7 @@ typedef struct forebay_accounts_report_argument {
     double reset_at;
     uint32_t has_random;
     double random;
-    double attempt;
+    uint32_t attempt;
     double base_milliseconds;
     double max_milliseconds;
     const spisor_value *quota;
