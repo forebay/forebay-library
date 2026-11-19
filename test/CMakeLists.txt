@@ -38,6 +38,11 @@ add_test(NAME public_headers_are_ascii
     COMMAND ${CMAKE_COMMAND} -DDIRECTORY=${PROJECT_SOURCE_DIR}/include
         -P ${forebay_spisor_test_directory}/ascii_check.cmake)
 
+include(${spisor_library_SOURCE_DIR}/cmake/header_isolation.cmake)
+file(GLOB forebay_isolated_headers CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/include/forebay/*.h)
+spisor_refuse_name_in_headers(public_headers_without_cjson NAME cJSON HEADERS ${forebay_isolated_headers}
+    INCLUDE_DIRECTORIES ${PROJECT_SOURCE_DIR}/include ${spisor_library_SOURCE_DIR}/include)
+
 forebay_vector_list(accounts)
 set(forebay_accounts_vectors ACCOUNTS_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/accounts_vectors.txt")
 forebay_definition_test(accounts_test spisor_allocator ${forebay_accounts_vectors})
