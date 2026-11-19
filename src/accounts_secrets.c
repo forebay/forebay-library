@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TOKEN_FIX "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
+#define TOKEN_FIX "keep tokens in the plugin's secrets and store only non-secret account state"
 
 static const char *const credential_names[] = {"access", "refresh", "accessToken", "refreshToken", "idToken", "apiKey"};
 

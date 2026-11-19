@@ -43,7 +43,7 @@
     "environment": {}
   },
   "result": {
-    "refused": "modelVariables.tierModel lacks the {{TIER}} placeholder",
-    "fix": "include {{TIER}} in modelVariables.tierModel where the upper-cased tier goes"
+    "refused": "the application's tier_model_variable lacks the {{TIER}} placeholder",
+    "fix": "include {{TIER}} in the application's tier_model_variable where the upper-cased tier goes"
   }
 }

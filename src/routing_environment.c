@@ -237,17 +237,17 @@ static cJSON *build_environment(const request *asked) {
     return built;
 }
 
-static int refuses_tier_template(const cJSON *variables, const char *member, service_reply *reply,
-                                  int32_t *status) {
+static int refuses_tier_template(const cJSON *variables, const char *member, const char *field,
+                                  service_reply *reply, int32_t *status) {
     const char *name_template = text_member(variables, member);
     if (name_template == NULL || strstr(name_template, TIER_PLACEHOLDER) != NULL) {
         return 0;
     }
     char cause[96];
     char fix[128];
-    snprintf(cause, sizeof(cause), "modelVariables.%s lacks the " TIER_PLACEHOLDER " placeholder", member);
-    snprintf(fix, sizeof(fix), "include " TIER_PLACEHOLDER " in modelVariables.%s where the upper-cased tier goes",
-             member);
+    snprintf(cause, sizeof(cause), "the application's %s lacks the " TIER_PLACEHOLDER " placeholder", field);
+    snprintf(fix, sizeof(fix), "include " TIER_PLACEHOLDER " in the application's %s where the upper-cased tier goes",
+             field);
     *status = service_refuse(cause, fix, reply);
     return 1;
 }
@@ -258,8 +258,8 @@ static int read_request(const service_call *call, request *asked, service_reply 
     asked->environment = cJSON_GetObjectItemCaseSensitive(call->argument, "environment");
     asked->application = cJSON_GetObjectItemCaseSensitive(call->argument, "application");
     const cJSON *variables = cJSON_GetObjectItemCaseSensitive(asked->application, "modelVariables");
-    if (refuses_tier_template(variables, "tierModel", reply, status) ||
-        refuses_tier_template(variables, "tierModelName", reply, status)) {
+    if (refuses_tier_template(variables, "tierModel", "tier_model_variable", reply, status) ||
+        refuses_tier_template(variables, "tierModelName", "tier_model_name_variable", reply, status)) {
         return 0;
     }
     asked->port = (int)cJSON_GetObjectItemCaseSensitive(call->argument, "port")->valuedouble;

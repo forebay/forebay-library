@@ -155,7 +155,7 @@ static int compile_native_pattern(const routing_profile *profile, routing_patter
     if (profile->native_model_pattern == NULL || profile->native_model_pattern[0] == '\0') {
         return 1;
     }
-    *native = routing_compile_profile_pattern("nativeModelPattern", profile->native_model_pattern, 0, refusal);
+    *native = routing_compile_profile_pattern("native_model_pattern", profile->native_model_pattern, 0, refusal);
     return *native != NULL;
 }
 

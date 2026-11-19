@@ -1,5 +1,5 @@
 {
-  "source": "decision 3: tokens live in ctx.secrets, never in the store",
+  "source": "decision 3: tokens live in the plugin's secrets, never in the store",
   "function": "upsert",
   "argument": {
     "account": {
@@ -9,7 +9,7 @@
   },
   "result": {
     "refused": "the account carries the token member apiKey",
-    "fix": "keep tokens in the plugin's secrets (ctx.secrets) and store only non-secret account state"
+    "fix": "keep tokens in the plugin's secrets and store only non-secret account state"
   },
   "after": null
 }

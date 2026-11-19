@@ -14,7 +14,7 @@
   },
   "status": 1,
   "result": {
-    "message": "settings is missing or is not an object",
-    "fix": "send settings as an object"
+    "message": "settings is not the user's settings record",
+    "fix": "set settings to the user's settings record"
   }
 }

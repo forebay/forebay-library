@@ -25,7 +25,7 @@
     "models": {}
   },
   "result": {
-    "refused": "tierRegex uses an unsupported construct: alternation with |",
+    "refused": "tier_regex uses an unsupported construct: alternation with |",
     "fix": "write the pattern with only ^ $ literals . [] \\d \\w \\s * + ? and at most one capture group"
   }
 }

@@ -23,7 +23,7 @@
     "requestedModel": "x"
   },
   "result": {
-    "refused": "unservedModelPattern uses an unsupported construct: an unbalanced (",
+    "refused": "unserved_model_pattern uses an unsupported construct: an unbalanced (",
     "fix": "write the pattern with only ^ $ literals . [] \\d \\w \\s * + ? and at most one capture group"
   }
 }

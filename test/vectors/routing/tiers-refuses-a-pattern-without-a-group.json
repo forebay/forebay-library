@@ -25,7 +25,7 @@
     "models": {}
   },
   "result": {
-    "refused": "tierRegex must contain exactly one capture group",
+    "refused": "tier_regex must contain exactly one capture group",
     "fix": "write the pattern with only ^ $ literals . [] \\d \\w \\s * + ? and at most one capture group"
   }
 }
