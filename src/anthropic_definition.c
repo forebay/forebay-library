@@ -168,6 +168,8 @@ static const forebay_anthropic_definition definition = {
     anthropic_release_stream_encoder,
     anthropic_error_envelope,
     anthropic_model_listing,
+    anthropic_model_lookup,
+    anthropic_release_model_lookup,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_anthropic_definition_of(void) {

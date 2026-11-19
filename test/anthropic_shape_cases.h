@@ -70,6 +70,21 @@ static const anthropic_shape_case ANTHROPIC_SHAPE_CASES[] = {
      "{\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[[{\"id\":\"only\",\"name\":\"Only\"}]]}",
      "{\"data\":[{\"type\":\"model\",\"id\":\"only\",\"display_name\":\"Only\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":1,\"max_tokens\":2}],\"first_id\":\"only\",\"last_id\":\"only\",\"has_more\":false}"},
+    {"a lookup finds the model as the first provider offers it", "modelLookup",
+     "{\"id\":\"a\",\"defaultContext\":200000,\"defaultOutput\":8192,\"providers\":["
+     "[{\"id\":\"b\"},{\"id\":\"a\",\"name\":\"A first\",\"context\":100}],[{\"id\":\"a\",\"name\":\"A second\"}]]}",
+     "{\"type\":\"model\",\"id\":\"a\",\"display_name\":\"A first\",\"created_at\":\"2025-01-01T00:00:00Z\","
+     "\"max_input_tokens\":100,\"max_tokens\":8192}"},
+    {"a lookup of an id no provider offers is the 404 body", "modelLookup",
+     "{\"id\":\"missing\",\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[[{\"id\":\"a\"}]]}",
+     "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: missing\"}}"},
+    {"a lookup of an id that needs JSON escapes", "modelLookup",
+     "{\"id\":\"q\\\"\\\\\\u0001 caf\\u00e9\",\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[]}",
+     "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: q\\\"\\\\\\u0001 "
+     "caf\\u00e9\"}}"},
+    {"a lookup of the empty id finds nothing", "modelLookup",
+     "{\"id\":\"\",\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[[{\"id\":\"a\"}]]}",
+     "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: \"}}"},
 };
 
 #define ANTHROPIC_SHAPE_CASE_COUNT (sizeof ANTHROPIC_SHAPE_CASES / sizeof ANTHROPIC_SHAPE_CASES[0])

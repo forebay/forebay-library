@@ -712,6 +712,63 @@ static void a_listing_that_breaks_its_header_is_malformed(void) {
     expect_listing_malformed("a model without an id", &listing, "providers[1].models[0].id");
 }
 
+static void expect_lookup(const char *label, const char *id, uint32_t found, const char *expected_bytes) {
+    static const forebay_anthropic_listed_model models[] = {{.id = "a", .name = "A"}, {.id = "b"}};
+    static const forebay_anthropic_listed_model later[] = {{.id = "a", .name = "A later"}};
+    const forebay_anthropic_listed_provider providers[2] = {{models, 2}, {later, 1}};
+    forebay_anthropic_model_lookup_argument argument = SPISOR_INIT(forebay_anthropic_model_lookup_argument);
+    argument.default_context = 5;
+    argument.default_output = 6;
+    argument.providers = providers;
+    argument.provider_count = 2;
+    argument.id = id;
+    forebay_anthropic_model_lookup_answer answer = SPISOR_INIT(forebay_anthropic_model_lookup_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_definition()->model_lookup(NULL, &argument, &answer, &refusal);
+    size_t expected_length = strlen(expected_bytes);
+    if (status != SPISOR_OK || answer.found != found || answer.length != expected_length ||
+        memcmp(answer.bytes, expected_bytes, expected_length) != 0 || answer.bytes[answer.length] != '\0') {
+        support_failf(label, "answered %d, found %d, wrote %.*s", (int)status, (int)answer.found, (int)answer.length,
+                      (const char *)answer.bytes);
+    }
+    anthropic_definition()->release_model_lookup(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void a_lookup_answers_found_or_not_found_with_the_proxys_bodies(void) {
+    expect_lookup("a found model", "a", 1,
+                  "{\"type\":\"model\",\"id\":\"a\",\"display_name\":\"A\",\"created_at\":\"2025-01-01T00:00:00Z\","
+                  "\"max_input_tokens\":5,\"max_tokens\":6}");
+    expect_lookup("a model not found", "zz", 0,
+                  "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: zz\"}}");
+}
+
+static void expect_lookup_malformed(const char *label, const forebay_anthropic_model_lookup_argument *argument,
+                                    const char *member) {
+    forebay_anthropic_model_lookup_answer answer = SPISOR_INIT(forebay_anthropic_model_lookup_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_definition()->model_lookup(NULL, argument, &answer, &refusal);
+    if (status != SPISOR_MALFORMED || refusal.detail == NULL || refusal.fix == NULL || answer.storage != NULL ||
+        answer.bytes != NULL) {
+        support_failf(label, "answered %d, not MALFORMED with a refusal and an empty answer", (int)status);
+    } else if (member != NULL && strstr(refusal.detail, member) == NULL) {
+        support_failf(label, "the refusal does not name %s: %s", member, refusal.detail);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void a_lookup_that_breaks_its_header_is_malformed(void) {
+    forebay_anthropic_model_lookup_argument argument = SPISOR_INIT(forebay_anthropic_model_lookup_argument);
+    expect_lookup_malformed("a NULL lookup argument", NULL, NULL);
+    expect_lookup_malformed("a lookup without an id", &argument, "id");
+    argument.id = "a";
+    argument.provider_count = 1;
+    expect_lookup_malformed("providers NULL beside a count", &argument, "providers");
+    argument.size = (uint32_t)sizeof argument.size;
+    expect_lookup_malformed("a lookup argument short of its first shape", &argument, NULL);
+    anthropic_definition()->release_model_lookup(NULL, NULL);
+}
+
 static void releasing_an_answer_never_filled_does_nothing(void) {
     forebay_anthropic_request_answer request_answer = {0};
     forebay_anthropic_response_answer response_answer = {0};
@@ -756,6 +813,8 @@ int main(void) {
     the_shapes_have_the_bytes_the_proxy_writes();
     an_error_call_that_breaks_its_header_is_malformed();
     a_listing_that_breaks_its_header_is_malformed();
+    a_lookup_answers_found_or_not_found_with_the_proxys_bodies();
+    a_lookup_that_breaks_its_header_is_malformed();
     releasing_an_answer_never_filled_does_nothing();
     printf("anthropic_test: %d request vectors, %d response vectors\n", vectors, response_vectors);
     return support_summary("anthropic_test");

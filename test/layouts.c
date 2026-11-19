@@ -455,6 +455,19 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_model_listing_argument, providers);
     FIELD(forebay_anthropic_model_listing_argument, provider_count);
     SIZE(forebay_anthropic_model_listing_argument);
+    FIELD(forebay_anthropic_model_lookup_argument, size);
+    FIELD(forebay_anthropic_model_lookup_argument, default_context);
+    FIELD(forebay_anthropic_model_lookup_argument, default_output);
+    FIELD(forebay_anthropic_model_lookup_argument, providers);
+    FIELD(forebay_anthropic_model_lookup_argument, provider_count);
+    FIELD(forebay_anthropic_model_lookup_argument, id);
+    SIZE(forebay_anthropic_model_lookup_argument);
+    FIELD(forebay_anthropic_model_lookup_answer, size);
+    FIELD(forebay_anthropic_model_lookup_answer, found);
+    FIELD(forebay_anthropic_model_lookup_answer, bytes);
+    FIELD(forebay_anthropic_model_lookup_answer, length);
+    FIELD(forebay_anthropic_model_lookup_answer, storage);
+    SIZE(forebay_anthropic_model_lookup_answer);
     FIELD(forebay_anthropic_definition, size);
     FIELD(forebay_anthropic_definition, context);
     FIELD(forebay_anthropic_definition, decode_request);
@@ -476,6 +489,8 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_definition, release_stream_encoder);
     FIELD(forebay_anthropic_definition, error_envelope);
     FIELD(forebay_anthropic_definition, model_listing);
+    FIELD(forebay_anthropic_definition, model_lookup);
+    FIELD(forebay_anthropic_definition, release_model_lookup);
     SIZE(forebay_anthropic_definition);
 }
 
