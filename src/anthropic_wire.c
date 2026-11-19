@@ -64,3 +64,8 @@ const cJSON *anthropic_wire_next_map(const cJSON *list, const cJSON *previous) {
     }
     return item;
 }
+
+const char *anthropic_wire_string_or_empty(const cJSON *item) {
+    const char *text = anthropic_wire_string(item);
+    return text == NULL ? "" : text;
+}

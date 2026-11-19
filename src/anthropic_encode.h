@@ -21,6 +21,10 @@ cJSON *anthropic_encode_block_list(anthropic_writer *writer, const forebay_ir_bl
 int anthropic_is_written_as_string(const spisor_value *extensions, const char *flag, const forebay_ir_block *blocks,
                                    size_t count);
 
+/** Sets `key` to the blocks as a string when anthropic_is_written_as_string says so, else as the block list. */
+void anthropic_set_content(anthropic_writer *writer, cJSON *object, const char *key, const spisor_value *extensions,
+                           const char *string_flag, const forebay_ir_block *blocks, size_t count);
+
 /**
  * Sets the members of an extensions record that are the wire's own, those whose key does not begin with `$`.
  *

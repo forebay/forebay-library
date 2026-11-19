@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-/** One header or environment variable. A later pair with a name already given replaces the earlier one. */
+/** One header or environment variable. */
 typedef struct forebay_pair {
     const char *name;
     const char *value;

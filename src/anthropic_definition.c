@@ -19,8 +19,10 @@
 #define DETAIL_LIMIT 200
 
 static spisor_status refuse_not_json(spisor_refusal *refusal) {
-    return spisor_refuse_as(refusal, SPISOR_MALFORMED, "the request body is not JSON: it must be UTF-8 JSON text",
-                            "send a JSON body");
+    static const char detail[] =
+        "the request body is not JSON this library can read: it must be UTF-8 JSON text "
+        "in which no string holds a NUL (\\u0000)";
+    return spisor_refuse_as(refusal, SPISOR_MALFORMED, detail, "send a JSON body without a NUL in any string");
 }
 
 static spisor_status refuse_problem(spisor_refusal *refusal, const anthropic_problem *problem) {
@@ -94,8 +96,12 @@ static spisor_status encode_request(void *context, const forebay_anthropic_encod
         return spisor_refuse_shape(refusal, "anthropic's encode_request");
     }
     anthropic_problem problem;
-    if (!anthropic_check_request(argument->request, &problem)) {
+    spisor_status checked = anthropic_check_request(argument->request, &problem);
+    if (checked == SPISOR_MALFORMED) {
         return refuse_problem(refusal, &problem);
+    }
+    if (checked != SPISOR_OK) {
+        return checked;
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
     cJSON *wire = anthropic_encode_request_object(&writer, argument->request);

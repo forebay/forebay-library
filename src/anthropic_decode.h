@@ -22,6 +22,15 @@ const forebay_ir_request *anthropic_decode_request(anthropic_reader *reader, con
 int anthropic_decode_blocks(anthropic_reader *reader, const cJSON *wire, const forebay_ir_block **blocks,
                             size_t *count);
 
+/**
+ * The content of a message, a tool result or the system prompt: a string is one text block and puts `string_flag`
+ * in `extensions`, so writing restores the string; a list is its blocks.
+ *
+ * @return 1 when `content` is a string or a list, else 0 with no blocks.
+ */
+int anthropic_decode_content(anthropic_reader *reader, const cJSON *content, const char *string_flag,
+                             const forebay_ir_block **blocks, size_t *count, anthropic_extension_list *extensions);
+
 /** One text block holding `text`, as a string `content` or `system` is read. */
 void anthropic_wrap_text(anthropic_reader *reader, const char *text, const forebay_ir_block **blocks, size_t *count);
 

@@ -28,6 +28,15 @@ int anthropic_is_written_as_string(const spisor_value *extensions, const char *f
            is_absent(blocks[0].extensions);
 }
 
+void anthropic_set_content(anthropic_writer *writer, cJSON *object, const char *key, const spisor_value *extensions,
+                           const char *string_flag, const forebay_ir_block *blocks, size_t count) {
+    if (anthropic_is_written_as_string(extensions, string_flag, blocks, count)) {
+        anthropic_set_text(writer, object, key, blocks[0].text);
+    } else {
+        anthropic_set(writer, object, key, anthropic_encode_block_list(writer, blocks, count));
+    }
+}
+
 static cJSON *encode_image(anthropic_writer *writer, const forebay_ir_block *image) {
     cJSON *wire = anthropic_new_object(writer);
     const spisor_value *raw_source =
@@ -54,13 +63,8 @@ static cJSON *encode_tool_result(anthropic_writer *writer, const forebay_ir_bloc
     cJSON *wire = anthropic_new_object(writer);
     anthropic_set_text(writer, wire, "type", "tool_result");
     anthropic_set_text(writer, wire, "tool_use_id", result->tool_use_id);
-    if (anthropic_is_written_as_string(result->extensions, ANTHROPIC_EXTENSION_CONTENT_IS_STRING, result->content,
-                                       result->content_count)) {
-        anthropic_set_text(writer, wire, "content", result->content[0].text);
-    } else {
-        anthropic_set(writer, wire, "content",
-                      anthropic_encode_block_list(writer, result->content, result->content_count));
-    }
+    anthropic_set_content(writer, wire, "content", result->extensions, ANTHROPIC_EXTENSION_CONTENT_IS_STRING,
+                          result->content, result->content_count);
     if (result->has_is_error) {
         anthropic_set_flag(writer, wire, "is_error", result->is_error);
     }

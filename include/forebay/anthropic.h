@@ -62,8 +62,10 @@ typedef struct forebay_anthropic_body_answer {
  * or short of its first shape, an answer that is not empty and `bytes` NULL beside a nonzero `length`; MALFORMED,
  * with the refusal saying what to repair, for a body that is not JSON and for an IR that breaks the rule its header
  * states (a required text NULL, an array NULL beside a nonzero count, a block kind the header does not name, a value
- * tree spisor_value_check refuses); and OUT_OF_MEMORY, with the answer empty. First shape ends at `release_refusal`;
- * a later operation is appended after it.
+ * tree spisor_value_check refuses, which includes every `extensions` record and an unknown block's `raw`); and
+ * OUT_OF_MEMORY, with the answer empty. JSON this library cannot read, a string holding a NUL (`\u0000`), is refused
+ * as a body that is not JSON, and a number that is not finite (`1e400`) reads as null, as JSON.stringify writes it.
+ * First shape ends at `release_refusal`; a later operation is appended after it.
  */
 typedef struct forebay_anthropic_definition {
     uint32_t size;

@@ -11,6 +11,12 @@
  * `asString` and the others do. A member read is NULL or 0 when it is absent, JSON null or of another type.
  */
 
+/** The array and the length of a static list of keys, as the key-list parameters take them. */
+#define ANTHROPIC_KEYS_OF(keys) keys, sizeof keys / sizeof keys[0]
+
+/** The text of a JSON string, "" for anything else. */
+const char *anthropic_wire_string_or_empty(const cJSON *item);
+
 /** The member of an object, NULL when absent. */
 const cJSON *anthropic_wire_member(const cJSON *object, const char *key);
 

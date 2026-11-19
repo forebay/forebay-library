@@ -12,25 +12,13 @@ static const char *const MESSAGE_CONSUMED[] = {"role", "content"};
 static const char *const TOOL_CONSUMED[] = {"name", "description", "input_schema"};
 static const char *const TOOL_CHOICE_CONSUMED[] = {"type", "name"};
 
-#define CONSUMED(keys) keys, sizeof keys / sizeof keys[0]
-
-static const char *text_or_empty(const cJSON *item) {
-    const char *text = anthropic_wire_string(item);
-    return text == NULL ? "" : text;
-}
-
 static void decode_message(anthropic_reader *reader, const cJSON *wire, forebay_ir_message *message) {
     anthropic_extension_list extensions;
     anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(wire));
-    message->role = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "role")));
-    const cJSON *content = anthropic_wire_member(wire, "content");
-    if (cJSON_IsString(content)) {
-        anthropic_wrap_text(reader, content->valuestring, &message->content, &message->content_count);
-        anthropic_extensions_put_flag(reader, &extensions, ANTHROPIC_EXTENSION_CONTENT_IS_STRING);
-    } else {
-        anthropic_decode_blocks(reader, content, &message->content, &message->content_count);
-    }
-    anthropic_extensions_put_unconsumed(reader, &extensions, wire, CONSUMED(MESSAGE_CONSUMED));
+    message->role = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "role")));
+    anthropic_decode_content(reader, anthropic_wire_member(wire, "content"), ANTHROPIC_EXTENSION_CONTENT_IS_STRING,
+                             &message->content, &message->content_count, &extensions);
+    anthropic_extensions_put_unconsumed(reader, &extensions, wire, ANTHROPIC_KEYS_OF(MESSAGE_CONSUMED));
     message->extensions = anthropic_extensions_finish(reader, &extensions);
 }
 
@@ -50,12 +38,12 @@ static void decode_tool(anthropic_reader *reader, const cJSON *wire, forebay_ir_
     anthropic_extension_list extensions;
     anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(wire));
     const cJSON *input_schema = anthropic_wire_member(wire, "input_schema");
-    tool->name = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "name")));
+    tool->name = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "name")));
     tool->description = anthropic_copy_text(reader, anthropic_wire_string(anthropic_wire_member(wire, "description")));
     tool->input_schema = input_schema == NULL || cJSON_IsNull(input_schema)
                              ? anthropic_null_value()
                              : anthropic_copy_value(reader, input_schema);
-    anthropic_extensions_put_unconsumed(reader, &extensions, wire, CONSUMED(TOOL_CONSUMED));
+    anthropic_extensions_put_unconsumed(reader, &extensions, wire, ANTHROPIC_KEYS_OF(TOOL_CONSUMED));
     tool->extensions = anthropic_extensions_finish(reader, &extensions);
 }
 
@@ -78,9 +66,9 @@ static const forebay_ir_tool_choice *decode_tool_choice(anthropic_reader *reader
     }
     anthropic_extension_list extensions;
     anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(wire));
-    choice->type = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "type")));
+    choice->type = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "type")));
     choice->name = anthropic_copy_text(reader, anthropic_wire_string(anthropic_wire_member(wire, "name")));
-    anthropic_extensions_put_unconsumed(reader, &extensions, wire, CONSUMED(TOOL_CHOICE_CONSUMED));
+    anthropic_extensions_put_unconsumed(reader, &extensions, wire, ANTHROPIC_KEYS_OF(TOOL_CHOICE_CONSUMED));
     choice->extensions = anthropic_extensions_finish(reader, &extensions);
     return choice;
 }
@@ -88,14 +76,8 @@ static const forebay_ir_tool_choice *decode_tool_choice(anthropic_reader *reader
 /** The system prompt; a string is one text block flagged `$systemIsString`, and a value that is no list is absent. */
 static void decode_system(anthropic_reader *reader, const cJSON *system, forebay_ir_request *request,
                           anthropic_extension_list *extensions) {
-    if (cJSON_IsString(system)) {
-        anthropic_wrap_text(reader, system->valuestring, &request->system, &request->system_count);
-        request->has_system = 1;
-        anthropic_extensions_put_flag(reader, extensions, ANTHROPIC_EXTENSION_SYSTEM_IS_STRING);
-    } else {
-        request->has_system = (uint32_t)anthropic_decode_blocks(reader, system, &request->system,
-                                                                &request->system_count);
-    }
+    request->has_system = (uint32_t)anthropic_decode_content(reader, system, ANTHROPIC_EXTENSION_SYSTEM_IS_STRING,
+                                                             &request->system, &request->system_count, extensions);
 }
 
 static void decode_thinking(anthropic_reader *reader, const cJSON *wire, forebay_ir_request *request,
@@ -153,7 +135,7 @@ static void decode_scalars(anthropic_reader *reader, const cJSON *root, forebay_
 static void decode_members(anthropic_reader *reader, const cJSON *root, forebay_ir_request *request) {
     anthropic_extension_list extensions;
     anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(root));
-    request->model = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(root, "model")));
+    request->model = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(root, "model")));
     request->messages = decode_messages(reader, anthropic_wire_member(root, "messages"), &request->message_count);
     anthropic_wire_boolean(anthropic_wire_member(root, "stream"), &request->stream);
     decode_scalars(reader, root, request);
@@ -164,7 +146,7 @@ static void decode_members(anthropic_reader *reader, const cJSON *root, forebay_
     const cJSON *tool_choice = anthropic_wire_map(anthropic_wire_member(root, "tool_choice"));
     request->tool_choice = tool_choice == NULL ? NULL : decode_tool_choice(reader, tool_choice);
     decode_thinking(reader, anthropic_wire_member(root, "thinking"), request, &extensions);
-    anthropic_extensions_put_unconsumed(reader, &extensions, root, CONSUMED(REQUEST_CONSUMED));
+    anthropic_extensions_put_unconsumed(reader, &extensions, root, ANTHROPIC_KEYS_OF(REQUEST_CONSUMED));
     request->extensions = anthropic_extensions_finish(reader, &extensions);
 }
 

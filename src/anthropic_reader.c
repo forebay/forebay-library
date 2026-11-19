@@ -1,5 +1,6 @@
 #include "anthropic_reader.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "answer_storage.h"
@@ -92,7 +93,7 @@ void anthropic_fill_value(anthropic_reader *reader, const cJSON *json, spisor_va
     if (cJSON_IsBool(json)) {
         target->kind = SPISOR_VALUE_BOOLEAN;
         target->boolean = cJSON_IsTrue(json) ? 1 : 0;
-    } else if (cJSON_IsNumber(json)) {
+    } else if (cJSON_IsNumber(json) && isfinite(json->valuedouble)) {
         target->kind = SPISOR_VALUE_NUMBER;
         target->number = json->valuedouble;
     } else if (cJSON_IsString(json)) {

@@ -8,7 +8,9 @@
  * no state; every decision reads only its argument, apart from `environment`'s state file. A size-prefixed struct is
  * read only up to its `size`; an array element has no size and never grows. Text the caller hands in is
  * NUL-terminated UTF-8 borrowed for the call; what an answer or a refusal points at is the provider's until the
- * release for its kind. An array is `count` elements at its pointer, which may be NULL only when `count` is 0.
+ * release for its kind. An array is `count` elements at its pointer, which may be NULL only when `count` is 0. In a
+ * list of `forebay_pair`, headers or environment variables, a later pair with a name already given replaces the
+ * earlier one.
  */
 
 #include <stddef.h>

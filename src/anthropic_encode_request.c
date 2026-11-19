@@ -5,13 +5,8 @@
 static cJSON *encode_message(anthropic_writer *writer, const forebay_ir_message *message) {
     cJSON *wire = anthropic_new_object(writer);
     anthropic_set_text(writer, wire, "role", message->role);
-    if (anthropic_is_written_as_string(message->extensions, ANTHROPIC_EXTENSION_CONTENT_IS_STRING, message->content,
-                                       message->content_count)) {
-        anthropic_set_text(writer, wire, "content", message->content[0].text);
-    } else {
-        anthropic_set(writer, wire, "content",
-                      anthropic_encode_block_list(writer, message->content, message->content_count));
-    }
+    anthropic_set_content(writer, wire, "content", message->extensions, ANTHROPIC_EXTENSION_CONTENT_IS_STRING,
+                          message->content, message->content_count);
     anthropic_set_extensions(writer, wire, message->extensions, 0);
     return wire;
 }
@@ -57,13 +52,8 @@ static void set_system(anthropic_writer *writer, cJSON *wire, const forebay_ir_r
     if (!request->has_system) {
         return;
     }
-    if (anthropic_is_written_as_string(request->extensions, ANTHROPIC_EXTENSION_SYSTEM_IS_STRING, request->system,
-                                       request->system_count)) {
-        anthropic_set_text(writer, wire, "system", request->system[0].text);
-    } else {
-        anthropic_set(writer, wire, "system", anthropic_encode_block_list(writer, request->system,
-                                                                          request->system_count));
-    }
+    anthropic_set_content(writer, wire, "system", request->extensions, ANTHROPIC_EXTENSION_SYSTEM_IS_STRING,
+                          request->system, request->system_count);
 }
 
 static void set_scalars(anthropic_writer *writer, cJSON *wire, const forebay_ir_request *request) {

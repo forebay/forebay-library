@@ -2,6 +2,7 @@
 #define ANTHROPIC_CHECK_H
 
 #include "forebay/ir.h"
+#include "spisor/status.h"
 
 /** The first rule an IR value breaks, the member as the header names it and the rule as the member should hold. */
 typedef struct anthropic_problem {
@@ -12,10 +13,11 @@ typedef struct anthropic_problem {
 /**
  * Whether an IR request keeps the rules of forebay/ir.h that writing it needs: the first shape reached, a required text
  * or value present, an array present beside a nonzero count, a block kind the header names and an unknown block's
- * `raw` a record. It allocates nothing. Whether a value tree is well formed is left to the writer, which meets it.
+ * `raw` a record. Every extensions record and every unknown block's `raw` is walked with spisor_value_check, so
+ * nothing later reads an entry, key or text that is not there.
  *
- * @return 1, or 0 with `*problem` set.
+ * @return OK; MALFORMED with `*problem` set; OUT_OF_MEMORY when the walk of a value tree cannot run.
  */
-int anthropic_check_request(const forebay_ir_request *request, anthropic_problem *problem);
+spisor_status anthropic_check_request(const forebay_ir_request *request, anthropic_problem *problem);
 
 #endif

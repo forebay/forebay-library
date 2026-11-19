@@ -10,13 +10,6 @@ static const char *const TOOL_RESULT_CONSUMED[] = {"type", "cache_control", "too
 static const char *const THINKING_CONSUMED[] = {"type", "cache_control", "thinking", "signature"};
 static const char *const REDACTED_THINKING_CONSUMED[] = {"type", "cache_control", "data"};
 
-#define CONSUMED(keys) keys, sizeof keys / sizeof keys[0]
-
-static const char *text_or_empty(const cJSON *item) {
-    const char *text = anthropic_wire_string(item);
-    return text == NULL ? "" : text;
-}
-
 static const spisor_value *value_or_null(anthropic_reader *reader, const cJSON *item) {
     return item == NULL || cJSON_IsNull(item) ? anthropic_null_value() : anthropic_copy_value(reader, item);
 }
@@ -35,14 +28,15 @@ static void decode_text(anthropic_reader *reader, const cJSON *wire, forebay_ir_
                         anthropic_extension_list *extensions) {
     (void)extensions;
     block->kind = FOREBAY_IR_BLOCK_TEXT;
-    block->text = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "text")));
+    block->text = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "text")));
 }
 
 static void decode_image_source(anthropic_reader *reader, const cJSON *source, forebay_ir_block *block,
                                 anthropic_extension_list *extensions) {
     const char *source_type = anthropic_wire_string(anthropic_wire_member(source, "type"));
     if (source_type != NULL && strcmp(source_type, "base64") == 0) {
-        block->media_type = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(source, "media_type")));
+        const char *media_type = anthropic_wire_string_or_empty(anthropic_wire_member(source, "media_type"));
+        block->media_type = anthropic_copy_text(reader, media_type);
         block->data = anthropic_copy_text(reader, anthropic_wire_string(anthropic_wire_member(source, "data")));
     } else if (source_type != NULL && strcmp(source_type, "url") == 0) {
         block->url = anthropic_copy_text(reader, anthropic_wire_string(anthropic_wire_member(source, "url")));
@@ -61,31 +55,22 @@ static void decode_image(anthropic_reader *reader, const cJSON *wire, forebay_ir
     }
 }
 
-/** A string `content` is one text block flagged `$contentIsString`; anything but a list or a string is empty. */
-static void decode_content(anthropic_reader *reader, const cJSON *content, const forebay_ir_block **blocks,
-                           size_t *count, anthropic_extension_list *extensions) {
-    if (cJSON_IsString(content)) {
-        anthropic_wrap_text(reader, content->valuestring, blocks, count);
-        anthropic_extensions_put_flag(reader, extensions, ANTHROPIC_EXTENSION_CONTENT_IS_STRING);
-    } else {
-        anthropic_decode_blocks(reader, content, blocks, count);
-    }
-}
 
 static void decode_tool_result(anthropic_reader *reader, const cJSON *wire, forebay_ir_block *block,
                                anthropic_extension_list *extensions) {
     block->kind = FOREBAY_IR_BLOCK_TOOL_RESULT;
-    block->tool_use_id = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "tool_use_id")));
+    const char *tool_use_id = anthropic_wire_string_or_empty(anthropic_wire_member(wire, "tool_use_id"));
+    block->tool_use_id = anthropic_copy_text(reader, tool_use_id);
     block->has_is_error = (uint32_t)anthropic_wire_boolean(anthropic_wire_member(wire, "is_error"), &block->is_error);
-    decode_content(reader, anthropic_wire_member(wire, "content"), &block->content, &block->content_count,
-                   extensions);
+    anthropic_decode_content(reader, anthropic_wire_member(wire, "content"), ANTHROPIC_EXTENSION_CONTENT_IS_STRING,
+                             &block->content, &block->content_count, extensions);
 }
 
 static void decode_thinking(anthropic_reader *reader, const cJSON *wire, forebay_ir_block *block,
                             anthropic_extension_list *extensions) {
     (void)extensions;
     block->kind = FOREBAY_IR_BLOCK_THINKING;
-    block->text = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "thinking")));
+    block->text = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "thinking")));
     block->signature = anthropic_copy_text(reader, anthropic_wire_string(anthropic_wire_member(wire, "signature")));
 }
 
@@ -102,8 +87,8 @@ static void decode_tool_use(anthropic_reader *reader, const cJSON *wire, forebay
                             anthropic_extension_list *extensions) {
     (void)extensions;
     block->kind = FOREBAY_IR_BLOCK_TOOL_USE;
-    block->id = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "id")));
-    block->name = anthropic_copy_text(reader, text_or_empty(anthropic_wire_member(wire, "name")));
+    block->id = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "id")));
+    block->name = anthropic_copy_text(reader, anthropic_wire_string_or_empty(anthropic_wire_member(wire, "name")));
     block->input = value_or_null(reader, anthropic_wire_member(wire, "input"));
 }
 
@@ -118,12 +103,12 @@ typedef struct block_type {
 } block_type;
 
 static const block_type BLOCK_TYPES[] = {
-    {"text", decode_text, CONSUMED(TEXT_CONSUMED)},
-    {"image", decode_image, CONSUMED(IMAGE_CONSUMED)},
-    {"tool_use", decode_tool_use, CONSUMED(TOOL_USE_CONSUMED)},
-    {"tool_result", decode_tool_result, CONSUMED(TOOL_RESULT_CONSUMED)},
-    {"thinking", decode_thinking, CONSUMED(THINKING_CONSUMED)},
-    {"redacted_thinking", decode_redacted_thinking, CONSUMED(REDACTED_THINKING_CONSUMED)},
+    {"text", decode_text, ANTHROPIC_KEYS_OF(TEXT_CONSUMED)},
+    {"image", decode_image, ANTHROPIC_KEYS_OF(IMAGE_CONSUMED)},
+    {"tool_use", decode_tool_use, ANTHROPIC_KEYS_OF(TOOL_USE_CONSUMED)},
+    {"tool_result", decode_tool_result, ANTHROPIC_KEYS_OF(TOOL_RESULT_CONSUMED)},
+    {"thinking", decode_thinking, ANTHROPIC_KEYS_OF(THINKING_CONSUMED)},
+    {"redacted_thinking", decode_redacted_thinking, ANTHROPIC_KEYS_OF(REDACTED_THINKING_CONSUMED)},
 };
 
 static const block_type *block_type_of(const cJSON *wire) {
@@ -172,6 +157,16 @@ static void decode_block(anthropic_reader *reader, const cJSON *wire, forebay_ir
     decode_cache_control(reader, wire, block, &extensions);
     anthropic_extensions_put_unconsumed(reader, &extensions, wire, type->consumed, type->consumed_count);
     block->extensions = anthropic_extensions_finish(reader, &extensions);
+}
+
+int anthropic_decode_content(anthropic_reader *reader, const cJSON *content, const char *string_flag,
+                             const forebay_ir_block **blocks, size_t *count, anthropic_extension_list *extensions) {
+    if (!cJSON_IsString(content)) {
+        return anthropic_decode_blocks(reader, content, blocks, count);
+    }
+    anthropic_wrap_text(reader, content->valuestring, blocks, count);
+    anthropic_extensions_put_flag(reader, extensions, string_flag);
+    return 1;
 }
 
 int anthropic_decode_blocks(anthropic_reader *reader, const cJSON *wire, const forebay_ir_block **blocks,

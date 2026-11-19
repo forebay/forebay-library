@@ -130,6 +130,10 @@ static const decode_case DECODE_CASES[] = {
      "\"mediaType\":\"image/png\",\"data\":\"AA\"},{\"kind\":\"image\",\"mediaType\":\"\",\"url\":\"u\"},"
      "{\"kind\":\"image\",\"mediaType\":\"\",\"extensions\":{\"$imageSourceRaw\":{\"type\":\"file\",\"id\":\"x\"}}},"
      "{\"kind\":\"image\",\"mediaType\":\"\"}]}]}"},
+    {"a number that is not finite reads as null",
+     "{\"model\":\"m\",\"messages\":[],\"x\":1e400,\"tools\":[{\"name\":\"n\",\"input_schema\":{\"a\":[-1e400]}}]}",
+     "{\"model\":\"m\",\"messages\":[],\"stream\":false,\"extensions\":{\"x\":null},\"tools\":[{\"name\":\"n\","
+     "\"inputSchema\":{\"a\":[null]}}]}"},
     {"items of a list that are no object are dropped",
      "{\"model\":\"m\",\"messages\":[1,{\"role\":\"user\",\"content\":[\"x\",{\"type\":\"text\","
      "\"text\":\"t\"},null]}],"
@@ -148,6 +152,25 @@ static void run_decode_cases(void) {
         }
         cJSON_Delete(expected);
     }
+}
+
+/** The wire body of 1e400, which JSON.stringify writes as null, survives decoding and encoding as null. */
+static void a_number_that_is_not_finite_is_written_as_null(void) {
+    forebay_anthropic_request_answer decoded = SPISOR_INIT(forebay_anthropic_request_answer);
+    forebay_anthropic_body_answer encoded = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    cJSON *expected = parse("{\"model\":\"m\",\"messages\":[],\"stream\":false,\"x\":null,"
+                            "\"tools\":[{\"name\":\"n\",\"input_schema\":{\"a\":[null]}}]}");
+    if (anthropic_decode_text("{\"model\":\"m\",\"messages\":[],\"x\":1e400,\"tools\":[{\"name\":\"n\","
+                              "\"input_schema\":{\"a\":[1e400]}}]}", &decoded, &refusal) != SPISOR_OK ||
+        anthropic_encode_request_of(decoded.request, &encoded, &refusal) != SPISOR_OK ||
+        !anthropic_body_equals(&encoded, expected)) {
+        support_fail("a number that is not finite", "did not round trip as null");
+    }
+    anthropic_definition()->release_body(NULL, &encoded);
+    anthropic_definition()->release_request(NULL, &decoded);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    cJSON_Delete(expected);
 }
 
 static void a_root_that_is_no_object_decodes_to_the_empty_request(void) {
@@ -171,6 +194,16 @@ static void bytes_that_are_no_json_are_malformed(void) {
         }
         anthropic_definition()->release_refusal(NULL, &refusal);
     }
+}
+
+static void a_string_holding_nul_is_refused_as_unreadable_json(void) {
+    forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_decode_text("{\"a\":\"\\u0000\"}", &answer, &refusal);
+    if (status != SPISOR_MALFORMED || refusal.detail == NULL || strstr(refusal.detail, "NUL") == NULL) {
+        support_failf("a string holding NUL", "answered %d without saying NUL", (int)status);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
 }
 
 static void bytes_may_be_null_only_beside_a_length_of_zero(void) {
@@ -333,6 +366,44 @@ static void an_ir_that_breaks_its_header_is_malformed(void) {
     expect_malformed("a metadata value tree that spisor_value_check refuses", &request);
 }
 
+/** Value trees a request holds in places the encoder reads at once: each must be MALFORMED, never a crash. */
+static void an_extension_tree_that_is_not_well_formed_is_malformed(void) {
+    static const spisor_value empty_text = {SPISOR_VALUE_TEXT, 0, 0, NULL, 0, NULL, NULL, 0};
+    static const spisor_value no_entries = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, NULL, 2};
+    static const spisor_entry unkeyed[] = {{NULL, 0, {SPISOR_VALUE_NULL, 0, 0, NULL, 0, NULL, NULL, 0}}};
+    static const spisor_value unkeyed_record = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, unkeyed, 1};
+    static const spisor_entry thinking_type[] = {
+        {"$thinkingType", 13, {SPISOR_VALUE_TEXT, 0, 0, NULL, 0, NULL, NULL, 0}}};
+    static const spisor_value thinking_record = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, thinking_type, 1};
+    static const spisor_entry short_key[] = {
+        {"abc", 1, {SPISOR_VALUE_NULL, 0, 0, NULL, 0, NULL, NULL, 0}}};
+    static const spisor_value short_key_record = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, short_key, 1};
+    static const forebay_ir_thinking thinking = {1, 0, 0};
+    static const forebay_ir_block raw_block = {FOREBAY_IR_BLOCK_UNKNOWN, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, 0, 0, 0, NULL, &no_entries};
+    static const forebay_ir_message raw_message = {"user", &raw_block, 1, NULL};
+    static const spisor_value *const bad[] = {&empty_text, &no_entries, &unkeyed_record, &thinking_record,
+                                              &short_key_record};
+    static const char *const names[] = {"extensions text without bytes", "extensions record without entries",
+                                        "extensions entry without a key", "a $thinkingType text without bytes",
+                                        "extensions key shorter than its length"};
+    for (size_t index = 0; index < sizeof bad / sizeof bad[0]; index++) {
+        forebay_ir_request request = valid_request();
+        forebay_ir_message message = {"user", NULL, 0, bad[index]};
+        request.extensions = bad[index];
+        request.thinking = &thinking;
+        expect_malformed(names[index], &request);
+        request = valid_request();
+        request.messages = &message;
+        request.message_count = 1;
+        expect_malformed(names[index], &request);
+    }
+    forebay_ir_request request = valid_request();
+    request.messages = &raw_message;
+    request.message_count = 1;
+    expect_malformed("an unknown block's raw without entries", &request);
+}
+
 static void releasing_an_answer_never_filled_does_nothing(void) {
     forebay_anthropic_request_answer request_answer = {0};
     forebay_anthropic_body_answer body_answer = {0};
@@ -352,11 +423,14 @@ int main(void) {
     }
     run_decode_cases();
     a_root_that_is_no_object_decodes_to_the_empty_request();
+    a_number_that_is_not_finite_is_written_as_null();
     bytes_that_are_no_json_are_malformed();
+    a_string_holding_nul_is_refused_as_unreadable_json();
     bytes_may_be_null_only_beside_a_length_of_zero();
     run_encode_cases();
     a_body_has_the_bytes_the_translator_writes();
     an_ir_that_breaks_its_header_is_malformed();
+    an_extension_tree_that_is_not_well_formed_is_malformed();
     releasing_an_answer_never_filled_does_nothing();
     printf("anthropic_test: %d request vectors\n", vectors);
     return support_summary("anthropic_test");
