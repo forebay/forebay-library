@@ -241,7 +241,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, con
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_model_map(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -254,6 +254,6 @@ SERVICE_EXPORT int32_t forebay_library_routing_model_map(const uint8_t *in, size
         service_require(&call, "models", service_is_object, "an object", &models, out, out_len, &status)) {
         status = answer_call(profile, settings, models, out, out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }

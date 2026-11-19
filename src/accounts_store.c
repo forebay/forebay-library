@@ -1,8 +1,8 @@
 #include "accounts_store.h"
 
-#include <stdlib.h>
 #include <string.h>
 
+#include "spisor/allocation.h"
 #include "spisor/file.h"
 #include "spisor/json_file.h"
 #include "spisor/json_write.h"
@@ -11,7 +11,7 @@
 
 static char *with_suffix(const char *path, const char *suffix) {
     size_t path_length = strlen(path);
-    char *joined = malloc(path_length + strlen(suffix) + 1);
+    char *joined = spisor_memory_allocate(path_length + strlen(suffix) + 1);
     if (joined != NULL) {
         memcpy(joined, path, path_length);
         strcpy(joined + path_length, suffix);
@@ -31,7 +31,7 @@ static char *folder_of(const char *path) {
         return NULL;
     }
     size_t length = (size_t)(separator - path);
-    char *folder = malloc(length + 1);
+    char *folder = spisor_memory_allocate(length + 1);
     if (folder != NULL) {
         memcpy(folder, path, length);
         folder[length] = '\0';
@@ -39,18 +39,29 @@ static char *folder_of(const char *path) {
     return folder;
 }
 
-static int ensure_folder_of(const char *path) {
+/** READY when the folder holding path exists or was made, OUT_OF_MEMORY, or `refused` when it cannot be made. */
+static accounts_store_status ensure_folder_of(const char *path, accounts_store_status refused) {
     char *folder = folder_of(path);
-    int ready = folder == NULL || spisor_file_exists(folder) || spisor_make_directories(folder);
-    free(folder);
-    return ready;
+    spisor_file_presence presence = folder == NULL ? SPISOR_FILE_PRESENT : spisor_probe_file(folder);
+    spisor_status made = SPISOR_OK;
+    if (presence == SPISOR_FILE_MISSING || presence == SPISOR_FILE_UNKNOWN) {
+        made = spisor_make_directories(folder);
+    }
+    spisor_memory_release(folder);
+    if (presence == SPISOR_FILE_OUT_OF_MEMORY || made == SPISOR_OUT_OF_MEMORY) {
+        return ACCOUNTS_STORE_OUT_OF_MEMORY;
+    }
+    return made == SPISOR_OK ? ACCOUNTS_STORE_READY : refused;
 }
 
-static spisor_lock *lock_beside(const char *path) {
+static accounts_store_status lock_beside(const char *path, spisor_lock **guard) {
     char *lock_path = with_suffix(path, LOCK_SUFFIX);
-    spisor_lock *guard = lock_path == NULL ? NULL : spisor_lock_file(lock_path);
-    free(lock_path);
-    return guard;
+    spisor_status status = lock_path == NULL ? SPISOR_OUT_OF_MEMORY : spisor_lock_file(lock_path, guard);
+    spisor_memory_release(lock_path);
+    if (status == SPISOR_OUT_OF_MEMORY) {
+        return ACCOUNTS_STORE_OUT_OF_MEMORY;
+    }
+    return status == SPISOR_OK ? ACCOUNTS_STORE_READY : ACCOUNTS_STORE_UNLOCKABLE;
 }
 
 static int ensure_array(cJSON *document, const char *name) {
@@ -104,6 +115,9 @@ static int normalize(cJSON *document) {
 static accounts_store_status read_document(const char *path, cJSON **document) {
     spisor_json_file_state state = SPISOR_JSON_FILE_UNREADABLE;
     cJSON *parsed = spisor_read_json_file(path, &state);
+    if (state == SPISOR_JSON_FILE_OUT_OF_MEMORY) {
+        return ACCOUNTS_STORE_OUT_OF_MEMORY;
+    }
     if (state == SPISOR_JSON_FILE_ABSENT) {
         *document = cJSON_CreateObject();
         return *document == NULL ? ACCOUNTS_STORE_OUT_OF_MEMORY : ACCOUNTS_STORE_READY;
@@ -125,11 +139,8 @@ static accounts_store_status load(accounts_store *store) {
 }
 
 static accounts_store_status take_lock(accounts_store *store) {
-    if (!ensure_folder_of(store->path)) {
-        return ACCOUNTS_STORE_UNLOCKABLE;
-    }
-    store->guard = lock_beside(store->path);
-    return store->guard == NULL ? ACCOUNTS_STORE_UNLOCKABLE : ACCOUNTS_STORE_READY;
+    accounts_store_status status = ensure_folder_of(store->path, ACCOUNTS_STORE_UNLOCKABLE);
+    return status == ACCOUNTS_STORE_READY ? lock_beside(store->path, &store->guard) : status;
 }
 
 accounts_store_status accounts_store_open(const char *path, int locked, accounts_store *store) {
@@ -153,16 +164,20 @@ accounts_store_status accounts_store_save(const accounts_store *store) {
     if (text == NULL) {
         return ACCOUNTS_STORE_OUT_OF_MEMORY;
     }
-    int written = ensure_folder_of(store->path) &&
-                  spisor_replace_file(store->path, (const uint8_t *)text, strlen(text));
-    free(text);
-    return written ? ACCOUNTS_STORE_READY : ACCOUNTS_STORE_UNWRITABLE;
+    accounts_store_status status = ensure_folder_of(store->path, ACCOUNTS_STORE_UNWRITABLE);
+    if (status == ACCOUNTS_STORE_READY) {
+        spisor_status written = spisor_replace_file(store->path, (const uint8_t *)text, strlen(text));
+        status = written == SPISOR_OK ? ACCOUNTS_STORE_READY
+                 : written == SPISOR_OUT_OF_MEMORY ? ACCOUNTS_STORE_OUT_OF_MEMORY : ACCOUNTS_STORE_UNWRITABLE;
+    }
+    spisor_memory_release(text);
+    return status;
 }
 
 void accounts_store_close(accounts_store *store) {
     spisor_unlock(store->guard);
     cJSON_Delete(store->document);
-    free(store->path);
+    spisor_memory_release(store->path);
     memset(store, 0, sizeof(*store));
 }
 

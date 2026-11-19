@@ -1,8 +1,9 @@
 #ifndef ACCOUNTS_QUOTA_H
 #define ACCOUNTS_QUOTA_H
 
-#include "service_support.h"
+#include "forebay/accounts.h"
 
-SERVICE_EXPORT int32_t forebay_library_accounts_has_capacity(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+spisor_status accounts_has_capacity(void *context, const forebay_accounts_capacity_argument *argument,
+                                    forebay_accounts_capacity_answer *answer, spisor_refusal *refusal);
 
 #endif

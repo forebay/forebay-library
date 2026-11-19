@@ -1,5 +1,7 @@
 #include "routing_headers.h"
 
+#include "spisor/allocation.h"
+
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -122,7 +124,7 @@ static cJSON *forwarded_headers(const cJSON *headers, const char *placeholder, c
 
 static char *join_target(const char *base, const char *url) {
     size_t base_length = strlen(base);
-    char *target = malloc(base_length + strlen(url) + 1);
+    char *target = spisor_memory_allocate(base_length + strlen(url) + 1);
     if (target != NULL) {
         memcpy(target, base, base_length);
         strcpy(target + base_length, url);
@@ -141,7 +143,7 @@ static cJSON *pass_through_answer(const routing_upstream *parts, const cJSON *ur
         cJSON_Delete(result);
         result = NULL;
     }
-    free(target);
+    spisor_memory_release(target);
     return result;
 }
 
@@ -157,7 +159,7 @@ static int is_body_length(const cJSON *value) {
     return cJSON_IsNumber(value) && value->valuedouble >= 0 && value->valuedouble == floor(value->valuedouble);
 }
 
-static int read_pass_through_arguments(const spisor_call *call, pass_through_arguments *read, uint8_t **out,
+static int read_pass_through_arguments(const service_call *call, pass_through_arguments *read, uint8_t **out,
                                        size_t *out_len, int32_t *status) {
     return service_require(call, "upstream", service_is_string, "a string", &read->upstream, out, out_len, status) &&
            service_require(call, "url", service_is_string, "a string", &read->url, out, out_len, status) &&
@@ -192,7 +194,7 @@ static int32_t answer_pass_through(const pass_through_arguments *arguments, uint
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_pass_through(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -201,12 +203,12 @@ SERVICE_EXPORT int32_t forebay_library_routing_pass_through(const uint8_t *in, s
     if (read_pass_through_arguments(&call, &arguments, out, out_len, &status)) {
         status = answer_pass_through(&arguments, out, out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_reply_headers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -218,6 +220,6 @@ SERVICE_EXPORT int32_t forebay_library_routing_reply_headers(const uint8_t *in, 
         status = service_answer(service_wrap("headers", routing_end_to_end_headers(headers, cJSON_IsTrue(rewritten))), out,
                                 out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }

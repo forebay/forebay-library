@@ -1,5 +1,7 @@
 #include "routing_pattern.h"
 
+#include "spisor/allocation.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,7 +90,7 @@ static node *append_node(parser *state, node_kind kind) {
     routing_pattern *pattern = state->pattern;
     if (pattern->count == pattern->capacity) {
         size_t capacity = pattern->capacity == 0 ? 8 : pattern->capacity * 2;
-        node *grown = realloc(pattern->nodes, capacity * sizeof(node));
+        node *grown = spisor_memory_reallocate(pattern->nodes, capacity * sizeof(node));
         if (grown == NULL) {
             return NULL;
         }
@@ -370,7 +372,7 @@ static routing_pattern_status parse_token(parser *state) {
 routing_pattern_status routing_pattern_compile(const char *source, routing_pattern **pattern, char *reason,
                                                size_t reason_size) {
     *pattern = NULL;
-    routing_pattern *compiled = calloc(1, sizeof(*compiled));
+    routing_pattern *compiled = spisor_memory_allocate_zeroed(1, sizeof(*compiled));
     if (compiled == NULL) {
         return ROUTING_PATTERN_OUT_OF_MEMORY;
     }
@@ -396,8 +398,8 @@ int routing_pattern_group_count(const routing_pattern *pattern) {
 
 void routing_pattern_free(routing_pattern *pattern) {
     if (pattern != NULL) {
-        free(pattern->nodes);
-        free(pattern);
+        spisor_memory_release(pattern->nodes);
+        spisor_memory_release(pattern);
     }
 }
 

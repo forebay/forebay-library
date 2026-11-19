@@ -2,41 +2,29 @@
 
 #include "accounts_secrets.h"
 #include "accounts_support.h"
+#include "definition_support.h"
+#include "json_value.h"
+#include "spisor/allocation.h"
+
+#define LIST_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_list_argument, store)
+#define LIST_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_list_answer, storage)
+#define UPSERT_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_upsert_argument, account)
+#define UPSERT_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_upsert_answer, outcome)
+#define REMOVE_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_remove_argument, id)
+#define REMOVE_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_remove_answer, removed)
 
 typedef struct upsert_request {
-    const char *store;
     const cJSON *account;
     const char *id;
 } upsert_request;
-
-typedef struct remove_request {
-    const char *store;
-    const char *id;
-} remove_request;
-
-static cJSON *text_answer(const char *name, const char *text) {
-    cJSON *answer = cJSON_CreateObject();
-    if (answer == NULL || cJSON_AddStringToObject(answer, name, text) == NULL) {
-        cJSON_Delete(answer);
-        return NULL;
-    }
-    return answer;
-}
-
-static cJSON *flag_answer(const char *name, int value) {
-    cJSON *answer = cJSON_CreateObject();
-    if (answer == NULL || cJSON_AddBoolToObject(answer, name, value) == NULL) {
-        cJSON_Delete(answer);
-        return NULL;
-    }
-    return answer;
-}
 
 static cJSON *account_entries(const cJSON *accounts) {
     cJSON *entries = cJSON_CreateArray();
     const cJSON *account = NULL;
     cJSON_ArrayForEach(account, accounts) {
-        if (cJSON_IsObject(account) && !service_push(entries, cJSON_Duplicate(account, 1))) {
+        cJSON *copy = cJSON_IsObject(account) && entries != NULL ? cJSON_Duplicate(account, 1) : NULL;
+        if (cJSON_IsObject(account) && (copy == NULL || !cJSON_AddItemToArray(entries, copy))) {
+            cJSON_Delete(copy);
             cJSON_Delete(entries);
             return NULL;
         }
@@ -44,28 +32,55 @@ static cJSON *account_entries(const cJSON *accounts) {
     return entries;
 }
 
+static spisor_status fill_list(const cJSON *accounts, forebay_accounts_list_answer *answer) {
+    cJSON *entries = account_entries(accounts);
+    spisor_value_tree tree = SPISOR_INIT(spisor_value_tree);
+    spisor_status status = entries == NULL ? SPISOR_OUT_OF_MEMORY : spisor_value_of_json(entries, &tree);
+    cJSON_Delete(entries);
+    if (status != SPISOR_OK) {
+        return SPISOR_OUT_OF_MEMORY;
+    }
+    if (tree.root.count == 0) {
+        spisor_value_release(&tree);
+        return SPISOR_OK;
+    }
+    answer->accounts = tree.root.items;
+    answer->count = tree.root.count;
+    answer->storage = tree.storage;
+    return SPISOR_OK;
+}
+
 /** An unreadable store lists as empty, as AccountStore.parseOrDefault degrades a corrupted one. */
-SERVICE_EXPORT int32_t forebay_library_accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
-        return status;
+spisor_status accounts_list(void *context, const forebay_accounts_list_argument *argument,
+                            forebay_accounts_list_answer *answer, spisor_refusal *refusal) {
+    accounts_store store;
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(argument, LIST_SHAPE) ||
+        !FOREBAY_IS_EMPTY_COUNTED_ANSWER(answer, LIST_ANSWER_SHAPE, answer->count)) {
+        return forebay_refuse_shape(refusal, "accounts' list");
     }
-    const char *path = NULL;
-    if (accounts_require_store(&call, &path, out, out_len, &status)) {
-        accounts_store store;
-        accounts_store_status opened = accounts_store_open(path, 0, &store);
-        if (opened == ACCOUNTS_STORE_OUT_OF_MEMORY) {
-            status = service_out_of_memory(out, out_len);
-        } else {
-            cJSON *entries = opened == ACCOUNTS_STORE_READY ? account_entries(accounts_store_accounts(&store))
-                                                            : cJSON_CreateArray();
-            status = service_answer(service_wrap("accounts", entries), out, out_len);
-            accounts_store_close(&store);
-        }
+    if (!forebay_is_text(argument->store)) {
+        return forebay_refuse_member(refusal, "store", "the path of the accounts file");
     }
-    spisor_discard_call(&call);
+    accounts_store_status opened = accounts_store_open(argument->store, 0, &store);
+    if (opened == ACCOUNTS_STORE_OUT_OF_MEMORY) {
+        return SPISOR_OUT_OF_MEMORY;
+    }
+    if (opened != ACCOUNTS_STORE_READY) {
+        return SPISOR_OK;
+    }
+    spisor_status status = fill_list(accounts_store_accounts(&store), answer);
+    accounts_store_close(&store);
     return status;
+}
+
+void accounts_release_list_answer(void *context, forebay_accounts_list_answer *answer) {
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(answer, LIST_ANSWER_SHAPE)) {
+        return;
+    }
+    spisor_memory_release(answer->storage);
+    FOREBAY_CLEAR_ANSWER(answer, LIST_ANSWER_SHAPE);
 }
 
 /** The incoming members laid over a copy of the stored account, in the stored order. */
@@ -81,99 +96,120 @@ static cJSON *merged_account(const cJSON *stored, const cJSON *incoming) {
     return merged;
 }
 
-static void add_account(cJSON *accounts, const upsert_request *request, accounts_outcome *outcome) {
-    if (service_push(accounts, cJSON_Duplicate(request->account, 1))) {
-        outcome->result = text_answer("outcome", "added");
-        outcome->changed = 1;
+static spisor_status add_account(cJSON *accounts, const upsert_request *request,
+                                 forebay_accounts_upsert_answer *answer, int *changed) {
+    cJSON *copy = cJSON_Duplicate(request->account, 1);
+    if (copy == NULL || !cJSON_AddItemToArray(accounts, copy)) {
+        cJSON_Delete(copy);
+        return SPISOR_OUT_OF_MEMORY;
     }
+    answer->outcome = FOREBAY_ACCOUNTS_ADDED;
+    *changed = 1;
+    return SPISOR_OK;
 }
 
-static void update_account(cJSON *accounts, int index, const upsert_request *request, accounts_outcome *outcome) {
+static spisor_status update_account(cJSON *accounts, int index, const upsert_request *request,
+                                    forebay_accounts_upsert_answer *answer, int *changed) {
     cJSON *stored = cJSON_GetArrayItem(accounts, index);
     cJSON *merged = merged_account(stored, request->account);
     if (merged == NULL) {
-        return;
+        return SPISOR_OUT_OF_MEMORY;
     }
     if (cJSON_Compare(merged, stored, 1)) {
         cJSON_Delete(merged);
-        outcome->result = text_answer("outcome", "unchanged");
-        return;
+        answer->outcome = FOREBAY_ACCOUNTS_UNCHANGED;
+        return SPISOR_OK;
     }
     if (!cJSON_ReplaceItemInArray(accounts, index, merged)) {
         cJSON_Delete(merged);
-        return;
+        return SPISOR_OUT_OF_MEMORY;
     }
-    outcome->result = text_answer("outcome", "updated");
-    outcome->changed = 1;
+    answer->outcome = FOREBAY_ACCOUNTS_UPDATED;
+    *changed = 1;
+    return SPISOR_OK;
 }
 
-static void upsert_into(accounts_store *store, const void *given, accounts_outcome *outcome) {
+static void clear_upsert_answer(void *filled) {
+    forebay_accounts_upsert_answer *answer = filled;
+    answer->outcome = 0;
+}
+
+static spisor_status upsert_into(accounts_store *store, const void *given, void *filled, int *changed) {
     const upsert_request *request = given;
     cJSON *accounts = accounts_store_accounts(store);
     int index = 0;
     if (accounts_find(accounts, request->id, &index) == NULL) {
-        add_account(accounts, request, outcome);
-    } else {
-        update_account(accounts, index, request, outcome);
+        return add_account(accounts, request, filled, changed);
     }
+    return update_account(accounts, index, request, filled, changed);
 }
 
-static int read_account(const spisor_call *call, upsert_request *request, uint8_t **out, size_t *out_len,
-                        int32_t *status) {
-    if (!service_require(call, "account", service_is_object, "an object", &request->account, out, out_len, status)) {
-        return 0;
-    }
-    request->id = accounts_account_id(request->account);
-    if (request->id == NULL) {
-        *status = service_fail("account.id", "is missing or is not a non-empty string",
-                               "send the account with its id", out, out_len);
-        return 0;
-    }
-    return 1;
+int accounts_is_account_record(const spisor_value *account) {
+    const spisor_value *id = account == NULL ? NULL : spisor_value_member(account, "id", 2);
+    return id != NULL && id->kind == SPISOR_VALUE_TEXT && id->length > 0;
 }
 
-SERVICE_EXPORT int32_t forebay_library_accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
-        return status;
+static spisor_status upsert_account(const char *path, const cJSON *account, forebay_accounts_upsert_answer *answer,
+                                    spisor_refusal *refusal) {
+    upsert_request request = {account, accounts_account_id(account)};
+    const char *token_member = accounts_find_token_member(account);
+    if (token_member != NULL) {
+        return accounts_refuse_token_member("account", token_member, refusal);
     }
-    upsert_request request;
-    if (accounts_require_store(&call, &request.store, out, out_len, &status) &&
-        read_account(&call, &request, out, out_len, &status)) {
-        const char *token_member = accounts_find_token_member(request.account);
-        status = token_member != NULL ? accounts_refuse_token_member("account", token_member, out, out_len)
-                                      : accounts_run_change(request.store, upsert_into, &request, out, out_len);
+    return accounts_run_change(path, upsert_into, &request, answer, clear_upsert_answer, refusal);
+}
+
+spisor_status accounts_upsert(void *context, const forebay_accounts_upsert_argument *argument,
+                              forebay_accounts_upsert_answer *answer, spisor_refusal *refusal) {
+    cJSON *account = NULL;
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(argument, UPSERT_SHAPE) || !FOREBAY_HAS_SHAPE(answer, UPSERT_ANSWER_SHAPE)) {
+        return forebay_refuse_shape(refusal, "accounts' upsert");
     }
-    spisor_discard_call(&call);
+    if (!forebay_is_text(argument->store)) {
+        return forebay_refuse_member(refusal, "store", "the path of the accounts file");
+    }
+    if (!accounts_is_account_record(argument->account)) {
+        return forebay_refuse_member(refusal, "account", "a record whose id is non-empty text");
+    }
+    spisor_status status = forebay_json_of_member(argument->account, "account", &account, refusal);
+    if (status == SPISOR_OK) {
+        status = upsert_account(argument->store, account, answer, refusal);
+    }
+    forebay_delete_overwritten(account);
     return status;
 }
 
-static void remove_from(accounts_store *store, const void *given, accounts_outcome *outcome) {
-    const remove_request *request = given;
+static spisor_status remove_from(accounts_store *store, const void *given, void *filled, int *changed) {
+    const char *id = given;
+    forebay_accounts_remove_answer *answer = filled;
     cJSON *accounts = accounts_store_accounts(store);
     int index = 0;
-    int found = accounts_find(accounts, request->id, &index) != NULL;
+    int found = accounts_find(accounts, id, &index) != NULL;
     if (found) {
         cJSON_DeleteItemFromArray(accounts, index);
     }
-    outcome->result = flag_answer("removed", found);
-    outcome->changed = found;
+    answer->removed = (uint32_t)found;
+    *changed = found;
+    return SPISOR_OK;
 }
 
-SERVICE_EXPORT int32_t forebay_library_accounts_remove(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
-        return status;
+static void clear_remove_answer(void *filled) {
+    forebay_accounts_remove_answer *answer = filled;
+    answer->removed = 0;
+}
+
+spisor_status accounts_remove(void *context, const forebay_accounts_remove_argument *argument,
+                              forebay_accounts_remove_answer *answer, spisor_refusal *refusal) {
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(argument, REMOVE_SHAPE) || !FOREBAY_HAS_SHAPE(answer, REMOVE_ANSWER_SHAPE)) {
+        return forebay_refuse_shape(refusal, "accounts' remove");
     }
-    remove_request request;
-    const cJSON *id = NULL;
-    if (accounts_require_store(&call, &request.store, out, out_len, &status) &&
-        service_require(&call, "id", service_is_string, "a string", &id, out, out_len, &status)) {
-        request.id = id->valuestring;
-        status = accounts_run_change(request.store, remove_from, &request, out, out_len);
+    if (!forebay_is_text(argument->store)) {
+        return forebay_refuse_member(refusal, "store", "the path of the accounts file");
     }
-    spisor_discard_call(&call);
-    return status;
+    if (argument->id == NULL) {
+        return forebay_refuse_member(refusal, "id", "the id of an account");
+    }
+    return accounts_run_change(argument->store, remove_from, argument->id, answer, clear_remove_answer, refusal);
 }

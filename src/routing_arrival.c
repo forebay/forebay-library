@@ -1,5 +1,7 @@
 #include "routing_arrival.h"
 
+#include "spisor/allocation.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,8 +16,8 @@ static int is_addressed_to_the_port(const cJSON *headers, int port) {
     char *name = routing_formatted(LOOPBACK_NAME ":%d", port);
     int admitted = host != NULL && address != NULL && name != NULL &&
                    (routing_equals_ignoring_case(host, address) || routing_equals_ignoring_case(host, name));
-    free(address);
-    free(name);
+    spisor_memory_release(address);
+    spisor_memory_release(name);
     return admitted;
 }
 
@@ -53,7 +55,7 @@ static cJSON *refusal_answer(int port) {
         cJSON_Delete(answer);
         answer = NULL;
     }
-    free(message);
+    spisor_memory_release(message);
     return answer;
 }
 
@@ -86,7 +88,7 @@ static cJSON *arrival_answer(const char *path, const cJSON *headers, int port) {
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_arrival(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -99,7 +101,7 @@ SERVICE_EXPORT int32_t forebay_library_routing_arrival(const uint8_t *in, size_t
         service_require(&call, "port", routing_is_port, "a port number from 1 to 65535", &port, out, out_len, &status)) {
         status = service_answer(arrival_answer(path->valuestring, headers, (int)port->valuedouble), out, out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }
 
@@ -117,9 +119,9 @@ static int32_t refuse_the_setting(const cJSON *value, const char *settings_file,
     char *cause = printed == NULL ? NULL : routing_formatted("proxy.port is %s, which is no port", printed);
     char *fix = routing_formatted("set proxy.port in %s to a port from 1 to 65535", settings_file);
     int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(out, out_len) : service_refuse(cause, fix, out, out_len);
-    free(printed);
-    free(cause);
-    free(fix);
+    spisor_memory_release(printed);
+    spisor_memory_release(cause);
+    spisor_memory_release(fix);
     return status;
 }
 
@@ -133,9 +135,9 @@ static int32_t refuse_the_listen(int port, const cJSON *failure, const char *set
     char *cause = routing_formatted("port %d on " LOOPBACK_ADDRESS " %s, so the proxy cannot listen", port, reason);
     char *fix = routing_formatted("stop what listens on port %d, or set proxy.port in %s to a free port", port, settings_file);
     int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(out, out_len) : service_refuse(cause, fix, out, out_len);
-    free(reason);
-    free(cause);
-    free(fix);
+    spisor_memory_release(reason);
+    spisor_memory_release(cause);
+    spisor_memory_release(fix);
     return status;
 }
 
@@ -161,7 +163,7 @@ static int32_t decide_the_port(const cJSON *value, const char *settings_file, co
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_port(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -177,6 +179,6 @@ SERVICE_EXPORT int32_t forebay_library_routing_port(const uint8_t *in, size_t in
                                &status)) {
         status = decide_the_port(value, settings_file->valuestring, failure, out, out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }

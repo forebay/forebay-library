@@ -1,5 +1,7 @@
 #include "routing_support.h"
 
+#include "spisor/allocation.h"
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -297,7 +299,7 @@ char *routing_formatted_list(const char *format, va_list values) {
     va_list copy;
     va_copy(copy, values);
     int length = vsnprintf(NULL, 0, format, values);
-    char *text = length < 0 ? NULL : malloc((size_t)length + 1);
+    char *text = length < 0 ? NULL : spisor_memory_allocate((size_t)length + 1);
     if (text != NULL) {
         vsnprintf(text, (size_t)length + 1, format, copy);
     }
