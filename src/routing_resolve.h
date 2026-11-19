@@ -13,6 +13,6 @@
 cJSON *routing_resolution(const routing_profile *profile, const cJSON *map, const cJSON *models, const char *requested,
                           routing_refusal *refusal);
 
-int32_t routing_resolve_call(const cJSON *argument, service_reply *reply);
+spisor_status routing_resolve_call(const cJSON *argument, service_reply *reply);
 
 #endif

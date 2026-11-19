@@ -10,6 +10,6 @@
  */
 cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models, routing_refusal *refusal);
 
-int32_t routing_tiers_call(const cJSON *argument, service_reply *reply);
+spisor_status routing_tiers_call(const cJSON *argument, service_reply *reply);
 
 #endif

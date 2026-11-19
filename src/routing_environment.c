@@ -238,7 +238,7 @@ static cJSON *build_environment(const request *asked) {
 }
 
 static int refuses_tier_template(const cJSON *variables, const char *member, const char *field,
-                                  service_reply *reply, int32_t *status) {
+                                  service_reply *reply, spisor_status *status) {
     const char *name_template = text_member(variables, member);
     if (name_template == NULL || strstr(name_template, TIER_PLACEHOLDER) != NULL) {
         return 0;
@@ -252,7 +252,7 @@ static int refuses_tier_template(const cJSON *variables, const char *member, con
     return 1;
 }
 
-static int read_request(const service_call *call, request *asked, service_reply *reply, int32_t *status) {
+static int read_request(const service_call *call, request *asked, service_reply *reply, spisor_status *status) {
     memset(asked, 0, sizeof(*asked));
     asked->map = cJSON_GetObjectItemCaseSensitive(call->argument, "map");
     asked->environment = cJSON_GetObjectItemCaseSensitive(call->argument, "environment");
@@ -268,9 +268,9 @@ static int read_request(const service_call *call, request *asked, service_reply 
     return 1;
 }
 
-int32_t routing_environment_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_environment_call(const cJSON *argument, service_reply *reply) {
     service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
+    spisor_status status = SPISOR_OK;
     request asked;
     if (read_request(&call, &asked, reply, &status)) {
         status = service_answer(service_wrap("environment", build_environment(&asked)), reply);

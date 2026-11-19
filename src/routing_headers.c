@@ -166,19 +166,19 @@ static pass_through_arguments read_pass_through_arguments(const cJSON *argument)
     return read;
 }
 
-static int32_t refuse_url(const char *url, service_reply *reply) {
+static spisor_status refuse_url(const char *url, service_reply *reply) {
     char cause[512];
     snprintf(cause, sizeof(cause), "the url %.400s is not a path starting with /", url);
     return service_refuse(cause, URL_FIX, reply);
 }
 
 /** @implNote A url not starting with `/` would join onto the upstream's host, so it could name another host. */
-static int32_t answer_pass_through(const pass_through_arguments *arguments, service_reply *reply) {
+static spisor_status answer_pass_through(const pass_through_arguments *arguments, service_reply *reply) {
     if (arguments->url->valuestring[0] != '/') {
         return refuse_url(arguments->url->valuestring, reply);
     }
     routing_upstream parts;
-    int32_t status = SERVICE_SUCCESS;
+    spisor_status status = SPISOR_OK;
     if (!routing_read_upstream(arguments->upstream->valuestring, &parts, reply, &status)) {
         return status;
     }
@@ -189,12 +189,12 @@ static int32_t answer_pass_through(const pass_through_arguments *arguments, serv
     return status;
 }
 
-int32_t routing_pass_through_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_pass_through_call(const cJSON *argument, service_reply *reply) {
     pass_through_arguments arguments = read_pass_through_arguments(argument);
     return answer_pass_through(&arguments, reply);
 }
 
-int32_t routing_reply_headers_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_reply_headers_call(const cJSON *argument, service_reply *reply) {
     const cJSON *headers = cJSON_GetObjectItemCaseSensitive(argument, "headers");
     int rewritten = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(argument, "rewritten"));
     return service_answer(service_wrap("headers", routing_end_to_end_headers(headers, rewritten)), reply);

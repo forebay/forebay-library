@@ -8,7 +8,7 @@
 #include "service_support.h"
 
 /** One of routing's decisions over the cJSON argument its definition built. */
-typedef int32_t (*routing_decision)(const cJSON *argument, service_reply *reply);
+typedef spisor_status (*routing_decision)(const cJSON *argument, service_reply *reply);
 
 /** Fills an answer from a decision's result into the answer's own storage chain; 0 when memory runs out. */
 typedef int (*routing_answer_filler)(const cJSON *result, void *answer);

@@ -56,8 +56,8 @@ static cJSON *request_failed_answer(const char *detail) {
     return answer;
 }
 
-static int32_t answer_unreachable(const cJSON *argument, const char *detail, service_reply *reply) {
-    int32_t status = SERVICE_SUCCESS;
+static spisor_status answer_unreachable(const cJSON *argument, const char *detail, service_reply *reply) {
+    spisor_status status = SPISOR_OK;
     const cJSON *upstream = cJSON_GetObjectItemCaseSensitive(argument, "upstream");
     routing_upstream parts;
     if (routing_read_upstream(upstream->valuestring, &parts, reply, &status)) {
@@ -67,7 +67,7 @@ static int32_t answer_unreachable(const cJSON *argument, const char *detail, ser
     return status;
 }
 
-int32_t routing_failure_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_failure_call(const cJSON *argument, service_reply *reply) {
     const char *reason = cJSON_GetObjectItemCaseSensitive(argument, "reason")->valuestring;
     const char *detail = cJSON_GetObjectItemCaseSensitive(argument, "detail")->valuestring;
     return strcmp(reason, "upstreamUnreachable") == 0 ? answer_unreachable(argument, detail, reply)

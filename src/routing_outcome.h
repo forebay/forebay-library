@@ -9,6 +9,6 @@
  */
 cJSON *routing_outcome_of(const cJSON *argument);
 
-int32_t routing_outcome_call(const cJSON *argument, service_reply *reply);
+spisor_status routing_outcome_call(const cJSON *argument, service_reply *reply);
 
 #endif

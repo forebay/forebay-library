@@ -7,6 +7,6 @@
  * The reply, and the log lines, for a failure a proxy meets outside any chain entry: an upstream it
  * could not reach while passing a request through, or a request that failed before it was answered.
  */
-int32_t routing_failure_call(const cJSON *argument, service_reply *reply);
+spisor_status routing_failure_call(const cJSON *argument, service_reply *reply);
 
 #endif

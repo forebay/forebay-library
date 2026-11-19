@@ -32,11 +32,11 @@ typedef enum routing_profile_need {
     NEEDS_UNSERVED_PATTERN = 8
 } routing_profile_need;
 
-int32_t routing_answer_refusal(const routing_refusal *refusal, service_reply *reply);
+spisor_status routing_answer_refusal(const routing_refusal *refusal, service_reply *reply);
 
 /** Validates the profile members named by need; on a problem answers 0 with the call already failed. */
 int routing_read_profile(const cJSON *profile, int need, routing_profile *read, service_reply *reply,
-                         int32_t *status);
+                         spisor_status *status);
 
 /** {provider, model, name, derived}, or NULL when memory runs out. */
 cJSON *routing_assignment(const char *provider, const char *model, const char *name, int derived);
