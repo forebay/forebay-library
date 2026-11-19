@@ -1,13 +1,5 @@
-#include <string.h>
-
 #include "anthropic_encode.h"
-
-static const char UNMAPPED_STOP_REASON[] = "error";
-
-/** The wire stop reason of an IR one: "error", which the wire has no word for, is "end_turn". */
-static const char *stop_reason_to_wire(const char *reason) {
-    return strcmp(reason, UNMAPPED_STOP_REASON) == 0 ? "end_turn" : reason;
-}
+#include "anthropic_stop_reason.h"
 
 /** A new object whose `type` is `type`. */
 static cJSON *typed_object(anthropic_writer *writer, const char *type) {
@@ -87,7 +79,7 @@ static cJSON *encode_message_delta(anthropic_writer *writer, const forebay_ir_ev
         anthropic_extension_of(event->extensions, ANTHROPIC_EXTENSION_STOP_SEQUENCE_RAW);
     cJSON *delta = anthropic_new_object(writer);
     anthropic_set_text_or_null(writer, delta, "stop_reason",
-                               event->stop_reason == NULL ? NULL : stop_reason_to_wire(event->stop_reason));
+                               event->stop_reason == NULL ? NULL : anthropic_stop_reason_to_wire(event->stop_reason));
     if (stop_sequence == NULL) {
         anthropic_set_text_or_null(writer, delta, "stop_sequence", NULL);
     } else {

@@ -1,29 +1,9 @@
-#include <string.h>
-
 #include "anthropic_decode.h"
+#include "anthropic_stop_reason.h"
 #include "anthropic_wire.h"
 
 static const char *const RESPONSE_CONSUMED[] = {"id",    "type",        "role",          "content",
                                                 "model", "stop_reason", "stop_sequence", "usage"};
-static const char *const KNOWN_STOP_REASONS[] = {"end_turn", "max_tokens", "tool_use", "stop_sequence", "pause_turn",
-                                                 "refusal"};
-static const char UNMAPPED_STOP_REASON[] = "error";
-
-/** The static text of the known stop reason `wire_reason` names, NULL for any other or none. */
-static const char *known_stop_reason(const char *wire_reason) {
-    for (size_t index = 0; wire_reason != NULL && index < sizeof KNOWN_STOP_REASONS / sizeof KNOWN_STOP_REASONS[0];
-         index++) {
-        if (strcmp(wire_reason, KNOWN_STOP_REASONS[index]) == 0) {
-            return KNOWN_STOP_REASONS[index];
-        }
-    }
-    return NULL;
-}
-
-const char *anthropic_stop_reason_to_ir(const char *wire_reason) {
-    const char *known = known_stop_reason(wire_reason);
-    return known != NULL ? known : UNMAPPED_STOP_REASON;
-}
 
 /** Records what the wire said that the IR cannot hold, so writing restores it; a stop reason of no string is null. */
 static void put_raw_members(anthropic_reader *reader, const cJSON *root, anthropic_extension_list *extensions) {
@@ -61,7 +41,7 @@ const forebay_ir_response *anthropic_decode_response(anthropic_reader *reader, c
     response->size = (uint32_t)sizeof *response;
     response->id = "";
     response->model = "";
-    response->stop_reason = UNMAPPED_STOP_REASON;
+    response->stop_reason = ANTHROPIC_UNMAPPED_STOP_REASON;
     if (anthropic_wire_map(root) != NULL) {
         decode_members(reader, root, response);
     }

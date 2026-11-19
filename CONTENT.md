@@ -132,6 +132,13 @@ line, a frame or a CRLF. A feed that runs out of memory leaves its handle as it 
 | `stream_encoder_open`, `release_stream_encoder` | a new encoder; freeing one |
 | `stream_encode`, `stream_encode_finish` | IR events to SSE text, `event:`, `data:` and a blank line each, with the translator's defaults for what an event leaves out; an event of a kind the header does not name is refused MALFORMED |
 
+Two operations write the proxy's own bodies, each answered as a `forebay_anthropic_body_answer`:
+
+| operation | does |
+| --- | --- |
+| `error_envelope` | an error type (not empty, such as `api_error` or `loader_proxy_error`) and a message to `{"type":"error","error":{"type":...,"message":...}}`, the message escaped as JSON text |
+| `model_listing` | providers' models, in order, and the profile's default context and output limits to the `/v1/models` body: each id once as the first provider offers it, `display_name` its name or its id, `created_at` fixed, `max_input_tokens` and `max_tokens` the model's or the defaults, in `data` with `first_id`, `last_id` and `has_more` |
+
 `test/vectors/anthropic/` holds the translator's vectors, copied unchanged; `anthropic_test` runs every `request-*` and
 `response-*` one in both directions through the definition, `anthropic_stream_test` every `stream-*` one, a decode
 also split in two at every byte and fed a byte at a time, and `anthropic_out_of_memory_test` fails each allocation of

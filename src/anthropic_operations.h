@@ -30,6 +30,9 @@ void anthropic_writer_problem(const anthropic_writer *writer, anthropic_problem 
 /** The MALFORMED refusal of bytes NULL beside a length that is not 0. */
 spisor_status anthropic_refuse_bytes(spisor_refusal *refusal);
 
+/** Fills the answer with the JSON of a wire object, which it deletes; the answer is left empty unless OK. */
+spisor_status anthropic_write_body(cJSON *wire, forebay_anthropic_body_answer *answer);
+
 void anthropic_release_body(void *context, forebay_anthropic_body_answer *answer);
 
 spisor_status anthropic_stream_decoder_open(void *context, forebay_anthropic_stream_decoder_answer *answer,
@@ -48,5 +51,10 @@ spisor_status anthropic_stream_encode(void *context, const forebay_anthropic_str
 spisor_status anthropic_stream_encode_finish(void *context, const forebay_anthropic_stream_encode_argument *argument,
                                              forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
 void anthropic_release_stream_encoder(void *context, forebay_anthropic_stream_encoder *encoder);
+
+spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_error_argument *argument,
+                                       forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
+spisor_status anthropic_model_listing(void *context, const forebay_anthropic_model_listing_argument *argument,
+                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
 
 #endif

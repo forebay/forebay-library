@@ -139,6 +139,10 @@ static const stream_case DECODE_CASES[] = {
      "data: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"tool_use\",\"$stopSequenceRaw\":1,"
      "\"stop_sequence\":\"s\"},\"usage\":[]}\n\n",
      "[{\"event\":\"message_delta\",\"stopReason\":\"tool_use\",\"extensions\":{\"$stopSequenceRaw\":1}}]"},
+    {"a text delta holding a 2-byte and a 4-byte character is whole however it is split",
+     "data: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"x"
+     "\xc3\xa9" "\xf0\x9f\x98\x80" "y\"}}\n\n",
+     "[{\"event\":\"text_delta\",\"index\":0,\"text\":\"x" "\xc3\xa9" "\xf0\x9f\x98\x80" "y\"}]"},
     {"a message start without a message object yields nothing, one with no members an empty start",
      "data: {\"type\":\"message_start\",\"message\":[]}\n\ndata: {\"type\":\"message_start\",\"message\":{}}\n\n",
      "[{\"event\":\"message_start\"}]"},
@@ -153,6 +157,7 @@ static void run_decode_cases(void) {
         } else {
             anthropic_check_direction(decode_stream(), DECODE_CASES[index].label, &input, expected);
             every_split_in_two(DECODE_CASES[index].label, &input, expected);
+            one_byte_at_a_time(DECODE_CASES[index].label, &input, expected);
         }
         anthropic_input_release(&input);
         cJSON_Delete(expected);

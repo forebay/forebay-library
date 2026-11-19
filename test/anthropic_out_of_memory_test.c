@@ -1,4 +1,5 @@
 #include "anthropic_call.h"
+#include "anthropic_shape_cases.h"
 
 #include "allocation.h"
 #include "allocation_failure.h"
@@ -12,6 +13,8 @@
  * gives without one. A failure is never read as a refusal or a malformed call. A stream feed that answers
  * OUT_OF_MEMORY is fed again, since the header says it leaves its handle as it was, so a single failure must still give
  * the whole stream.
+ *
+ * The wire shapes, `error_envelope` and `model_listing`, are failed over their cases the same way.
  *
  * @implNote The cases a vector does not write are not repeated here; the vectors, among them the golden request and
  * response and the ones holding every block kind, reach every allocation site of both directions.
@@ -88,8 +91,31 @@ static void every_failure_of_the_vectors(allocation_failure_mode mode) {
     free(list);
 }
 
+static void every_failure_of_the_shape_cases(allocation_failure_mode mode) {
+    for (size_t index = 0; index < ANTHROPIC_SHAPE_CASE_COUNT; index++) {
+        const anthropic_shape_case *shape = &ANTHROPIC_SHAPE_CASES[index];
+        int out_of_memory = 0;
+        cJSON *input = spisor_parse_json_reporting((const uint8_t *)shape->input, strlen(shape->input), &out_of_memory);
+        cJSON *expected =
+            spisor_parse_json_reporting((const uint8_t *)shape->expected, strlen(shape->expected), &out_of_memory);
+        const anthropic_direction *direction = anthropic_direction_named(shape->direction);
+        if (input == NULL || expected == NULL || direction == NULL) {
+            support_fail(shape->label, "the case could not be read");
+        } else {
+            every_failure_of(direction, shape->label, input, expected, mode);
+        }
+        cJSON_Delete(input);
+        cJSON_Delete(expected);
+    }
+}
+
+static void every_failure_of_everything(allocation_failure_mode mode) {
+    every_failure_of_the_vectors(mode);
+    every_failure_of_the_shape_cases(mode);
+}
+
 int main(void) {
     spisor_json_use_library_allocator();
-    in_every_failure_mode(every_failure_of_the_vectors);
+    in_every_failure_mode(every_failure_of_everything);
     return support_summary("anthropic_out_of_memory_test");
 }
