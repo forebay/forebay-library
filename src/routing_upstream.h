@@ -19,7 +19,7 @@ typedef struct routing_upstream {
  * On a problem answers 0 with the refusal or out of memory already answered into *status.
  */
 int routing_read_upstream(const char *upstream, routing_upstream *parts, service_reply *reply,
-                          int32_t *status);
+                          spisor_status *status);
 
 void routing_free_upstream(routing_upstream *parts);
 

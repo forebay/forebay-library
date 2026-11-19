@@ -3,34 +3,31 @@
 #include <stdio.h>
 #include <string.h>
 
-int32_t service_out_of_memory(service_reply *reply) {
-    reply->status = SERVICE_OUT_OF_MEMORY;
+#include "spisor/definition.h"
+
+spisor_status service_out_of_memory(service_reply *reply) {
+    reply->status = SPISOR_OUT_OF_MEMORY;
     return reply->status;
 }
 
-int32_t service_answer(cJSON *result, service_reply *reply) {
+spisor_status service_answer(cJSON *result, service_reply *reply) {
     if (result == NULL) {
         return service_out_of_memory(reply);
     }
     reply->result = result;
-    reply->status = SERVICE_SUCCESS;
+    reply->status = SPISOR_OK;
     return reply->status;
 }
 
-int32_t service_refuse(const char *cause, const char *fix, service_reply *reply) {
-    cJSON *refusal = cJSON_CreateObject();
-    if (refusal == NULL || cJSON_AddStringToObject(refusal, "refused", cause) == NULL ||
-        cJSON_AddStringToObject(refusal, "fix", fix) == NULL) {
-        cJSON_Delete(refusal);
-        return service_out_of_memory(reply);
-    }
-    return service_answer(refusal, reply);
+spisor_status service_refuse(const char *cause, const char *fix, service_reply *reply) {
+    reply->status = spisor_refuse_as(reply->refusal, SPISOR_REFUSED, cause, fix);
+    return reply->status;
 }
 
-int32_t service_fail(const char *subject, const char *problem, const char *fix, service_reply *reply) {
-    snprintf(reply->message, sizeof reply->message, "%s %s", subject, problem);
-    snprintf(reply->fix, sizeof reply->fix, "%s", fix);
-    reply->status = SERVICE_MALFORMED;
+spisor_status service_fail(const char *subject, const char *problem, const char *fix, service_reply *reply) {
+    char detail[320];
+    snprintf(detail, sizeof detail, "%s %s", subject, problem);
+    reply->status = spisor_refuse_as(reply->refusal, SPISOR_MALFORMED, detail, fix);
     return reply->status;
 }
 

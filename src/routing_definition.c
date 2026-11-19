@@ -45,13 +45,11 @@
 
 spisor_status routing_decide(routing_decision decision, cJSON *argument, routing_answer_filler fill, void *answer,
                              void **storage, size_t shape, spisor_refusal *refusal) {
-    service_reply reply;
-    memset(&reply, 0, sizeof reply);
+    service_reply reply = {SPISOR_OK, NULL, refusal};
     if (argument == NULL) {
         return SPISOR_OUT_OF_MEMORY;
     }
-    decision(argument, &reply);
-    spisor_status status = routing_served(&reply, refusal);
+    spisor_status status = decision(argument, &reply);
     if (status == SPISOR_OK && !fill(reply.result, answer)) {
         forebay_storage_release(*storage);
         memset((char *)answer + sizeof(uint32_t), 0, shape - sizeof(uint32_t));

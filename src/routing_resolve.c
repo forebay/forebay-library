@@ -191,9 +191,9 @@ cJSON *routing_resolution(const routing_profile *profile, const cJSON *map, cons
     return result;
 }
 
-static int32_t answer_call(const cJSON *profile_json, const cJSON *map, const cJSON *models, const char *requested,
-                           service_reply *reply) {
-    int32_t status = SERVICE_SUCCESS;
+static spisor_status answer_call(const cJSON *profile_json, const cJSON *map, const cJSON *models,
+                                 const char *requested, service_reply *reply) {
+    spisor_status status = SPISOR_OK;
     routing_profile profile;
     if (!routing_read_profile(profile_json, ROUTING_RESOLUTION_NEEDS, &profile, reply, &status)) {
         return status;
@@ -203,7 +203,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *map, const cJ
     return result == NULL ? routing_answer_refusal(&refusal, reply) : service_answer(result, reply);
 }
 
-int32_t routing_resolve_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_resolve_call(const cJSON *argument, service_reply *reply) {
     return answer_call(cJSON_GetObjectItemCaseSensitive(argument, "profile"),
                        cJSON_GetObjectItemCaseSensitive(argument, "map"),
                        cJSON_GetObjectItemCaseSensitive(argument, "models"),

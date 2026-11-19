@@ -13,7 +13,8 @@
 #define SERVICE_UNAVAILABLE 503
 #define NO_MESSAGE "no message given"
 
-typedef int32_t (*report_reader)(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply);
+typedef spisor_status (*report_reader)(step_walk *walk, const cJSON *providers, const cJSON *report,
+                                       service_reply *reply);
 
 typedef struct report_reading {
     const char *kind;
@@ -80,7 +81,7 @@ static cJSON *served(step_walk *walk, cJSON *step) {
     return routing_answer_of(walk, step, 0);
 }
 
-static int32_t read_served(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
+static spisor_status read_served(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
     (void)providers;
     (void)report;
     return service_answer(served(walk, routing_kind_step("done")), reply);
@@ -91,7 +92,7 @@ static const char *message_of(const cJSON *report) {
     return message == NULL ? NO_MESSAGE : message->valuestring;
 }
 
-static int32_t read_thrown(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
+static spisor_status read_thrown(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
     const char *message = message_of(report);
     cJSON *answer = NULL;
     if (routing_walk_remember_failure(walk, routing_formatted("%s", message)) &&
@@ -121,7 +122,8 @@ static cJSON *stream_failed_after_bytes(step_walk *walk, const char *message) {
     return served(walk, routing_end_stream_step(message));
 }
 
-static int32_t read_stream_failed(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
+static spisor_status read_stream_failed(step_walk *walk, const cJSON *providers, const cJSON *report,
+                                        service_reply *reply) {
     const char *message = message_of(report);
     cJSON *answer = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(report, "afterBytes"))
                         ? stream_failed_after_bytes(walk, message)
@@ -140,7 +142,7 @@ static cJSON *rate_limited(step_walk *walk, const cJSON *providers, const cJSON 
 }
 
 /** @implNote A failure that is not rate limiting ends the request with the provider's own answer, no fallback tried. */
-static int32_t read_failure(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
+static spisor_status read_failure(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
     cJSON *outcome = routing_outcome_of(report);
     if (outcome == NULL) {
         return service_out_of_memory(reply);
@@ -171,8 +173,8 @@ static report_reader reader_for(const char *kind) {
     return NULL;
 }
 
-static int32_t continue_walk(const service_call *call, const cJSON *providers, service_reply *reply) {
-    int32_t status = SERVICE_SUCCESS;
+static spisor_status continue_walk(const service_call *call, const cJSON *providers, service_reply *reply) {
+    spisor_status status = SPISOR_OK;
     const cJSON *report = cJSON_GetObjectItemCaseSensitive(call->argument, "report");
     report_reader read = reader_for(cJSON_GetObjectItemCaseSensitive(report, "kind")->valuestring);
     step_walk walk = {.log = cJSON_CreateArray()};
@@ -244,8 +246,8 @@ static cJSON *walk_over(step_walk *walk, const cJSON *resolution, const cJSON *p
     return routing_answer_of(walk, no_model_step(walk, providers, wording), 0);
 }
 
-static int32_t routed(const service_call *call, const cJSON *providers, step_walk *walk, service_reply *reply) {
-    int32_t status = SERVICE_SUCCESS;
+static spisor_status routed(const service_call *call, const cJSON *providers, step_walk *walk, service_reply *reply) {
+    spisor_status status = SPISOR_OK;
     const cJSON *request = cJSON_GetObjectItemCaseSensitive(call->argument, "request");
     const cJSON *model = cJSON_GetObjectItemCaseSensitive(request, "model");
     const char *requested = model == NULL ? "" : model->valuestring;
@@ -273,8 +275,8 @@ static int is_passed_through(const cJSON *request, const cJSON *providers) {
            cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(request, "passThrough"));
 }
 
-static int32_t start_walk(const service_call *call, const cJSON *providers, service_reply *reply) {
-    int32_t status = SERVICE_SUCCESS;
+static spisor_status start_walk(const service_call *call, const cJSON *providers, service_reply *reply) {
+    spisor_status status = SPISOR_OK;
     step_walk walk = {.log = cJSON_CreateArray()};
     if (walk.log == NULL) {
         status = service_out_of_memory(reply);
@@ -287,7 +289,7 @@ static int32_t start_walk(const service_call *call, const cJSON *providers, serv
     return status;
 }
 
-int32_t routing_step_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_step_call(const cJSON *argument, service_reply *reply) {
     service_call call = {argument};
     const cJSON *providers = cJSON_GetObjectItemCaseSensitive(argument, "providers");
     return cJSON_GetObjectItemCaseSensitive(argument, "walk") == NULL ? start_walk(&call, providers, reply)

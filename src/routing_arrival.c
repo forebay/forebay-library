@@ -82,18 +82,20 @@ spisor_status routing_decide_arrival(const forebay_arrival_argument *argument, f
     return SPISOR_OK;
 }
 
-static int32_t refuse_the_setting(const cJSON *value, const char *settings_file, service_reply *reply) {
+static spisor_status refuse_the_setting(const cJSON *value, const char *settings_file, service_reply *reply) {
     char *printed = cJSON_PrintUnformatted(value);
     char *cause = printed == NULL ? NULL : routing_formatted("proxy.port is %s, which is no port", printed);
     char *fix = routing_formatted("set proxy.port in %s to a port from 1 to 65535", settings_file);
-    int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(reply) : service_refuse(cause, fix, reply);
+    spisor_status status =
+        cause == NULL || fix == NULL ? service_out_of_memory(reply) : service_refuse(cause, fix, reply);
     spisor_memory_release(printed);
     spisor_memory_release(cause);
     spisor_memory_release(fix);
     return status;
 }
 
-static int32_t refuse_the_listen(int port, const cJSON *failure, const char *settings_file, service_reply *reply) {
+static spisor_status refuse_the_listen(int port, const cJSON *failure, const char *settings_file,
+                                       service_reply *reply) {
     const char *detail = cJSON_GetObjectItemCaseSensitive(failure, "detail")->valuestring;
     int in_use = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(failure, "inUse"));
     char *reason =
@@ -104,14 +106,15 @@ static int32_t refuse_the_listen(int port, const cJSON *failure, const char *set
     char *cause = routing_formatted("port %d on " LOOPBACK_ADDRESS " %s, so the proxy cannot listen", port, reason);
     char *fix =
         routing_formatted("stop what listens on port %d, or set proxy.port in %s to a free port", port, settings_file);
-    int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(reply) : service_refuse(cause, fix, reply);
+    spisor_status status =
+        cause == NULL || fix == NULL ? service_out_of_memory(reply) : service_refuse(cause, fix, reply);
     spisor_memory_release(reason);
     spisor_memory_release(cause);
     spisor_memory_release(fix);
     return status;
 }
 
-static int32_t answer_the_port(int port, service_reply *reply) {
+static spisor_status answer_the_port(int port, service_reply *reply) {
     cJSON *answer = cJSON_CreateObject();
     if (answer == NULL || cJSON_AddNumberToObject(answer, "port", port) == NULL ||
         cJSON_AddStringToObject(answer, "address", LOOPBACK_ADDRESS) == NULL) {
@@ -121,8 +124,8 @@ static int32_t answer_the_port(int port, service_reply *reply) {
     return service_answer(answer, reply);
 }
 
-static int32_t decide_the_port(const cJSON *value, const char *settings_file, const cJSON *failure,
-                               service_reply *reply) {
+static spisor_status decide_the_port(const cJSON *value, const char *settings_file, const cJSON *failure,
+                                     service_reply *reply) {
     if (!routing_is_port(value)) {
         return refuse_the_setting(value, settings_file, reply);
     }
@@ -132,7 +135,7 @@ static int32_t decide_the_port(const cJSON *value, const char *settings_file, co
     return answer_the_port((int)value->valuedouble, reply);
 }
 
-int32_t routing_port_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_port_call(const cJSON *argument, service_reply *reply) {
     return decide_the_port(cJSON_GetObjectItemCaseSensitive(argument, "value"),
                            cJSON_GetObjectItemCaseSensitive(argument, "settingsFile")->valuestring,
                            cJSON_GetObjectItemCaseSensitive(argument, "failure"), reply);

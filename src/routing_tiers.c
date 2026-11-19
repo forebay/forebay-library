@@ -122,9 +122,9 @@ cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models,
     return tiers;
 }
 
-int32_t routing_tiers_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_tiers_call(const cJSON *argument, service_reply *reply) {
     service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
+    spisor_status status = SPISOR_OK;
     const cJSON *profile_json = cJSON_GetObjectItemCaseSensitive(call.argument, "profile");
     const cJSON *models = cJSON_GetObjectItemCaseSensitive(call.argument, "models");
     routing_profile profile;

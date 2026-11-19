@@ -12,13 +12,6 @@
  * to release with the rest.
  */
 
-/**
- * What a decision's reply means to a definition: OK with `reply->result` to read; REFUSED with the refusal filled
- * from a {"refused", "fix"} result, which is deleted; MALFORMED with the refusal filled from the reason; or
- * OUT_OF_MEMORY.
- */
-spisor_status routing_served(service_reply *reply, spisor_refusal *refusal);
-
 /** An array of strings. */
 int routing_read_texts(void **storage, const cJSON *json, const char *const **texts, size_t *count);
 

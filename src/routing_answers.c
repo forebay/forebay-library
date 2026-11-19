@@ -5,25 +5,6 @@
 #include "answer_storage.h"
 #include "definition_support.h"
 
-spisor_status routing_served(service_reply *reply, spisor_refusal *refusal) {
-    if (reply->status == SERVICE_OUT_OF_MEMORY) {
-        return SPISOR_OUT_OF_MEMORY;
-    }
-    if (reply->status == SERVICE_MALFORMED) {
-        return spisor_refuse_as(refusal, SPISOR_MALFORMED, reply->message, reply->fix);
-    }
-    const cJSON *refused = cJSON_GetObjectItemCaseSensitive(reply->result, "refused");
-    if (!cJSON_IsString(refused)) {
-        return SPISOR_OK;
-    }
-    spisor_status status = spisor_refuse_as(
-        refusal, SPISOR_REFUSED, refused->valuestring,
-        cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(reply->result, "fix")));
-    cJSON_Delete(reply->result);
-    reply->result = NULL;
-    return status;
-}
-
 int routing_read_text(void **storage, const cJSON *object, const char *name, const char **text) {
     return forebay_storage_text(storage, cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(object, name)), text);
 }

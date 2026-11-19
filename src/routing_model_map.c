@@ -218,9 +218,9 @@ static const cJSON *stored_map_of(const cJSON *settings, const cJSON *empty) {
     return cJSON_IsObject(declared) ? declared : empty;
 }
 
-static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, const cJSON *models,
-                           service_reply *reply) {
-    int32_t status = SERVICE_SUCCESS;
+static spisor_status answer_call(const cJSON *profile_json, const cJSON *settings, const cJSON *models,
+                                 service_reply *reply) {
+    spisor_status status = SPISOR_OK;
     routing_profile profile;
     if (!routing_read_profile(profile_json, NEEDS_TIERS | NEEDS_UNSERVED_PATTERN, &profile, reply, &status)) {
         return status;
@@ -249,7 +249,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, con
     return status;
 }
 
-int32_t routing_model_map_call(const cJSON *argument, service_reply *reply) {
+spisor_status routing_model_map_call(const cJSON *argument, service_reply *reply) {
     return answer_call(cJSON_GetObjectItemCaseSensitive(argument, "profile"),
                        cJSON_GetObjectItemCaseSensitive(argument, "settings"),
                        cJSON_GetObjectItemCaseSensitive(argument, "models"), reply);

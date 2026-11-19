@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int32_t routing_answer_refusal(const routing_refusal *refusal, service_reply *reply) {
+spisor_status routing_answer_refusal(const routing_refusal *refusal, service_reply *reply) {
     if (!refusal->refused) {
         return service_out_of_memory(reply);
     }
@@ -39,7 +39,7 @@ static const profile_member native_model_pattern = {"nativeModelPattern", "nativ
 static const profile_member unserved_model_pattern = {"unservedModelPattern", "unserved_model_pattern"};
 
 static int profile_string(const cJSON *profile, const profile_member *named, const char **value,
-                          service_reply *reply, int32_t *status) {
+                          service_reply *reply, spisor_status *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, named->key);
     if (!cJSON_IsString(member)) {
         *status = service_fail("the profile member", named->field, "set this member of the profile to text", reply);
@@ -50,7 +50,7 @@ static int profile_string(const cJSON *profile, const profile_member *named, con
 }
 
 static int profile_list(const cJSON *profile, const profile_member *named, const cJSON **value,
-                        service_reply *reply, int32_t *status) {
+                        service_reply *reply, spisor_status *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, named->key);
     if (!cJSON_IsArray(member) || !all_strings(member)) {
         *status = service_fail("the profile member", named->field,
@@ -62,7 +62,7 @@ static int profile_list(const cJSON *profile, const profile_member *named, const
 }
 
 static int read_tier_members(const cJSON *profile, routing_profile *read, service_reply *reply,
-                             int32_t *status) {
+                             spisor_status *status) {
     return profile_string(profile, &tier_source_provider, &read->tier_source_provider, reply, status) &&
            profile_list(profile, &tier_order, &read->tier_order, reply, status) &&
            profile_list(profile, &tier_fallback, &read->tier_fallback, reply, status) &&
@@ -70,7 +70,7 @@ static int read_tier_members(const cJSON *profile, routing_profile *read, servic
 }
 
 static int read_native_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
-                               int32_t *status) {
+                               spisor_status *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, native_model_pattern.key);
     if (member == NULL || cJSON_IsNull(member)) {
         read->native_model_pattern = NULL;
@@ -80,7 +80,7 @@ static int read_native_pattern(const cJSON *profile, routing_profile *read, serv
 }
 
 static int read_unserved_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
-                                 int32_t *status) {
+                                 spisor_status *status) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, unserved_model_pattern.key);
     if (member == NULL || cJSON_IsNull(member)) {
         read->unserved_model_pattern = NULL;
@@ -90,7 +90,7 @@ static int read_unserved_pattern(const cJSON *profile, routing_profile *read, se
 }
 
 int routing_read_profile(const cJSON *profile, int need, routing_profile *read, service_reply *reply,
-                         int32_t *status) {
+                         spisor_status *status) {
     memset(read, 0, sizeof(*read));
     return (!(need & NEEDS_TIERS) || read_tier_members(profile, read, reply, status)) &&
            (!(need & NEEDS_NATIVE_PATTERN) || read_native_pattern(profile, read, reply, status)) &&

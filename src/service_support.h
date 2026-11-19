@@ -2,9 +2,9 @@
 #define SERVICE_SUPPORT_H
 
 #include <stddef.h>
-#include <stdint.h>
 
 #include "cJSON.h"
+#include "spisor/status.h"
 
 #if defined(_WIN32)
 #define SERVICE_WINDOWS 1
@@ -12,19 +12,14 @@
 #define SERVICE_WINDOWS 0
 #endif
 
-#define SERVICE_SUCCESS 0
-#define SERVICE_MALFORMED 1
-#define SERVICE_OUT_OF_MEMORY 2
-
 /**
  * What one of routing's decisions answered, over the cJSON tree its definition built from the caller's structs: a
- * result it owns on SUCCESS, which may be a refusal {"refused", "fix"}, or the reason the call is malformed.
+ * result it owns on OK, or on MALFORMED and REFUSED the definition's `refusal` filled.
  */
 typedef struct service_reply {
-    int32_t status;
+    spisor_status status;
     cJSON *result;
-    char message[320];
-    char fix[256];
+    spisor_refusal *refusal;
 } service_reply;
 
 /** The argument a decision reads, borrowed from its definition for the call. */
@@ -32,16 +27,16 @@ typedef struct service_call {
     const cJSON *argument;
 } service_call;
 
-int32_t service_out_of_memory(service_reply *reply);
+spisor_status service_out_of_memory(service_reply *reply);
 
-/** A semantic refusal, answered as a successful call: {"refused": cause, "fix": fix}. */
-int32_t service_refuse(const char *cause, const char *fix, service_reply *reply);
+/** Refuses the call as REFUSED with `cause` and `fix`, or answers OUT_OF_MEMORY when the refusal cannot be filled. */
+spisor_status service_refuse(const char *cause, const char *fix, service_reply *reply);
 
 /** Answers result and consumes it; NULL answers out of memory. */
-int32_t service_answer(cJSON *result, service_reply *reply);
+spisor_status service_answer(cJSON *result, service_reply *reply);
 
-/** Fails a malformed call as "<subject> <problem>". */
-int32_t service_fail(const char *subject, const char *problem, const char *fix, service_reply *reply);
+/** Refuses a malformed call as "<subject> <problem>", or answers OUT_OF_MEMORY when the refusal cannot be filled. */
+spisor_status service_fail(const char *subject, const char *problem, const char *fix, service_reply *reply);
 
 /** {name: item} with item consumed, or NULL when memory runs out. */
 cJSON *service_wrap(const char *name, cJSON *item);

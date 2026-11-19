@@ -11,6 +11,6 @@
 spisor_status routing_decide_arrival(const forebay_arrival_argument *argument, forebay_arrival_answer *answer);
 
 /** The port a proxy listens on, or the refusal naming why it cannot: a setting that is no port, or a listen failure. */
-int32_t routing_port_call(const cJSON *argument, service_reply *reply);
+spisor_status routing_port_call(const cJSON *argument, service_reply *reply);
 
 #endif
