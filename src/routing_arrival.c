@@ -142,11 +142,8 @@ static int32_t decide_the_port(const cJSON *value, const char *settings_file, co
 }
 
 int32_t routing_port_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *value = NULL;
     const cJSON *settings_file = NULL;
     const cJSON *failure = cJSON_GetObjectItemCaseSensitive(call.argument, "failure");

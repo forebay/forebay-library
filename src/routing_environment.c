@@ -306,11 +306,8 @@ static int read_request(const service_call *call, request *asked, service_reply 
 }
 
 int32_t routing_environment_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     request asked;
     if (read_request(&call, &asked, reply, &status)) {
         status = service_answer(service_wrap("environment", build_environment(&asked)), reply);

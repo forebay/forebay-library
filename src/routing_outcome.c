@@ -69,11 +69,8 @@ cJSON *routing_outcome_of(const cJSON *argument) {
 }
 
 int32_t routing_outcome_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *reply_status = NULL;
     const cJSON *headers = NULL;
     const cJSON *now = NULL;

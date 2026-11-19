@@ -32,7 +32,7 @@ void routing_walk_discard(step_walk *walk);
 
 const char *routing_walk_entry_member(const step_walk *walk, int index, const char *name);
 
-/** Reads a walk handed back into walk; answers 0 with refusal filled, or with it clear when memory runs out. */
-int routing_walk_read(const cJSON *json, step_walk *walk, routing_refusal *refusal);
+/** Reads a walk routing.step answered into walk; answers 0 when memory runs out. */
+int routing_walk_read(const cJSON *json, step_walk *walk);
 
 #endif

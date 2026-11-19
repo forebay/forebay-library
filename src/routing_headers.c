@@ -195,11 +195,8 @@ static int32_t answer_pass_through(const pass_through_arguments *arguments, serv
 }
 
 int32_t routing_pass_through_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     pass_through_arguments arguments;
     if (read_pass_through_arguments(&call, &arguments, reply, &status)) {
         status = answer_pass_through(&arguments, reply);
@@ -208,11 +205,8 @@ int32_t routing_pass_through_call(const cJSON *argument, service_reply *reply) {
 }
 
 int32_t routing_reply_headers_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *headers = NULL;
     const cJSON *rewritten = NULL;
     if (service_require(&call, "headers", service_is_object, "an object", &headers, reply, &status) &&

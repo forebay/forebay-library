@@ -2,7 +2,6 @@
 
 #include "spisor/allocation.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,7 +11,6 @@
 
 #define BAD_GATEWAY 502
 #define SERVICE_UNAVAILABLE 503
-#define REPORT_KIND_FIX "report response, streamed, streamFailed, thrown or failure"
 
 typedef int32_t (*report_reader)(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply);
 
@@ -216,16 +214,10 @@ static int32_t continue_walk(const service_call *call, const cJSON *providers, s
         return status;
     }
     report_reader read = reader_for(kind->valuestring);
-    if (read == NULL) {
-        char cause[160];
-        snprintf(cause, sizeof(cause), "the report kind %.64s is not one routing.step reads", kind->valuestring);
-        return service_refuse(cause, REPORT_KIND_FIX, reply);
-    }
     step_walk walk = {.log = cJSON_CreateArray()};
-    routing_refusal refusal = {0, "", NULL};
     const cJSON *handed_back = cJSON_GetObjectItemCaseSensitive(call->argument, "walk");
-    if (walk.log == NULL || !routing_walk_read(handed_back, &walk, &refusal)) {
-        status = routing_answer_refusal(&refusal, reply);
+    if (walk.log == NULL || !routing_walk_read(handed_back, &walk)) {
+        status = service_out_of_memory(reply);
     } else {
         status = read(&walk, providers, report, reply);
     }
@@ -353,11 +345,8 @@ static int32_t start_walk(const service_call *call, const cJSON *providers, serv
 }
 
 int32_t routing_step_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *providers = NULL;
     if (service_require(&call, "providers", is_string_list, "a list of strings", &providers, reply, &status)) {
         status = cJSON_GetObjectItemCaseSensitive(call.argument, "walk") == NULL

@@ -123,11 +123,8 @@ cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models,
 }
 
 int32_t routing_tiers_call(const cJSON *argument, service_reply *reply) {
-    service_call call;
-    int32_t status = service_open(argument, &call, reply);
-    if (status != SERVICE_SUCCESS) {
-        return status;
-    }
+    service_call call = {argument};
+    int32_t status = SERVICE_SUCCESS;
     const cJSON *profile_json = NULL;
     const cJSON *models = NULL;
     routing_profile profile;
