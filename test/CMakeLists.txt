@@ -72,6 +72,10 @@ forebay_definition_test(ir_codec_test spisor_allocator
     IR_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/ir_vectors.txt"
     ANTHROPIC_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/anthropic_vectors.txt")
 target_link_libraries(ir_codec_test PRIVATE forebay_ir_json)
+forebay_definition_test(ir_codec_out_of_memory_test spisor_allocator_counting
+    IR_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/ir_vectors.txt"
+    ANTHROPIC_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/anthropic_vectors.txt")
+target_link_libraries(ir_codec_out_of_memory_test PRIVATE forebay_ir_json)
 
 set(forebay_anthropic_vectors ANTHROPIC_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/anthropic_vectors.txt")
 forebay_definition_test(anthropic_test spisor_allocator ${forebay_anthropic_vectors})

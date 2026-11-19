@@ -8,13 +8,14 @@
 
 #include "check.h"
 #include "declaration_file.h"
+#include "forebay/anthropic.h"
 #include "forebay/routing.h"
 
 /**
  * @file
  * Loads the built forebay-library as a weivel host loads a C library: reads `library.json` with the standard, hands it
  * to `weivel/c`'s host on the pinned core, resolves `routing` as that host's own context gets a service, and calls
- * `arrival` through the very definition the host registered.
+ * `arrival` through the very definition the host registered, and `anthropic` the same way, writing an error body.
  */
 
 static int read_library(weivel_standard_library *library) {
@@ -55,11 +56,11 @@ static int load_forebay(weivel_c_host *host, const weivel_standard_library *decl
     return status == WEIVEL_C_STATUS_OK;
 }
 
-static const forebay_routing_definition *routing_of(weivel_c_host *host) {
+static void *service_of(weivel_c_host *host, const char *id) {
     weivel_c_context *context = NULL;
     void *service = NULL;
     CHECK(weivel_c_host_context(host, &context) == WEIVEL_C_STATUS_OK);
-    CHECK(weivel_c_context_get_service(context, "routing", &service, NULL) == WEIVEL_C_STATUS_OK);
+    CHECK(weivel_c_context_get_service(context, id, &service, NULL) == WEIVEL_C_STATUS_OK);
     return service;
 }
 
@@ -81,25 +82,48 @@ static void arrive_through(const forebay_routing_definition *routing) {
     CHECK(answer.storage == NULL && refusal.storage == NULL);
 }
 
+static void write_error_through(const forebay_anthropic_definition *anthropic) {
+    static const char expected[] =
+        "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"upstream failed\"}}";
+    forebay_anthropic_error_argument argument = SPISOR_INIT(forebay_anthropic_error_argument);
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    CHECK(anthropic->size >= sizeof(forebay_anthropic_definition));
+    argument.error_type = "api_error";
+    argument.message = "upstream failed";
+    CHECK(anthropic->error_envelope(anthropic->context, &argument, &answer, &refusal) == SPISOR_OK);
+    CHECK(answer.length == sizeof expected - 1 && answer.bytes != NULL &&
+          memcmp(answer.bytes, expected, sizeof expected - 1) == 0);
+    anthropic->release_body(anthropic->context, &answer);
+    anthropic->release_refusal(anthropic->context, &refusal);
+    CHECK(answer.storage == NULL && refusal.storage == NULL);
+}
+
 static void destroy_host(weivel_c_host *host) {
     uint32_t finished = 0;
     CHECK(weivel_c_host_destroy(host, &finished) == WEIVEL_C_STATUS_OK && finished == 1);
     CHECK(weivel_c_host_free(host) == WEIVEL_C_STATUS_OK);
 }
 
-static void routing_arrives_through_the_definition_the_host_registered(void) {
+static void services_work_through_the_definitions_the_host_registered(void) {
     weivel_standard_library declaration = WEIVEL_INIT(weivel_standard_library);
     weivel_c_host *host;
     const forebay_routing_definition *routing;
+    const forebay_anthropic_definition *anthropic;
     if (!read_library(&declaration)) {
         return;
     }
     host = create_host();
     if (host != NULL && load_forebay(host, &declaration)) {
-        routing = routing_of(host);
+        routing = service_of(host, "routing");
         CHECK(routing != NULL);
         if (routing != NULL) {
             arrive_through(routing);
+        }
+        anthropic = service_of(host, "anthropic");
+        CHECK(anthropic != NULL);
+        if (anthropic != NULL) {
+            write_error_through(anthropic);
         }
     }
     if (host != NULL) {
@@ -109,6 +133,6 @@ static void routing_arrives_through_the_definition_the_host_registered(void) {
 }
 
 int main(void) {
-    routing_arrives_through_the_definition_the_host_registered();
+    services_work_through_the_definitions_the_host_registered();
     return check_summary("weivel_host_load_test");
 }

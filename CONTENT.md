@@ -144,6 +144,8 @@ Three operations write the proxy's own bodies, each answered as a `forebay_anthr
 `response-*` one in both directions through the definition, `anthropic_stream_test` every `stream-*` one, a decode
 also split in two at every byte and fed a byte at a time, and `anthropic_out_of_memory_test` fails each allocation of
 every vector, singly and from that one on.
+The test-only IR JSON codec the vectors are read with has its own `ir_codec_test` round trip and
+`ir_codec_out_of_memory_test`.
 
 ## Building and testing
 

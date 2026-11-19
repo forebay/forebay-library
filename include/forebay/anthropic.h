@@ -296,7 +296,8 @@ typedef struct forebay_anthropic_definition {
      * One model of `/v1/models/<id>`: the model `id` names, built as the listing builds it (first provider wins), with
      * `found` 1, or `{"type":"error","error":{"type":"not_found_error","message":"model not found: <id>"}}` with
      * `found` 0, so the caller answers 200 or 404. MALFORMED, naming the member, as `model_listing` for the providers
-     * and for a NULL `id`.
+     * and for a NULL `id`. An empty `id` is not a lookup: `/v1/models/` belongs to `model_listing`, as the TypeScript
+     * routes it, and `model_lookup` answers not found for it.
      */
     spisor_status (*model_lookup)(void *context, const forebay_anthropic_model_lookup_argument *argument,
                                   forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal);
