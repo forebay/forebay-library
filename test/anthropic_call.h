@@ -20,12 +20,6 @@ static inline const forebay_anthropic_definition *anthropic_definition(void) {
     return (const forebay_anthropic_definition *)forebay_anthropic_definition_of();
 }
 
-/** Whether a vector's `direction` member is `direction`. */
-static inline int anthropic_is_direction(const cJSON *vector, const char *direction) {
-    const char *actual = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(vector, "direction"));
-    return actual != NULL && strcmp(actual, direction) == 0;
-}
-
 /** The IR request of an encode vector's `input` or any IR JSON, in the arena; 1 when the codec read it. */
 static inline int anthropic_read_ir(const cJSON *ir, ir_json_arena *arena, forebay_ir_request *request) {
     cJSON *form = ir_json_schema_form(ir);
@@ -120,6 +114,170 @@ static inline int anthropic_body_equals(const forebay_anthropic_body_answer *ans
     }
     cJSON_Delete(parsed);
     return same;
+}
+
+/** What a direction is called on: a decode's wire text, or an encode's IR read into the arena. */
+typedef struct anthropic_input {
+    const char *text;
+    char *printed;
+    ir_json_arena arena;
+    forebay_ir_request request;
+    forebay_ir_response response;
+} anthropic_input;
+
+/** Any answer a direction fills, begun empty with the size of its own kind by anthropic_start_answer. */
+typedef union anthropic_answer {
+    uint32_t size;
+    forebay_anthropic_request_answer request;
+    forebay_anthropic_response_answer response;
+    forebay_anthropic_body_answer body;
+} anthropic_answer;
+
+/**
+ * One direction of the service as a vector names it: how its input is read from the vector, the call through the
+ * definition, the comparison of what it answered with the vector's `output`, and the release of that answer.
+ */
+typedef struct anthropic_direction {
+    const char *name;
+    uint32_t answer_size;
+    int (*read_input)(const cJSON *json, anthropic_input *input);
+    spisor_status (*call)(const anthropic_input *input, anthropic_answer *answer, spisor_refusal *refusal);
+    int (*matches)(const anthropic_answer *answer, const cJSON *expected);
+    void (*release)(anthropic_answer *answer);
+} anthropic_direction;
+
+/** An input holding `text`, borrowed, as a decode reads it. */
+static inline anthropic_input anthropic_input_of_text(const char *text) {
+    anthropic_input input = {0};
+    input.text = text;
+    return input;
+}
+
+static inline void anthropic_input_release(anthropic_input *input) {
+    cJSON_free(input->printed);
+    ir_json_arena_release(&input->arena);
+    *input = (anthropic_input){0};
+}
+
+/** Zeroes the answer whole and sets the size of the direction's kind. */
+static inline void anthropic_start_answer(const anthropic_direction *direction, anthropic_answer *answer) {
+    memset(answer, 0, sizeof *answer);
+    answer->size = direction->answer_size;
+}
+
+static inline int anthropic_read_wire_text(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    input->printed = cJSON_PrintUnformatted(json);
+    input->text = input->printed;
+    return input->printed != NULL;
+}
+
+static inline int anthropic_read_request_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    return anthropic_read_ir(json, &input->arena, &input->request);
+}
+
+static inline int anthropic_read_response_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    return anthropic_read_response_ir(json, &input->arena, &input->response);
+}
+
+static inline spisor_status anthropic_call_decode_request(const anthropic_input *input, anthropic_answer *answer,
+                                                          spisor_refusal *refusal) {
+    return anthropic_decode_text(input->text, &answer->request, refusal);
+}
+
+static inline spisor_status anthropic_call_encode_request(const anthropic_input *input, anthropic_answer *answer,
+                                                          spisor_refusal *refusal) {
+    return anthropic_encode_request_of(&input->request, &answer->body, refusal);
+}
+
+static inline spisor_status anthropic_call_decode_response(const anthropic_input *input, anthropic_answer *answer,
+                                                           spisor_refusal *refusal) {
+    return anthropic_decode_response_text(input->text, &answer->response, refusal);
+}
+
+static inline spisor_status anthropic_call_encode_response(const anthropic_input *input, anthropic_answer *answer,
+                                                           spisor_refusal *refusal) {
+    return anthropic_encode_response_of(&input->response, &answer->body, refusal);
+}
+
+static inline int anthropic_request_matches(const anthropic_answer *answer, const cJSON *expected) {
+    return answer->request.request != NULL && anthropic_request_equals(answer->request.request, expected);
+}
+
+static inline int anthropic_response_matches(const anthropic_answer *answer, const cJSON *expected) {
+    return answer->response.response != NULL && anthropic_response_equals(answer->response.response, expected);
+}
+
+static inline int anthropic_body_matches(const anthropic_answer *answer, const cJSON *expected) {
+    return anthropic_body_equals(&answer->body, expected);
+}
+
+static inline void anthropic_release_request(anthropic_answer *answer) {
+    anthropic_definition()->release_request(NULL, &answer->request);
+}
+
+static inline void anthropic_release_response(anthropic_answer *answer) {
+    anthropic_definition()->release_response(NULL, &answer->response);
+}
+
+static inline void anthropic_release_body(anthropic_answer *answer) {
+    anthropic_definition()->release_body(NULL, &answer->body);
+}
+
+/** The direction a vector's `direction` member names, NULL for one this service does not have. */
+static inline const anthropic_direction *anthropic_direction_named(const char *name) {
+    static const anthropic_direction directions[] = {
+        {"decodeRequest", (uint32_t)sizeof(forebay_anthropic_request_answer), anthropic_read_wire_text,
+         anthropic_call_decode_request, anthropic_request_matches, anthropic_release_request},
+        {"encodeRequest", (uint32_t)sizeof(forebay_anthropic_body_answer), anthropic_read_request_input,
+         anthropic_call_encode_request, anthropic_body_matches, anthropic_release_body},
+        {"decodeResponse", (uint32_t)sizeof(forebay_anthropic_response_answer), anthropic_read_wire_text,
+         anthropic_call_decode_response, anthropic_response_matches, anthropic_release_response},
+        {"encodeResponse", (uint32_t)sizeof(forebay_anthropic_body_answer), anthropic_read_response_input,
+         anthropic_call_encode_response, anthropic_body_matches, anthropic_release_body},
+    };
+    for (size_t index = 0; name != NULL && index < sizeof directions / sizeof directions[0]; index++) {
+        if (strcmp(directions[index].name, name) == 0) {
+            return &directions[index];
+        }
+    }
+    return NULL;
+}
+
+/** The direction of a vector, NULL for one this service does not have. */
+static inline const anthropic_direction *anthropic_direction_of(const cJSON *vector) {
+    return anthropic_direction_named(
+        cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(vector, "direction")));
+}
+
+/** Calls the direction on the input and requires OK with an answer that matches `expected`. */
+static inline void anthropic_check_direction(const anthropic_direction *direction, const char *label,
+                                             const anthropic_input *input, const cJSON *expected) {
+    anthropic_answer answer;
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    anthropic_start_answer(direction, &answer);
+    spisor_status status = direction->call(input, &answer, &refusal);
+    if (status != SPISOR_OK) {
+        support_failf(label, "%s answered %d", direction->name, (int)status);
+    } else if (!direction->matches(&answer, expected)) {
+        support_failf(label, "%s did not answer the expected one", direction->name);
+    }
+    direction->release(&answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+/** Reads the vector input as the direction does, then checks the direction on it. */
+static inline void anthropic_check_vector_input(const anthropic_direction *direction, const char *label,
+                                                const cJSON *input_json, const cJSON *expected) {
+    anthropic_input input;
+    if (!direction->read_input(input_json, &input)) {
+        support_fail(label, "the input is not one the test reads");
+    } else {
+        anthropic_check_direction(direction, label, &input, expected);
+    }
+    anthropic_input_release(&input);
 }
 
 #endif
