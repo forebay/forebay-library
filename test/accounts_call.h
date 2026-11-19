@@ -98,6 +98,14 @@ static inline const char *accounts_optional_text(const cJSON *argument, const ch
 }
 
 /** A number member into `*number`, answering 1 when the member is one. */
+/** A vector's whole number from 0 to UINT32_MAX as a uint32_t, left as it was when absent. */
+static inline void accounts_optional_count(const cJSON *argument, const char *key, uint32_t *count) {
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(argument, key);
+    if (cJSON_IsNumber(member) && member->valuedouble >= 0 && member->valuedouble <= UINT32_MAX) {
+        *count = (uint32_t)member->valuedouble;
+    }
+}
+
 static inline uint32_t accounts_optional_number(const cJSON *argument, const char *key, double *number) {
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(argument, key);
     if (!cJSON_IsNumber(member)) {
@@ -150,7 +158,7 @@ static inline void accounts_read_report(const cJSON *argument, const char *store
     report->reason = accounts_optional_text(argument, "reason");
     report->has_reset_at = accounts_optional_number(argument, "resetAt", &report->reset_at);
     report->has_random = accounts_optional_number(argument, "random", &report->random);
-    accounts_optional_number(argument, "attempt", &report->attempt);
+    accounts_optional_count(argument, "attempt", &report->attempt);
     accounts_optional_number(argument, "baseMilliseconds", &report->base_milliseconds);
     accounts_optional_number(argument, "maxMilliseconds", &report->max_milliseconds);
 }

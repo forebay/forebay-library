@@ -192,15 +192,15 @@ typedef enum forebay_report_kind {
 
 /**
  * A forebay_report_kind and what it carries: `after_bytes` 1 when a stream failed after bytes went out, `message`
- * (NULL for none) for a throw or a failed stream, and the upstream `status` and `headers` at `now` for a failure.
- * First shape ends at `now`.
+ * (NULL for none) for a throw or a failed stream, and the upstream `status`, 0 for none or an HTTP status from 100
+ * to 599, and `headers` at `now` for a failure. First shape ends at `now`.
  */
 typedef struct forebay_report {
     uint32_t size;
     uint32_t kind;
     uint32_t after_bytes;
     const char *message;
-    double status;
+    uint32_t status;
     const forebay_pair *headers;
     size_t header_count;
     uint32_t has_retry_after;
@@ -274,7 +274,7 @@ typedef struct forebay_step_answer {
     const char *provider;
     const char *model;
     uint32_t reply_kind;
-    double status;
+    uint32_t status;
     const char *message;
     const forebay_pair *headers;
     size_t header_count;

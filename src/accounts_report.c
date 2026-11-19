@@ -29,7 +29,7 @@ typedef struct report_request {
     report_outcome outcome;
     double now;
     double random;
-    double attempt;
+    uint32_t attempt;
     double base;
     double maximum;
     int has_reset;
@@ -162,7 +162,7 @@ static int needs_backoff(const forebay_accounts_report_argument *argument) {
 
 static int has_finite_numbers(const forebay_accounts_report_argument *argument) {
     return forebay_is_finite(argument->now) && forebay_is_finite(argument->reset_at) &&
-           forebay_is_finite(argument->random) && forebay_is_finite(argument->attempt) &&
+           forebay_is_finite(argument->random) &&
            forebay_is_finite(argument->base_milliseconds) && forebay_is_finite(argument->max_milliseconds);
 }
 

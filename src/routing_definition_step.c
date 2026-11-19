@@ -29,7 +29,7 @@ static uint32_t step_kind_of(const char *kind) {
 static int fill_reply(void **storage, const cJSON *reply, forebay_step_answer *answer) {
     const cJSON *reset_at = cJSON_GetObjectItemCaseSensitive(reply, "resetAt");
     answer->reply_kind = routing_reply_kind(reply);
-    answer->status = routing_number(reply, "status");
+    answer->status = (uint32_t)routing_number(reply, "status");
     answer->has_reset_at = cJSON_IsNumber(reset_at) ? 1u : 0u;
     answer->reset_at = cJSON_IsNumber(reset_at) ? reset_at->valuedouble : 0;
     return routing_read_text(storage, reply, "message", &answer->message) &&
@@ -140,10 +140,14 @@ static cJSON *later_step_json(const forebay_step_argument *argument) {
     return call;
 }
 
+static int is_http_status(uint32_t status) {
+    return status == 0 || (status >= 100 && status <= 599);
+}
+
 static int is_report(const forebay_report *report) {
     return report != NULL && spisor_has_shape(report->size, REPORT_SHAPE) && report->kind >= FOREBAY_REPORT_RESPONSE &&
            report->kind <= FOREBAY_REPORT_FAILURE && routing_are_pairs(report->headers, report->header_count) &&
-           forebay_is_finite(report->status) && forebay_is_finite(report->retry_after_milliseconds) &&
+           is_http_status(report->status) && forebay_is_finite(report->retry_after_milliseconds) &&
            forebay_is_finite(report->now);
 }
 
@@ -165,7 +169,8 @@ spisor_status routing_step(void *context, const forebay_step_argument *argument,
         (argument->walk == NULL ? !is_first_step(argument) : !is_report(argument->report))) {
         return forebay_refuse_member(refusal, argument->walk == NULL ? "a first step's members" : "report",
                                      argument->walk == NULL ? "complete, with every text set"
-                                                            : "a forebay_report of a kind the header names");
+                                                            : "a forebay_report of a kind the header names, with "
+                                                              "every number in range");
     }
     cJSON *call = argument->walk == NULL ? first_step_json(argument) : later_step_json(argument);
     return routing_decide(routing_step_call, call, fill_step, answer, &answer->storage, STEP_ANSWER_SHAPE, refusal);
