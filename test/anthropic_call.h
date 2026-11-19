@@ -143,6 +143,7 @@ typedef struct anthropic_input {
     forebay_anthropic_model_listing_argument listing;
     forebay_anthropic_listed_provider *providers;
     forebay_anthropic_listed_model *models;
+    const char *lookup_id;
 } anthropic_input;
 
 /** Every answer a whole stream through one handle gave, each feed's and the finish's, held until released. */
@@ -159,6 +160,7 @@ typedef union anthropic_answer {
     forebay_anthropic_request_answer request;
     forebay_anthropic_response_answer response;
     forebay_anthropic_body_answer body;
+    forebay_anthropic_model_lookup_answer lookup;
     anthropic_stream_answer stream;
 } anthropic_answer;
 
@@ -563,6 +565,33 @@ static inline int anthropic_read_listing_input(const cJSON *json, anthropic_inpu
     return 1;
 }
 
+/** A wire-shape lookup vector's input: a listing's, and the `id` to look up, borrowed from the JSON. */
+static inline int anthropic_read_lookup_input(const cJSON *json, anthropic_input *input) {
+    int read = anthropic_read_listing_input(json, input);
+    input->lookup_id = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "id"));
+    return read;
+}
+
+static inline spisor_status anthropic_call_model_lookup(const anthropic_input *input, anthropic_answer *answer,
+                                                        spisor_refusal *refusal) {
+    forebay_anthropic_model_lookup_argument argument = SPISOR_INIT(forebay_anthropic_model_lookup_argument);
+    argument.default_context = input->listing.default_context;
+    argument.default_output = input->listing.default_output;
+    argument.providers = input->listing.providers;
+    argument.provider_count = input->listing.provider_count;
+    argument.id = input->lookup_id;
+    return anthropic_definition()->model_lookup(NULL, &argument, &answer->lookup, refusal);
+}
+
+static inline int anthropic_lookup_matches(const anthropic_answer *answer, const cJSON *expected) {
+    forebay_anthropic_body_answer body = {sizeof body, answer->lookup.bytes, answer->lookup.length, NULL};
+    return anthropic_body_equals(&body, expected);
+}
+
+static inline void anthropic_release_lookup(anthropic_answer *answer) {
+    anthropic_definition()->release_model_lookup(NULL, &answer->lookup);
+}
+
 static inline spisor_status anthropic_call_error_envelope(const anthropic_input *input, anthropic_answer *answer,
                                                           spisor_refusal *refusal) {
     return anthropic_definition()->error_envelope(NULL, &input->error, &answer->body, refusal);
@@ -592,6 +621,8 @@ static inline const anthropic_direction *anthropic_direction_named(const char *n
          anthropic_call_error_envelope, anthropic_body_matches, anthropic_release_body},
         {"modelListing", (uint32_t)sizeof(forebay_anthropic_body_answer), anthropic_read_listing_input,
          anthropic_call_model_listing, anthropic_body_matches, anthropic_release_body},
+        {"modelLookup", (uint32_t)sizeof(forebay_anthropic_model_lookup_answer), anthropic_read_lookup_input,
+         anthropic_call_model_lookup, anthropic_lookup_matches, anthropic_release_lookup},
     };
     for (size_t index = 0; name != NULL && index < sizeof directions / sizeof directions[0]; index++) {
         if (strcmp(directions[index].name, name) == 0) {

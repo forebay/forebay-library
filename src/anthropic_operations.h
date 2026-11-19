@@ -56,5 +56,8 @@ spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_er
                                        forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
 spisor_status anthropic_model_listing(void *context, const forebay_anthropic_model_listing_argument *argument,
                                       forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
+spisor_status anthropic_model_lookup(void *context, const forebay_anthropic_model_lookup_argument *argument,
+                                     forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal);
+void anthropic_release_model_lookup(void *context, forebay_anthropic_model_lookup_answer *answer);
 
 #endif

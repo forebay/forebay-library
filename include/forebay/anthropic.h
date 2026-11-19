@@ -173,6 +173,32 @@ typedef struct forebay_anthropic_model_listing_argument {
 } forebay_anthropic_model_listing_argument;
 
 /**
+ * One model to look up in what a `/v1/models/<id>` request is answered from: the same providers and defaults as the
+ * listing, and `id`, required, the model id already URL-decoded by the caller. Borrowed for the call. First shape ends
+ * at `id`.
+ */
+typedef struct forebay_anthropic_model_lookup_argument {
+    uint32_t size;
+    uint64_t default_context;
+    uint64_t default_output;
+    const forebay_anthropic_listed_provider *providers;
+    size_t provider_count;
+    const char *id;
+} forebay_anthropic_model_lookup_argument;
+
+/**
+ * The body of a lookup, the provider's until release_model_lookup: the listed model when `found` is 1 (answer 200), or
+ * the `not_found_error` body when it is 0 (answer 404). First shape ends at `storage`.
+ */
+typedef struct forebay_anthropic_model_lookup_answer {
+    uint32_t size;
+    uint32_t found;
+    const uint8_t *bytes;
+    size_t length;
+    void *storage;
+} forebay_anthropic_model_lookup_answer;
+
+/**
  * The anthropic service. Every operation answers MALFORMED, before it allocates, for an argument or an answer absent
  * or short of its first shape, an answer that is not empty and `bytes` NULL beside a nonzero `length`; MALFORMED,
  * with the refusal saying what to repair, for a body that is not JSON and for an IR that breaks the rule its header
@@ -181,7 +207,7 @@ typedef struct forebay_anthropic_model_listing_argument {
  * OUT_OF_MEMORY, with the answer empty. JSON this library cannot read, a string holding a NUL (`\u0000`), is refused
  * as a body that is not JSON, and a number that is not finite (`1e400`) reads as null, as JSON.stringify writes it.
  * First shape ends at `release_refusal`; the response operations follow it, then the stream operations, then the wire
- * shapes, and a later operation is appended after those.
+ * shapes (listing and lookup), and a later operation is appended after those.
  */
 typedef struct forebay_anthropic_definition {
     uint32_t size;
@@ -266,6 +292,16 @@ typedef struct forebay_anthropic_definition {
      */
     spisor_status (*model_listing)(void *context, const forebay_anthropic_model_listing_argument *argument,
                                    forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
+    /**
+     * One model of `/v1/models/<id>`: the model `id` names, built as the listing builds it (first provider wins), with
+     * `found` 1, or `{"type":"error","error":{"type":"not_found_error","message":"model not found: <id>"}}` with
+     * `found` 0, so the caller answers 200 or 404. MALFORMED, naming the member, as `model_listing` for the providers
+     * and for a NULL `id`.
+     */
+    spisor_status (*model_lookup)(void *context, const forebay_anthropic_model_lookup_argument *argument,
+                                  forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal);
+    /** Frees a lookup answer, NULL or one never filled doing nothing. */
+    void (*release_model_lookup)(void *context, forebay_anthropic_model_lookup_answer *answer);
 } forebay_anthropic_definition;
 
 /** The static forebay_anthropic_definition, living until the library is unloaded. */
