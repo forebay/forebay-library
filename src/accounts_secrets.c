@@ -1,5 +1,7 @@
 #include "accounts_secrets.h"
 
+#include "definition_support.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -30,8 +32,8 @@ const char *accounts_find_token_member(const cJSON *value) {
     return NULL;
 }
 
-int32_t accounts_refuse_token_member(const char *subject, const char *member, uint8_t **out, size_t *out_len) {
+spisor_status accounts_refuse_token_member(const char *subject, const char *member, spisor_refusal *refusal) {
     char cause[200];
     snprintf(cause, sizeof(cause), "the %s carries the token member %s", subject, member);
-    return service_refuse(cause, TOKEN_FIX, out, out_len);
+    return forebay_refuse_as(refusal, SPISOR_REFUSED, cause, TOKEN_FIX);
 }

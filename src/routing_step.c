@@ -1,5 +1,7 @@
 #include "routing_step.h"
 
+#include "spisor/allocation.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +44,7 @@ static cJSON *exhausted(step_walk *walk) {
     char *message =
         routing_formatted("no chain entry could serve the request: %s", walk->failure == NULL ? "" : walk->failure);
     cJSON *step = message == NULL ? NULL : routing_reply_step("proxyError", BAD_GATEWAY, message);
-    free(message);
+    spisor_memory_release(message);
     return routing_answer_of(walk, step, 0);
 }
 
@@ -209,7 +211,7 @@ static int is_string_list(const cJSON *value) {
     return 1;
 }
 
-static int32_t continue_walk(const spisor_call *call, const cJSON *providers, uint8_t **out, size_t *out_len) {
+static int32_t continue_walk(const service_call *call, const cJSON *providers, uint8_t **out, size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     const cJSON *report = NULL;
     const cJSON *kind = NULL;
@@ -242,7 +244,7 @@ static char *login_hints(const cJSON *providers, const char *command) {
     cJSON_ArrayForEach(id, providers) {
         char *longer = hints == NULL ? routing_formatted("%s %s login", command, id->valuestring)
                                      : routing_formatted("%s or %s %s login", hints, command, id->valuestring);
-        free(hints);
+        spisor_memory_release(hints);
         if (longer == NULL) {
             return NULL;
         }
@@ -260,8 +262,8 @@ static cJSON *no_model_step(const step_walk *walk, const cJSON *providers, const
                                                       "with %s, or set routing.modelMap in %s",
                                                       walk->requested, hints, settings);
     cJSON *step = message == NULL ? NULL : routing_reply_step("apiError", SERVICE_UNAVAILABLE, message);
-    free(hints);
-    free(message);
+    spisor_memory_release(hints);
+    spisor_memory_release(message);
     return step;
 }
 
@@ -279,7 +281,7 @@ static int log_notices(step_walk *walk, const cJSON *notices) {
  * @implNote An empty chain is answered with a refresh first, since a login after the last refresh offers
  * models the snapshot lacks; only an empty chain after that refresh is refused.
  */
-static cJSON *walk_over(step_walk *walk, const cJSON *resolution, const cJSON *providers, const spisor_call *call) {
+static cJSON *walk_over(step_walk *walk, const cJSON *resolution, const cJSON *providers, const service_call *call) {
     walk->chain = cJSON_GetObjectItemCaseSensitive(resolution, "chain");
     if (!log_notices(walk, cJSON_GetObjectItemCaseSensitive(resolution, "notices"))) {
         return NULL;
@@ -294,7 +296,7 @@ static cJSON *walk_over(step_walk *walk, const cJSON *resolution, const cJSON *p
     return routing_answer_of(walk, no_model_step(walk, providers, wording), 0);
 }
 
-static int32_t routed(const spisor_call *call, const cJSON *providers, step_walk *walk, uint8_t **out,
+static int32_t routed(const service_call *call, const cJSON *providers, step_walk *walk, uint8_t **out,
                       size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     const cJSON *request = cJSON_GetObjectItemCaseSensitive(call->argument, "request");
@@ -325,7 +327,7 @@ static int is_passed_through(const cJSON *request, const cJSON *providers) {
            cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(request, "passThrough"));
 }
 
-static int read_first_call(const spisor_call *call, uint8_t **out, size_t *out_len, int32_t *status) {
+static int read_first_call(const service_call *call, uint8_t **out, size_t *out_len, int32_t *status) {
     const cJSON *member = NULL;
     const cJSON *wording = NULL;
     return service_require(call, "profile", service_is_object, "an object", &member, out, out_len, status) &&
@@ -339,7 +341,7 @@ static int read_first_call(const spisor_call *call, uint8_t **out, size_t *out_l
                                   &member, out, out_len, status);
 }
 
-static int32_t start_walk(const spisor_call *call, const cJSON *providers, uint8_t **out, size_t *out_len) {
+static int32_t start_walk(const service_call *call, const cJSON *providers, uint8_t **out, size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     if (!read_first_call(call, out, out_len, &status)) {
         return status;
@@ -357,7 +359,7 @@ static int32_t start_walk(const spisor_call *call, const cJSON *providers, uint8
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_step(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -368,6 +370,6 @@ SERVICE_EXPORT int32_t forebay_library_routing_step(const uint8_t *in, size_t in
                      ? start_walk(&call, providers, out, out_len)
                      : continue_walk(&call, providers, out, out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }

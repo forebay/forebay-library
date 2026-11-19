@@ -1,37 +1,17 @@
 #include "support.h"
 
-int32_t forebay_library_accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_accounts_remove(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_accounts_acquire(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_accounts_report(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_accounts_token_expired(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-int32_t forebay_library_accounts_has_capacity(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+#include <math.h>
 
-typedef struct named_function {
-    const char *name;
-    library_function function;
-    int takes_store;
-} named_function;
+#include "accounts_call.h"
+#include "json_allocation.h"
+#include "spisor/allocation.h"
 
-static const named_function functions[] = {
-    {"list", forebay_library_accounts_list, 1},
-    {"upsert", forebay_library_accounts_upsert, 1},
-    {"remove", forebay_library_accounts_remove, 1},
-    {"acquire", forebay_library_accounts_acquire, 1},
-    {"report", forebay_library_accounts_report, 1},
-    {"tokenExpired", forebay_library_accounts_token_expired, 0},
-    {"hasCapacity", forebay_library_accounts_has_capacity, 0},
-};
-
-static const named_function *find_function(const char *name) {
-    for (size_t index = 0; index < sizeof(functions) / sizeof(functions[0]); index++) {
-        if (strcmp(functions[index].name, name) == 0) {
-            return &functions[index];
-        }
-    }
-    return NULL;
-}
+/**
+ * @file
+ * Every accounts vector, each step called through the definition and its answer compared with the result the vector
+ * writes, then the store with the one it writes after; and the calls no vector can write: malformed structs, answers
+ * that are not empty, and what the store looks like on disk.
+ */
 
 static int file_exists(const char *path) {
     FILE *file = fopen(path, "rb");
@@ -47,7 +27,7 @@ static void lay_out_store(const cJSON *vector, const char *store) {
     if (cJSON_IsObject(before)) {
         char *text = cJSON_PrintUnformatted(before);
         support_write(store, text);
-        free(text);
+        cJSON_free(text);
     } else if (cJSON_IsString(before_text)) {
         support_write(store, before_text->valuestring);
     }
@@ -67,7 +47,7 @@ static void expect_store(const cJSON *step, const char *store, const char *label
             char *wanted = cJSON_PrintUnformatted(after);
             support_failf(label, "the store differs\n  expected %s\n  actual   %s", wanted,
                           text == NULL ? "(absent)" : text);
-            free(wanted);
+            cJSON_free(wanted);
         }
         cJSON_Delete(stored);
     } else if (cJSON_IsString(after_text) && (text == NULL || strcmp(text, after_text->valuestring) != 0)) {
@@ -76,35 +56,38 @@ static void expect_store(const cJSON *step, const char *store, const char *label
     free(text);
 }
 
+static void expect_result(const cJSON *expected, const accounts_call *call, const accounts_answers *answers,
+                          const char *label) {
+    cJSON *actual = accounts_result_of(call, answers);
+    if (!cJSON_Compare(actual, expected, 1)) {
+        char *wanted = cJSON_PrintUnformatted(expected);
+        char *got = cJSON_PrintUnformatted(actual);
+        support_failf(label, "status %d\n  expected %s\n  actual   %s", (int)answers->status, wanted, got);
+        cJSON_free(wanted);
+        cJSON_free(got);
+    }
+    cJSON_Delete(actual);
+}
+
 static void run_step(const cJSON *step, const char *store, const char *path) {
-    const cJSON *name = cJSON_GetObjectItemCaseSensitive(step, "function");
-    const cJSON *argument = cJSON_GetObjectItemCaseSensitive(step, "argument");
     const cJSON *result = cJSON_GetObjectItemCaseSensitive(step, "result");
-    const named_function *target = cJSON_IsString(name) ? find_function(name->valuestring) : NULL;
-    if (target == NULL || argument == NULL || result == NULL) {
-        support_fail(path, "not a vector step: needs a known function, an argument and a result");
+    accounts_call call;
+    accounts_answers answers;
+    char label[1100];
+    snprintf(label, sizeof(label), "%s [%s]", path, accounts_optional_text(step, "function"));
+    if (result == NULL || !accounts_read_call(step, store, &call)) {
+        support_fail(label, "not a vector step: needs a known function, an argument and a result");
         return;
     }
-    char label[1100];
-    snprintf(label, sizeof(label), "%s [%s]", path, name->valuestring);
-    cJSON *call = cJSON_Duplicate(argument, 1);
-    if (target->takes_store) {
-        cJSON_AddStringToObject(call, "store", store);
-    }
-    char *input = cJSON_PrintUnformatted(call);
-    char *expected = cJSON_PrintUnformatted(result);
-    support_answer answer = support_call_raw(target->function, input);
-    expect_json(&answer, 0, expected, label);
+    accounts_make_call(&call, &answers);
+    expect_result(result, &call, &answers, label);
     expect_store(step, store, label);
-    free(input);
-    free(expected);
-    cJSON_Delete(call);
+    accounts_release_answers(&answers);
+    accounts_release_call(&call);
 }
 
 static void run_vector(const char *path) {
-    char *text = support_read_text(path);
-    cJSON *vector = text == NULL ? NULL : cJSON_Parse(text);
-    free(text);
+    cJSON *vector = spisor_vector_read(path);
     if (vector == NULL) {
         support_fail(path, "not JSON");
         return;
@@ -117,8 +100,8 @@ static void run_vector(const char *path) {
     cJSON_ArrayForEach(step, cJSON_GetObjectItemCaseSensitive(vector, "then")) {
         run_step(step, store, path);
     }
-    free(store);
-    free(directory);
+    spisor_memory_release(store);
+    spisor_memory_release(directory);
     cJSON_Delete(vector);
 }
 
@@ -139,96 +122,177 @@ static int run_every_vector(void) {
     return count;
 }
 
-/** Calls function with members_json's members, plus store when one is given. */
-static support_answer call_with(library_function function, const char *store, const char *members_json) {
-    cJSON *call = cJSON_Parse(members_json);
-    if (store != NULL) {
-        cJSON_AddStringToObject(call, "store", store);
+static void expect_status(spisor_status status, spisor_status expected, spisor_refusal *refusal, const char *label) {
+    if (status != expected || (expected != SPISOR_OK && (refusal->detail == NULL || refusal->fix == NULL))) {
+        support_failf(label, "expected status %d with a refusal, got %d refusing with \"%s\"", (int)expected,
+                      (int)status, refusal->detail == NULL ? "(none)" : refusal->detail);
     }
-    char *input = cJSON_PrintUnformatted(call);
-    support_answer answer = support_call_raw(function, input);
-    free(input);
-    cJSON_Delete(call);
-    return answer;
+    if (refusal->fix != NULL && (strstr(refusal->fix, "JSON") != NULL || strstr(refusal->fix, "send ") != NULL)) {
+        support_failf(label, "the fix speaks JSON, not the struct: %s", refusal->fix);
+    }
+    accounts_definition()->release_refusal(NULL, refusal);
 }
 
-typedef struct malformed_call {
-    const char *label;
-    library_function function;
-    int sends_store;
-    const char *members;
-} malformed_call;
+static spisor_value text_value(const char *text) {
+    spisor_value value = {SPISOR_VALUE_TEXT, 0, 0, text, strlen(text), NULL, NULL, 0};
+    return value;
+}
 
-static const malformed_call malformed_calls[] = {
-    {"list without a store", forebay_library_accounts_list, 0, "{}"},
-    {"list with a store that is a number", forebay_library_accounts_list, 0, "{\"store\":5}"},
-    {"list with an empty store", forebay_library_accounts_list, 0, "{\"store\":\"\"}"},
-    {"upsert without an account", forebay_library_accounts_upsert, 1, "{}"},
-    {"upsert of an account that is a list", forebay_library_accounts_upsert, 1, "{\"account\":[]}"},
-    {"upsert of an account without an id", forebay_library_accounts_upsert, 1, "{\"account\":{\"label\":\"x\"}}"},
-    {"upsert of an account whose id is a number", forebay_library_accounts_upsert, 1, "{\"account\":{\"id\":4}}"},
-    {"upsert of an account whose id is empty", forebay_library_accounts_upsert, 1, "{\"account\":{\"id\":\"\"}}"},
-    {"remove without an id", forebay_library_accounts_remove, 1, "{}"},
-    {"remove with an id that is a number", forebay_library_accounts_remove, 1, "{\"id\":3}"},
-    {"acquire without a strategy", forebay_library_accounts_acquire, 1, "{\"now\":5}"},
-    {"acquire with a strategy that is a number", forebay_library_accounts_acquire, 1, "{\"strategy\":1,\"now\":5}"},
-    {"acquire without now", forebay_library_accounts_acquire, 1, "{\"strategy\":\"hybrid\"}"},
-    {"acquire with now as text", forebay_library_accounts_acquire, 1, "{\"strategy\":\"hybrid\",\"now\":\"5\"}"},
-    {"acquire with a lane that is a number", forebay_library_accounts_acquire, 1, "{\"strategy\":\"hybrid\",\"now\":5,\"lane\":2}"},
-    {"report without an id", forebay_library_accounts_report, 1, "{\"outcome\":\"success\",\"now\":5}"},
-    {"report without an outcome", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"now\":5}"},
-    {"report with an unknown outcome", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"explode\",\"now\":5}"},
-    {"report without now", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"success\"}"},
-    {"report with a lane that is a number", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"success\",\"now\":5,\"lane\":1}"},
-    {"report with a reason that is a number", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"disabled\",\"now\":5,\"reason\":1}"},
-    {"report error with random 1", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"random\":1,\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report error with a negative random", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"random\":-0.1,\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report error with random as text", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"random\":\"0.5\",\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report error without a base", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"maxMilliseconds\":2}"},
-    {"report error without a maximum", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"baseMilliseconds\":2}"},
-    {"report error with a negative base", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"baseMilliseconds\":-1,\"maxMilliseconds\":2}"},
-    {"report error with an attempt as text", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"error\",\"now\":5,\"attempt\":\"1\",\"baseMilliseconds\":1,\"maxMilliseconds\":2}"},
-    {"report rate-limited with neither a reset nor a backoff", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"rate-limited\",\"now\":5}"},
-    {"report rate-limited with a reset as text", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"rate-limited\",\"now\":5,\"resetAt\":\"9\"}"},
-    {"report quota without a reading", forebay_library_accounts_report, 1, "{\"id\":\"a\",\"outcome\":\"quota\",\"now\":5}"},
-    {"report quota with a reading that is a number", forebay_library_accounts_report, 1,
-     "{\"id\":\"a\",\"outcome\":\"quota\",\"now\":5,\"quota\":7}"},
-    {"tokenExpired without now", forebay_library_accounts_token_expired, 0, "{\"expires\":5}"},
-    {"tokenExpired with expires as text", forebay_library_accounts_token_expired, 0, "{\"expires\":\"5\",\"now\":5}"},
-    {"tokenExpired with a skew as text", forebay_library_accounts_token_expired, 0, "{\"expires\":5,\"now\":5,\"skewMilliseconds\":\"1\"}"},
-    {"tokenExpired with a negative skew", forebay_library_accounts_token_expired, 0, "{\"expires\":5,\"now\":5,\"skewMilliseconds\":-1}"},
-    {"hasCapacity without pools", forebay_library_accounts_has_capacity, 0, "{}"},
-    {"hasCapacity with pools as an object", forebay_library_accounts_has_capacity, 0, "{\"pools\":{}}"},
-};
+static spisor_entry id_entry(const char *id) {
+    spisor_entry entry = {"id", 2, text_value(id)};
+    return entry;
+}
+
+static spisor_value record_of(const spisor_entry *entries, size_t count) {
+    spisor_value record = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, entries, count};
+    return record;
+}
+
+static void malformed_list_and_upsert(const char *store) {
+    const forebay_accounts_definition *accounts = accounts_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_accounts_list_argument list = SPISOR_INIT(forebay_accounts_list_argument);
+    forebay_accounts_list_answer listed = SPISOR_INIT(forebay_accounts_list_answer);
+    forebay_accounts_upsert_argument upsert = SPISOR_INIT(forebay_accounts_upsert_argument);
+    forebay_accounts_upsert_answer upserted = SPISOR_INIT(forebay_accounts_upsert_answer);
+    spisor_entry entries[1] = {id_entry("")};
+    spisor_entry broken[1] = {id_entry("\xff")};
+    spisor_value account = record_of(entries, 1);
+    expect_status(accounts->list(NULL, &list, &listed, &refusal), SPISOR_MALFORMED, &refusal, "list without a store");
+    list.store = "";
+    expect_status(accounts->list(NULL, &list, &listed, &refusal), SPISOR_MALFORMED, &refusal, "list, empty store");
+    list.store = store;
+    list.size = 4;
+    expect_status(accounts->list(NULL, &list, &listed, &refusal), SPISOR_MALFORMED, &refusal, "list, short argument");
+    expect_status(accounts->list(NULL, NULL, &listed, &refusal), SPISOR_MALFORMED, &refusal, "list, no argument");
+    list.size = sizeof list;
+    expect_status(accounts->list(NULL, &list, NULL, &refusal), SPISOR_MALFORMED, &refusal, "list, no answer");
+    listed.count = 3;
+    expect_status(accounts->list(NULL, &list, &listed, &refusal), SPISOR_MALFORMED, &refusal,
+                  "list into an answer whose count is not zero beside no storage");
+    upsert.store = store;
+    expect_status(accounts->upsert(NULL, &upsert, &upserted, &refusal), SPISOR_MALFORMED, &refusal,
+                  "upsert without an account");
+    upsert.account = &account;
+    expect_status(accounts->upsert(NULL, &upsert, &upserted, &refusal), SPISOR_MALFORMED, &refusal,
+                  "upsert of an account whose id is empty");
+    account = record_of(broken, 1);
+    expect_status(accounts->upsert(NULL, &upsert, &upserted, &refusal), SPISOR_MALFORMED, &refusal,
+                  "upsert of an account whose id is not UTF-8");
+    account = text_value("acc1");
+    expect_status(accounts->upsert(NULL, &upsert, &upserted, &refusal), SPISOR_MALFORMED, &refusal,
+                  "upsert of an account that is text");
+}
+
+static void malformed_remove_and_acquire(const char *store) {
+    const forebay_accounts_definition *accounts = accounts_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_accounts_remove_argument remove = SPISOR_INIT(forebay_accounts_remove_argument);
+    forebay_accounts_remove_answer removed = SPISOR_INIT(forebay_accounts_remove_answer);
+    forebay_accounts_acquire_argument acquire = SPISOR_INIT(forebay_accounts_acquire_argument);
+    forebay_accounts_acquire_answer acquired = SPISOR_INIT(forebay_accounts_acquire_answer);
+    char held = 0;
+    remove.store = store;
+    expect_status(accounts->remove(NULL, &remove, &removed, &refusal), SPISOR_MALFORMED, &refusal,
+                  "remove without an id");
+    acquire.store = store;
+    acquire.now = (double)INFINITY;
+    expect_status(accounts->acquire(NULL, &acquire, &acquired, &refusal), SPISOR_MALFORMED, &refusal,
+                  "acquire at an infinite now");
+    acquire.now = 5;
+    acquired.storage = &held;
+    expect_status(accounts->acquire(NULL, &acquire, &acquired, &refusal), SPISOR_MALFORMED, &refusal,
+                  "acquire into an answer holding storage");
+}
+
+static void expect_report_refused(forebay_accounts_report_argument *report, const char *label) {
+    const forebay_accounts_definition *accounts = accounts_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_accounts_report_answer reported = SPISOR_INIT(forebay_accounts_report_answer);
+    expect_status(accounts->report(NULL, report, &reported, &refusal), SPISOR_MALFORMED, &refusal, label);
+}
+
+static forebay_accounts_report_argument error_report(const char *store) {
+    forebay_accounts_report_argument report = SPISOR_INIT(forebay_accounts_report_argument);
+    report.store = store;
+    report.id = "a";
+    report.outcome = FOREBAY_ACCOUNTS_ERROR;
+    report.now = 5;
+    report.base_milliseconds = 1;
+    report.max_milliseconds = 2;
+    return report;
+}
+
+static void malformed_report(const char *store) {
+    forebay_accounts_report_argument report = error_report(store);
+    spisor_value number = {SPISOR_VALUE_NUMBER, 0, 7, NULL, 0, NULL, NULL, 0};
+    report.id = NULL;
+    expect_report_refused(&report, "report without an id");
+    report = error_report(store);
+    report.outcome = 9;
+    expect_report_refused(&report, "report with an unknown outcome");
+    report = error_report(store);
+    report.has_random = 1;
+    report.random = 1;
+    expect_report_refused(&report, "report error with random 1");
+    report.random = -0.1;
+    expect_report_refused(&report, "report error with a negative random");
+    report = error_report(store);
+    report.base_milliseconds = -1;
+    expect_report_refused(&report, "report error with a negative base");
+    report = error_report(store);
+    report.now = (double)NAN;
+    expect_report_refused(&report, "report at a now that is not a number");
+    report = error_report(store);
+    report.outcome = FOREBAY_ACCOUNTS_QUOTA;
+    expect_report_refused(&report, "report quota without a reading");
+    report.quota = &number;
+    expect_report_refused(&report, "report quota with a reading that is a number");
+}
+
+static void malformed_token_and_capacity(void) {
+    const forebay_accounts_definition *accounts = accounts_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_accounts_token_argument token = SPISOR_INIT(forebay_accounts_token_argument);
+    forebay_accounts_token_answer expired = SPISOR_INIT(forebay_accounts_token_answer);
+    forebay_accounts_capacity_argument capacity = SPISOR_INIT(forebay_accounts_capacity_argument);
+    forebay_accounts_capacity_answer has = SPISOR_INIT(forebay_accounts_capacity_answer);
+    token.has_skew_milliseconds = 1;
+    token.skew_milliseconds = -1;
+    expect_status(accounts->token_expired(NULL, &token, &expired, &refusal), SPISOR_MALFORMED, &refusal,
+                  "tokenExpired with a negative skew");
+    token.skew_milliseconds = 1;
+    token.expires = (double)INFINITY;
+    expect_status(accounts->token_expired(NULL, &token, &expired, &refusal), SPISOR_MALFORMED, &refusal,
+                  "tokenExpired with an infinite expiry");
+    capacity.count = 2;
+    expect_status(accounts->has_capacity(NULL, &capacity, &has, &refusal), SPISOR_MALFORMED, &refusal,
+                  "hasCapacity with a count at no pools");
+}
 
 static void refuses_a_malformed_call(void) {
     char *directory = support_scratch();
     char *store = support_join(directory, "accounts.json");
-    for (size_t index = 0; index < sizeof(malformed_calls) / sizeof(malformed_calls[0]); index++) {
-        const malformed_call *call = &malformed_calls[index];
-        support_answer answer = call_with(call->function, call->sends_store ? store : NULL, call->members);
-        expect_failure(&answer, call->label);
-    }
+    malformed_list_and_upsert(store);
+    malformed_remove_and_acquire(store);
+    malformed_report(store);
+    malformed_token_and_capacity();
     if (file_exists(store)) {
         support_fail("malformed calls", "a malformed call created the store");
     }
-    support_answer not_object = support_call_raw(forebay_library_accounts_list, "[]");
-    expect_failure(&not_object, "list with an array argument");
-    support_answer not_json = support_call_raw(forebay_library_accounts_list, "{\"store\":");
-    expect_failure(&not_json, "list with broken json");
-    free(store);
-    free(directory);
+    spisor_memory_release(store);
+    spisor_memory_release(directory);
+}
+
+static spisor_status upsert_record(const char *store, const spisor_entry *entries, size_t count,
+                                   spisor_refusal *refusal) {
+    const forebay_accounts_definition *accounts = accounts_definition();
+    spisor_value account = record_of(entries, count);
+    forebay_accounts_upsert_argument upsert = SPISOR_INIT(forebay_accounts_upsert_argument);
+    forebay_accounts_upsert_answer upserted = SPISOR_INIT(forebay_accounts_upsert_answer);
+    upsert.store = store;
+    upsert.account = &account;
+    return accounts->upsert(NULL, &upsert, &upserted, refusal);
 }
 
 static void creates_the_missing_parent_directories_and_the_lock_file(void) {
@@ -236,18 +300,19 @@ static void creates_the_missing_parent_directories_and_the_lock_file(void) {
     char *inner = support_join3(directory, "one", "two");
     char *store = support_join(inner, "accounts.json");
     char *lock = support_join(inner, "accounts.json.lock");
-    support_answer answer = call_with(forebay_library_accounts_upsert, store, "{\"account\":{\"id\":\"acc1\",\"label\":\"acc1\"}}");
-    expect_json(&answer, 0, "{\"outcome\":\"added\"}", "upsert into missing directories");
+    spisor_entry entries[1] = {id_entry("acc1")};
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    expect_status(upsert_record(store, entries, 1, &refusal), SPISOR_OK, &refusal, "upsert into missing directories");
     if (!file_exists(store)) {
         support_fail("missing directories", "the store was not created");
     }
     if (!file_exists(lock)) {
         support_fail("missing directories", "the lock file <store>.lock was not created");
     }
-    free(lock);
-    free(store);
-    free(inner);
-    free(directory);
+    spisor_memory_release(lock);
+    spisor_memory_release(store);
+    spisor_memory_release(inner);
+    spisor_memory_release(directory);
 }
 
 static const char *const token_names[] = {"access", "refresh", "accessToken", "refreshToken", "idToken", "apiKey"};
@@ -256,38 +321,51 @@ static void token_members_are_refused(void) {
     char *directory = support_scratch();
     char *store = support_join(directory, "accounts.json");
     for (size_t index = 0; index < sizeof(token_names) / sizeof(token_names[0]); index++) {
-        char members[256];
-        snprintf(members, sizeof(members), "{\"account\":{\"id\":\"acc1\",\"%s\":\"secret-value\"}}", token_names[index]);
-        support_answer answer = call_with(forebay_library_accounts_upsert, store, members);
-        const cJSON *refused = support_at(answer.result, "refused");
-        if (answer.status != 0 || !cJSON_IsString(refused) || strstr(refused->valuestring, token_names[index]) == NULL) {
-            support_failf(token_names[index], "expected a refusal naming the member: %s", answer.text);
+        spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+        spisor_entry entries[2] = {id_entry("acc1"), {token_names[index], strlen(token_names[index]),
+                                                      text_value("secret-value")}};
+        spisor_status status = upsert_record(store, entries, 2, &refusal);
+        if (status != SPISOR_REFUSED || refusal.detail == NULL || strstr(refusal.detail, token_names[index]) == NULL) {
+            support_failf(token_names[index], "expected a refusal naming the member, got %d", (int)status);
         }
-        support_discard(&answer);
+        accounts_definition()->release_refusal(NULL, &refusal);
     }
     if (file_exists(store)) {
         support_fail("token members", "a refused account reached the store");
     }
-    free(store);
-    free(directory);
+    spisor_memory_release(store);
+    spisor_memory_release(directory);
+}
+
+static void report_on(const char *store, uint32_t outcome) {
+    forebay_accounts_report_argument report = error_report(store);
+    forebay_accounts_report_answer reported = SPISOR_INIT(forebay_accounts_report_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    report.id = "acc1";
+    report.lane = "chat";
+    report.outcome = outcome;
+    report.has_reset_at = 1;
+    report.reset_at = 9;
+    expect_status(accounts_definition()->report(NULL, &report, &reported, &refusal), SPISOR_OK, &refusal, "report");
 }
 
 static void no_operation_writes_a_secret_looking_member(void) {
     char *directory = support_scratch();
     char *store = support_join(directory, "accounts.json");
-    support_answer added = call_with(forebay_library_accounts_upsert, store, "{\"account\":{\"id\":\"acc1\",\"label\":\"acc1\",\"expires\":9}}");
-    support_discard(&added);
-    support_answer claimed = call_with(forebay_library_accounts_acquire, store, "{\"strategy\":\"hybrid\",\"now\":5,\"lane\":\"chat\"}");
-    support_discard(&claimed);
-    const char *outcomes[] = {"success", "error", "rate-limited", "disabled"};
-    for (size_t index = 0; index < 4; index++) {
-        char members[256];
-        snprintf(members, sizeof(members),
-                 "{\"id\":\"acc1\",\"lane\":\"chat\",\"outcome\":\"%s\",\"now\":5,\"resetAt\":9,\"baseMilliseconds\":1,"
-                 "\"maxMilliseconds\":2}",
-                 outcomes[index]);
-        support_answer reported = call_with(forebay_library_accounts_report, store, members);
-        support_discard(&reported);
+    spisor_value expires = {SPISOR_VALUE_NUMBER, 0, 9, NULL, 0, NULL, NULL, 0};
+    spisor_entry entries[3] = {id_entry("acc1"), {"label", 5, text_value("acc1")}, {"expires", 7, expires}};
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_accounts_acquire_argument acquire = SPISOR_INIT(forebay_accounts_acquire_argument);
+    forebay_accounts_acquire_answer acquired = SPISOR_INIT(forebay_accounts_acquire_answer);
+    expect_status(upsert_record(store, entries, 3, &refusal), SPISOR_OK, &refusal, "upsert");
+    acquire.store = store;
+    acquire.lane = "chat";
+    acquire.strategy = FOREBAY_ACCOUNTS_HYBRID;
+    acquire.now = 5;
+    expect_status(accounts_definition()->acquire(NULL, &acquire, &acquired, &refusal), SPISOR_OK, &refusal, "acquire");
+    accounts_definition()->release_acquire_answer(NULL, &acquired);
+    for (uint32_t outcome = FOREBAY_ACCOUNTS_SUCCESS; outcome <= FOREBAY_ACCOUNTS_DISABLED; outcome++) {
+        report_on(store, outcome);
     }
     char *text = support_read_text(store);
     if (text == NULL || strstr(text, "token") != NULL || strstr(text, "access\"") != NULL ||
@@ -295,28 +373,31 @@ static void no_operation_writes_a_secret_looking_member(void) {
         support_fail("no secrets", text == NULL ? "the store is missing" : text);
     }
     free(text);
-    free(store);
-    free(directory);
+    spisor_memory_release(store);
+    spisor_memory_release(directory);
 }
 
 static void whole_numbers_keep_their_text(void) {
     char *directory = support_scratch();
     char *store = support_join(directory, "accounts.json");
-    support_answer answer = call_with(
-        forebay_library_accounts_upsert, store,
-        "{\"account\":{\"id\":\"acc-meta\",\"meta\":{\"count\":5,\"remainingFraction\":0.5}}}");
-    support_discard(&answer);
+    spisor_value count = {SPISOR_VALUE_NUMBER, 0, 5, NULL, 0, NULL, NULL, 0};
+    spisor_value fraction = {SPISOR_VALUE_NUMBER, 0, 0.5, NULL, 0, NULL, NULL, 0};
+    spisor_entry meta_entries[2] = {{"count", 5, count}, {"remainingFraction", 17, fraction}};
+    spisor_entry entries[2] = {id_entry("acc-meta"), {"meta", 4, record_of(meta_entries, 2)}};
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    expect_status(upsert_record(store, entries, 2, &refusal), SPISOR_OK, &refusal, "upsert meta");
     char *text = support_read_text(store);
     if (text == NULL || strstr(text, "\"count\": 5") == NULL || strstr(text, "\"count\": 5.0") != NULL ||
         strstr(text, "\"remainingFraction\": 0.5") == NULL) {
         support_fail("meta numbers", text == NULL ? "the store is missing" : text);
     }
     free(text);
-    free(store);
-    free(directory);
+    spisor_memory_release(store);
+    spisor_memory_release(directory);
 }
 
 int main(void) {
+    spisor_json_use_library_allocator();
     int vectors = run_every_vector();
     if (vectors == 0) {
         support_fail("vectors", "no accounts vector was found");

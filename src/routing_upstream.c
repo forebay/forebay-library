@@ -1,5 +1,7 @@
 #include "routing_upstream.h"
 
+#include "spisor/allocation.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,7 +36,7 @@ static void lower_case(char *text, size_t length) {
 }
 
 static char *copy_of(const char *text, size_t length) {
-    char *copy = malloc(length + 1);
+    char *copy = spisor_memory_allocate(length + 1);
     if (copy != NULL) {
         memcpy(copy, text, length);
         copy[length] = '\0';
@@ -43,9 +45,9 @@ static char *copy_of(const char *text, size_t length) {
 }
 
 void routing_free_upstream(routing_upstream *parts) {
-    free(parts->origin);
-    free(parts->base);
-    free(parts->host);
+    spisor_memory_release(parts->origin);
+    spisor_memory_release(parts->base);
+    spisor_memory_release(parts->host);
     parts->origin = NULL;
     parts->base = NULL;
     parts->host = NULL;
@@ -69,7 +71,7 @@ static upstream_parse split_upstream(const char *upstream, routing_upstream *par
     }
     size_t origin_length = scheme + authority_length;
     size_t path_length = trimmed_path_length(authority + authority_length);
-    parts->base = malloc(origin_length + path_length + 1);
+    parts->base = spisor_memory_allocate(origin_length + path_length + 1);
     if (parts->base == NULL) {
         return UPSTREAM_OUT_OF_MEMORY;
     }

@@ -2,7 +2,7 @@
 #define ACCOUNTS_SECRETS_H
 
 #include "cJSON.h"
-#include "service_support.h"
+#include "spisor/status.h"
 
 /**
  * The name of the first member, at any depth, that would hold a credential: exactly access, refresh,
@@ -15,7 +15,7 @@
  */
 const char *accounts_find_token_member(const cJSON *value);
 
-/** Answers the refusal for a value (an account, a quota) that carries a credential member. */
-int32_t accounts_refuse_token_member(const char *subject, const char *member, uint8_t **out, size_t *out_len);
+/** REFUSED, naming the member, for a value (an account, a quota) that carries a credential member. */
+spisor_status accounts_refuse_token_member(const char *subject, const char *member, spisor_refusal *refusal);
 
 #endif

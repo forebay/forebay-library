@@ -1,5 +1,7 @@
 #include "routing_failure.h"
 
+#include "spisor/allocation.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +42,7 @@ static cJSON *warning_log(const char *message) {
 static cJSON *unreachable_answer(const char *origin, const char *detail) {
     char *message = routing_formatted("the upstream %s could not be reached: %s", origin, detail);
     cJSON *answer = message == NULL ? NULL : service_wrap("reply", proxy_error(BAD_GATEWAY, message));
-    free(message);
+    spisor_memory_release(message);
     return answer;
 }
 
@@ -51,11 +53,11 @@ static cJSON *request_failed_answer(const char *detail) {
         cJSON_Delete(answer);
         answer = NULL;
     }
-    free(warning);
+    spisor_memory_release(warning);
     return answer;
 }
 
-static int32_t answer_unreachable(const spisor_call *call, const char *detail, uint8_t **out, size_t *out_len) {
+static int32_t answer_unreachable(const service_call *call, const char *detail, uint8_t **out, size_t *out_len) {
     int32_t status = SPISOR_STATUS_SUCCESS;
     const cJSON *upstream = NULL;
     routing_upstream parts;
@@ -73,7 +75,7 @@ static int32_t refuse_reason(const char *reason, uint8_t **out, size_t *out_len)
     return service_refuse(cause, REASON_FIX, out, out_len);
 }
 
-static int32_t answer_failure(const spisor_call *call, const char *reason, const char *detail, uint8_t **out,
+static int32_t answer_failure(const service_call *call, const char *reason, const char *detail, uint8_t **out,
                               size_t *out_len) {
     if (strcmp(reason, "upstreamUnreachable") == 0) {
         return answer_unreachable(call, detail, out, out_len);
@@ -85,7 +87,7 @@ static int32_t answer_failure(const spisor_call *call, const char *reason, const
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_failure(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -96,6 +98,6 @@ SERVICE_EXPORT int32_t forebay_library_routing_failure(const uint8_t *in, size_t
         service_require(&call, "detail", service_is_string, "a string", &detail, out, out_len, &status)) {
         status = answer_failure(&call, reason->valuestring, detail->valuestring, out, out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }

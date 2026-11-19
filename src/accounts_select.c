@@ -1,10 +1,14 @@
 #include "accounts_select.h"
 
 #include <math.h>
-#include <string.h>
 
 #include "accounts_availability.h"
 #include "accounts_support.h"
+#include "definition_support.h"
+#include "spisor/allocation.h"
+
+#define ACQUIRE_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_acquire_argument, now)
+#define ACQUIRE_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_acquire_answer, storage)
 
 #define NO_ACCOUNT (-1)
 #define OUT_OF_MEMORY (-2)
@@ -12,19 +16,10 @@
 typedef enum accounts_strategy { STRATEGY_STICKY, STRATEGY_ROUND_ROBIN, STRATEGY_HYBRID } accounts_strategy;
 
 typedef struct acquire_request {
-    const char *store;
     const char *lane;
     accounts_strategy strategy;
     double now;
 } acquire_request;
-
-/** An unknown name is hybrid, as Strategy.java reads a missing one. */
-static accounts_strategy parse_strategy(const char *name) {
-    if (strcmp(name, "round-robin") == 0) {
-        return STRATEGY_ROUND_ROBIN;
-    }
-    return strcmp(name, "sticky") == 0 ? STRATEGY_STICKY : STRATEGY_HYBRID;
-}
 
 /** The lane's cursor when it has one, else the pool-wide one; a cursor outside the pool reads as 0. */
 static int cursor_of(const cJSON *document, const char *lane, int count) {
@@ -108,83 +103,86 @@ static int select_index(cJSON *document, const acquire_request *request) {
     return select_sticky_or_hybrid(document, accounts, request, cursor);
 }
 
-static cJSON *none_answer(const cJSON *accounts, const acquire_request *request) {
-    cJSON *answer = cJSON_CreateObject();
+static void fill_none(const cJSON *accounts, const acquire_request *request, forebay_accounts_acquire_answer *answer) {
     int found = 0;
     double soonest = accounts_next_available_at(accounts, request->lane, request->now, &found);
-    if (answer == NULL || cJSON_AddTrueToObject(answer, "none") == NULL ||
-        (found && cJSON_AddNumberToObject(answer, "nextAvailableAt", soonest) == NULL)) {
-        cJSON_Delete(answer);
-        return NULL;
-    }
-    return answer;
+    answer->kind = FOREBAY_ACCOUNTS_NONE;
+    answer->knows_available_at = (uint32_t)found;
+    answer->available_at = soonest;
 }
 
 /**
  * The claimed id, whether the account is available now, and when it will be when it is not: hybrid claims
  * the soonest-free account while every account is cooling, and the provider answers 503 from available.
  */
-static cJSON *claimed_answer(const cJSON *account, const acquire_request *request) {
-    cJSON *answer = cJSON_CreateObject();
+static spisor_status fill_claimed(const cJSON *account, const acquire_request *request,
+                                  forebay_accounts_acquire_answer *answer) {
+    char *id = spisor_memory_duplicate_text(accounts_account_id(account));
     int available = accounts_is_available(account, request->lane, request->now);
-    if (answer == NULL || cJSON_AddStringToObject(answer, "id", accounts_account_id(account)) == NULL ||
-        cJSON_AddBoolToObject(answer, "available", available) == NULL ||
-        (!available &&
-         cJSON_AddNumberToObject(answer, "availableAt",
-                                 accounts_available_at(account, request->lane, request->now)) == NULL)) {
-        cJSON_Delete(answer);
-        return NULL;
+    if (id == NULL) {
+        return SPISOR_OUT_OF_MEMORY;
     }
-    return answer;
+    answer->kind = FOREBAY_ACCOUNTS_CLAIMED;
+    answer->id = id;
+    answer->storage = id;
+    answer->available = (uint32_t)available;
+    answer->knows_available_at = (uint32_t)!available;
+    answer->available_at = available ? 0 : accounts_available_at(account, request->lane, request->now);
+    return SPISOR_OK;
 }
 
-static void claim(accounts_store *store, const void *given, accounts_outcome *outcome) {
+static spisor_status claim(accounts_store *store, const void *given, void *filled, int *changed) {
     const acquire_request *request = given;
+    forebay_accounts_acquire_answer *answer = filled;
     int index = select_index(store->document, request);
     cJSON *accounts = accounts_store_accounts(store);
     if (index == OUT_OF_MEMORY) {
-        return;
+        return SPISOR_OUT_OF_MEMORY;
     }
     if (index == NO_ACCOUNT) {
-        outcome->result = none_answer(accounts, request);
-        return;
+        fill_none(accounts, request, answer);
+        return SPISOR_OK;
     }
     cJSON *account = cJSON_GetArrayItem(accounts, index);
-    outcome->result = claimed_answer(account, request);
-    if (outcome->result != NULL && accounts_set_number(account, "lastUsed", request->now)) {
-        outcome->changed = 1;
-    } else {
-        cJSON_Delete(outcome->result);
-        outcome->result = NULL;
+    if (!accounts_set_number(account, "lastUsed", request->now)) {
+        return SPISOR_OUT_OF_MEMORY;
     }
+    *changed = 1;
+    return fill_claimed(account, request, answer);
 }
 
-static int read_request(const spisor_call *call, acquire_request *request, uint8_t **out, size_t *out_len,
-                        int32_t *status) {
-    const cJSON *strategy = NULL;
-    const cJSON *now = NULL;
-    memset(request, 0, sizeof(*request));
-    if (accounts_require_store(call, &request->store, out, out_len, status) &&
-        accounts_optional_text(call, "lane", &request->lane, out, out_len, status) &&
-        service_require(call, "strategy", service_is_string, "a string", &strategy, out, out_len, status) &&
-        service_require(call, "now", service_is_number, "a number", &now, out, out_len, status)) {
-        request->strategy = parse_strategy(strategy->valuestring);
-        request->now = now->valuedouble;
-        return 1;
-    }
-    return 0;
+static void release_acquire(void *filled) {
+    accounts_release_acquire_answer(NULL, filled);
 }
 
-SERVICE_EXPORT int32_t forebay_library_accounts_acquire(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
-        return status;
+void accounts_release_acquire_answer(void *context, forebay_accounts_acquire_answer *answer) {
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(answer, ACQUIRE_ANSWER_SHAPE)) {
+        return;
     }
-    acquire_request request;
-    if (read_request(&call, &request, out, out_len, &status)) {
-        status = accounts_run_change(request.store, claim, &request, out, out_len);
+    spisor_memory_release(answer->storage);
+    FOREBAY_CLEAR_ANSWER(answer, ACQUIRE_ANSWER_SHAPE);
+}
+
+static accounts_strategy strategy_of(uint32_t strategy) {
+    if (strategy == FOREBAY_ACCOUNTS_STICKY) {
+        return STRATEGY_STICKY;
     }
-    spisor_discard_call(&call);
-    return status;
+    return strategy == FOREBAY_ACCOUNTS_ROUND_ROBIN ? STRATEGY_ROUND_ROBIN : STRATEGY_HYBRID;
+}
+
+spisor_status accounts_acquire(void *context, const forebay_accounts_acquire_argument *argument,
+                               forebay_accounts_acquire_answer *answer, spisor_refusal *refusal) {
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(argument, ACQUIRE_SHAPE) || !FOREBAY_IS_EMPTY_ANSWER(answer, ACQUIRE_ANSWER_SHAPE)) {
+        return forebay_refuse_shape(refusal, "accounts' acquire");
+    }
+    if (!forebay_is_text(argument->store)) {
+        return forebay_refuse_member(refusal, "store", "the path of the accounts file");
+    }
+    if (!forebay_is_finite(argument->now)) {
+        return forebay_refuse_member(refusal, "now", "a finite number of milliseconds");
+    }
+    acquire_request request = {argument->lane, strategy_of(argument->strategy), argument->now};
+    return accounts_run_change(argument->store, claim, &request, answer, release_acquire, refusal);
 }

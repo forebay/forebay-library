@@ -1,10 +1,17 @@
 #ifndef ACCOUNTS_MANAGE_H
 #define ACCOUNTS_MANAGE_H
 
-#include "service_support.h"
+#include "forebay/accounts.h"
 
-SERVICE_EXPORT int32_t forebay_library_accounts_list(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-SERVICE_EXPORT int32_t forebay_library_accounts_upsert(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-SERVICE_EXPORT int32_t forebay_library_accounts_remove(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+spisor_status accounts_list(void *context, const forebay_accounts_list_argument *argument,
+                            forebay_accounts_list_answer *answer, spisor_refusal *refusal);
+spisor_status accounts_upsert(void *context, const forebay_accounts_upsert_argument *argument,
+                              forebay_accounts_upsert_answer *answer, spisor_refusal *refusal);
+spisor_status accounts_remove(void *context, const forebay_accounts_remove_argument *argument,
+                              forebay_accounts_remove_answer *answer, spisor_refusal *refusal);
+void accounts_release_list_answer(void *context, forebay_accounts_list_answer *answer);
+
+/** Whether a value is a record whose `id` member is non-empty text, as every stored account is. */
+int accounts_is_account_record(const spisor_value *account);
 
 #endif

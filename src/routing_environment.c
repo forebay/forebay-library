@@ -1,5 +1,7 @@
 #include "routing_environment.h"
 
+#include "spisor/allocation.h"
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,7 +104,7 @@ static int has_account_on_disk(const cJSON *environment, const char *user_home, 
     }
     spisor_json_file_state state = SPISOR_JSON_FILE_UNREADABLE;
     cJSON *state_file = spisor_read_json_file(path, &state);
-    free(path);
+    spisor_memory_release(path);
     int signed_in = state_file != NULL && is_truthy(cJSON_GetObjectItemCaseSensitive(state_file, text_member(state_file_facts, "member")));
     cJSON_Delete(state_file);
     return signed_in;
@@ -268,7 +270,7 @@ static int refuses_tier_template(const cJSON *variables, const char *member, uin
     return 1;
 }
 
-static int read_request(const spisor_call *call, request *asked, uint8_t **out, size_t *out_len, int32_t *status) {
+static int read_request(const service_call *call, request *asked, uint8_t **out, size_t *out_len, int32_t *status) {
     const cJSON *port = NULL;
     const cJSON *enabled = NULL;
     const cJSON *home = NULL;
@@ -296,7 +298,7 @@ static int read_request(const spisor_call *call, request *asked, uint8_t **out, 
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_environment(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -305,6 +307,6 @@ SERVICE_EXPORT int32_t forebay_library_routing_environment(const uint8_t *in, si
     if (read_request(&call, &asked, out, out_len, &status)) {
         status = service_answer(service_wrap("environment", build_environment(&asked)), out, out_len);
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }

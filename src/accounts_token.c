@@ -1,49 +1,33 @@
 #include "accounts_token.h"
 
-#include "accounts_support.h"
+#include "definition_support.h"
 
 #define DEFAULT_SKEW_MILLISECONDS 60000.0
+#define TOKEN_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_token_argument, skew_milliseconds)
+#define TOKEN_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_token_answer, expired)
 
 /**
  * TokenRefresh.accessTokenExpired for an expiry the provider read from its secrets: no expiry is expired,
  * and so is one within skew of now (<=, so the edge counts as expired).
  */
-static int is_expired(const cJSON *expires, double now, double skew) {
-    return expires == NULL || expires->valuedouble <= now + skew;
+static int is_expired(const forebay_accounts_token_argument *argument, double skew) {
+    return !argument->has_expires || argument->expires <= argument->now + skew;
 }
 
-static int read_skew(const spisor_call *call, double *skew, uint8_t **out, size_t *out_len, int32_t *status) {
-    int present = 0;
-    *skew = DEFAULT_SKEW_MILLISECONDS;
-    if (!accounts_optional_number(call, "skewMilliseconds", skew, &present, out, out_len, status)) {
-        return 0;
+spisor_status accounts_token_expired(void *context, const forebay_accounts_token_argument *argument,
+                                     forebay_accounts_token_answer *answer, spisor_refusal *refusal) {
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(argument, TOKEN_SHAPE) || !FOREBAY_HAS_SHAPE(answer, TOKEN_ANSWER_SHAPE)) {
+        return forebay_refuse_shape(refusal, "accounts' token_expired");
     }
-    if (*skew < 0) {
-        *status = service_fail("skewMilliseconds", "is negative", "send a number of milliseconds from 0", out, out_len);
-        return 0;
+    if (!forebay_is_finite(argument->expires) || !forebay_is_finite(argument->now) ||
+        !forebay_is_finite(argument->skew_milliseconds)) {
+        return forebay_refuse_member(refusal, "every number", "finite");
     }
-    return 1;
-}
-
-SERVICE_EXPORT int32_t forebay_library_accounts_token_expired(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
-        return status;
+    double skew = argument->has_skew_milliseconds ? argument->skew_milliseconds : DEFAULT_SKEW_MILLISECONDS;
+    if (skew < 0) {
+        return forebay_refuse_member(refusal, "skew_milliseconds", "a number of milliseconds from 0");
     }
-    const cJSON *expires = NULL;
-    const cJSON *now = NULL;
-    double skew = 0;
-    if (accounts_optional(&call, "expires", service_is_number, "a number", &expires, out, out_len, &status) &&
-        service_require(&call, "now", service_is_number, "a number", &now, out, out_len, &status) &&
-        read_skew(&call, &skew, out, out_len, &status)) {
-        cJSON *answer = cJSON_CreateObject();
-        if (answer != NULL && cJSON_AddBoolToObject(answer, "expired", is_expired(expires, now->valuedouble, skew)) == NULL) {
-            cJSON_Delete(answer);
-            answer = NULL;
-        }
-        status = service_answer(answer, out, out_len);
-    }
-    spisor_discard_call(&call);
-    return status;
+    answer->expired = (uint32_t)is_expired(argument, skew);
+    return SPISOR_OK;
 }

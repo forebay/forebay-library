@@ -1,38 +1,46 @@
 #include "accounts_quota.h"
 
-#include "accounts_support.h"
+#include "definition_support.h"
+
+#define CAPACITY_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_capacity_argument, count)
+#define CAPACITY_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_capacity_answer, capacity)
 
 /** QuotaHealth.hasCapacity: a pool counts when its remainingFraction is a number above zero. */
-static int has_remaining(const cJSON *pool) {
-    const cJSON *fraction = cJSON_GetObjectItemCaseSensitive(pool, "remainingFraction");
-    return cJSON_IsObject(pool) && cJSON_IsNumber(fraction) && fraction->valuedouble > 0;
+static int has_remaining(const spisor_value *pool) {
+    const spisor_value *fraction = spisor_value_member(pool, "remainingFraction", sizeof "remainingFraction" - 1);
+    return fraction != NULL && fraction->kind == SPISOR_VALUE_NUMBER && fraction->number > 0;
 }
 
-static int any_pool_has_capacity(const cJSON *pools) {
-    const cJSON *pool = NULL;
-    cJSON_ArrayForEach(pool, pools) {
-        if (has_remaining(pool)) {
+static int any_pool_has_capacity(const spisor_value *pools, size_t count) {
+    for (size_t index = 0; index < count; index++) {
+        if (has_remaining(&pools[index])) {
             return 1;
         }
     }
     return 0;
 }
 
-SERVICE_EXPORT int32_t forebay_library_accounts_has_capacity(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
-        return status;
+static spisor_status check_pools(const forebay_accounts_capacity_argument *argument, spisor_refusal *refusal) {
+    spisor_value list = {SPISOR_VALUE_LIST, 0, 0, NULL, 0, argument->pools, NULL, argument->count};
+    if (argument->pools == NULL && argument->count != 0) {
+        return forebay_refuse_member(refusal, "pools", "an array of count values");
     }
-    const cJSON *pools = NULL;
-    if (service_require(&call, "pools", service_is_array, "an array", &pools, out, out_len, &status)) {
-        cJSON *answer = cJSON_CreateObject();
-        if (answer != NULL && cJSON_AddBoolToObject(answer, "capacity", any_pool_has_capacity(pools)) == NULL) {
-            cJSON_Delete(answer);
-            answer = NULL;
-        }
-        status = service_answer(answer, out, out_len);
+    spisor_status status = argument->count == 0 ? SPISOR_OK : spisor_value_check(&list);
+    if (status == SPISOR_MALFORMED) {
+        return forebay_refuse_member(refusal, "pools", "well-formed spisor_values");
     }
-    spisor_discard_call(&call);
+    return status;
+}
+
+spisor_status accounts_has_capacity(void *context, const forebay_accounts_capacity_argument *argument,
+                                    forebay_accounts_capacity_answer *answer, spisor_refusal *refusal) {
+    (void)context;
+    if (!FOREBAY_HAS_SHAPE(argument, CAPACITY_SHAPE) || !FOREBAY_HAS_SHAPE(answer, CAPACITY_ANSWER_SHAPE)) {
+        return forebay_refuse_shape(refusal, "accounts' has_capacity");
+    }
+    spisor_status status = check_pools(argument, refusal);
+    if (status == SPISOR_OK) {
+        answer->capacity = (uint32_t)any_pool_has_capacity(argument->pools, argument->count);
+    }
     return status;
 }

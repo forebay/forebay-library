@@ -1,5 +1,7 @@
 #include "routing_step_walk.h"
 
+#include "spisor/allocation.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +16,7 @@ int routing_walk_log(step_walk *walk, const char *level, const char *format, ...
     cJSON *line = cJSON_CreateObject();
     int added = message != NULL && line != NULL && cJSON_AddStringToObject(line, "level", level) != NULL &&
                 cJSON_AddStringToObject(line, "message", message) != NULL;
-    free(message);
+    spisor_memory_release(message);
     if (!added) {
         cJSON_Delete(line);
         return 0;
@@ -23,7 +25,7 @@ int routing_walk_log(step_walk *walk, const char *level, const char *format, ...
 }
 
 int routing_walk_remember_failure(step_walk *walk, char *message) {
-    free(walk->failure);
+    spisor_memory_release(walk->failure);
     walk->failure = message;
     return message != NULL;
 }
@@ -36,7 +38,7 @@ void routing_walk_remember_limit(step_walk *walk, const cJSON *headers, double r
 }
 
 void routing_walk_discard(step_walk *walk) {
-    free(walk->failure);
+    spisor_memory_release(walk->failure);
     cJSON_Delete(walk->log);
 }
 

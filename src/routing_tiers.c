@@ -1,5 +1,7 @@
 #include "routing_tiers.h"
 
+#include "spisor/allocation.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -47,23 +49,23 @@ static int collect_tier(cJSON *tiers, const routing_pattern *pattern, const char
     if (!routing_pattern_find(pattern, id, &start, &length)) {
         return 1;
     }
-    char *name = malloc(length + 1);
+    char *name = spisor_memory_allocate(length + 1);
     if (name == NULL) {
         return 0;
     }
     memcpy(name, id + start, length);
     name[length] = '\0';
     int ok = already_listed(tiers, name) || service_push(tiers, cJSON_CreateString(name));
-    free(name);
+    spisor_memory_release(name);
     return ok;
 }
 
 static cJSON *sorted_copy(const cJSON *tiers, const cJSON *tier_order) {
     int count = cJSON_GetArraySize(tiers);
-    tier *entries = malloc(sizeof(tier) * (size_t)(count == 0 ? 1 : count));
+    tier *entries = spisor_memory_allocate(sizeof(tier) * (size_t)(count == 0 ? 1 : count));
     cJSON *sorted = cJSON_CreateArray();
     if (entries == NULL || sorted == NULL) {
-        free(entries);
+        spisor_memory_release(entries);
         cJSON_Delete(sorted);
         return NULL;
     }
@@ -82,7 +84,7 @@ static cJSON *sorted_copy(const cJSON *tiers, const cJSON *tier_order) {
             break;
         }
     }
-    free(entries);
+    spisor_memory_release(entries);
     return sorted;
 }
 
@@ -121,7 +123,7 @@ cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models,
 }
 
 SERVICE_EXPORT int32_t forebay_library_routing_tiers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    spisor_call call;
+    service_call call;
     int32_t status = service_open(in, in_len, &call, out, out_len);
     if (status != SPISOR_STATUS_SUCCESS) {
         return status;
@@ -140,6 +142,6 @@ SERVICE_EXPORT int32_t forebay_library_routing_tiers(const uint8_t *in, size_t i
             status = service_answer(service_wrap("tiers", tiers), out, out_len);
         }
     }
-    spisor_discard_call(&call);
+    service_discard_call(&call);
     return status;
 }

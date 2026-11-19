@@ -15,6 +15,13 @@
 #define SERVICE_WINDOWS 0
 #endif
 
+/** A parsed call: its argument, owned until service_discard_call. */
+typedef struct service_call {
+    cJSON *argument;
+} service_call;
+
+void service_discard_call(service_call *call);
+
 int32_t service_out_of_memory(uint8_t **out, size_t *out_len);
 
 /** A semantic refusal, answered as a successful call: {"refused": cause, "fix": fix}. */
@@ -27,10 +34,10 @@ int32_t service_answer(cJSON *result, uint8_t **out, size_t *out_len);
 int32_t service_fail(const char *subject, const char *problem, const char *fix, uint8_t **out, size_t *out_len);
 
 /** Parses a plain call whose argument must be an object. */
-int32_t service_open(const uint8_t *in, size_t in_len, spisor_call *call, uint8_t **out, size_t *out_len);
+int32_t service_open(const uint8_t *in, size_t in_len, service_call *call, uint8_t **out, size_t *out_len);
 
 /** Reads the named argument member of the type asked for; answers 0 with the call already failed. */
-int service_require(const spisor_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
+int service_require(const service_call *call, const char *name, int (*is_type)(const cJSON *), const char *type_name,
                     const cJSON **member, uint8_t **out, size_t *out_len, int32_t *status);
 
 /** service_require for a member of a nested object, failed as "<subject> <name> is missing or is not <type>". */
