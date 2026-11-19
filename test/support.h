@@ -25,10 +25,6 @@
 #define support_process_id() getpid()
 #endif
 
-typedef int32_t (*library_function)(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
-
-void forebay_library_release(uint8_t *buffer);
-
 static int support_failures = 0;
 static int support_case_count = 0;
 static char support_run_root[1024];
@@ -97,73 +93,6 @@ static inline char *support_read_text(const char *path) {
         text[read] = '\0';
     }
     return text;
-}
-
-typedef struct support_answer {
-    int32_t status;
-    cJSON *result;
-    char text[8192];
-} support_answer;
-
-static inline support_answer support_call_raw(library_function function, const char *input) {
-    support_answer answer;
-    uint8_t *out = NULL;
-    size_t out_len = 0;
-    answer.status = function((const uint8_t *)input, strlen(input), &out, &out_len);
-    size_t kept = out_len < sizeof(answer.text) - 1 ? out_len : sizeof(answer.text) - 1;
-    if (out != NULL) {
-        memcpy(answer.text, out, kept);
-    }
-    answer.text[kept] = '\0';
-    answer.result = out == NULL ? NULL : cJSON_ParseWithLength((const char *)out, out_len);
-    forebay_library_release(out);
-    return answer;
-}
-
-static inline void support_discard(support_answer *answer) {
-    cJSON_Delete(answer->result);
-    answer->result = NULL;
-}
-
-static inline void expect_json(support_answer *answer, int32_t status, const char *expected, const char *label) {
-    cJSON *wanted = cJSON_Parse(expected);
-    if (wanted == NULL) {
-        support_fail(label, "the expectation is not JSON");
-    } else if (answer->status != status || answer->result == NULL || !cJSON_Compare(answer->result, wanted, 1)) {
-        support_failf(label, "status %d, expected %d\n  expected %s\n  actual   %s", (int)answer->status,
-                 (int)status, expected, answer->text);
-    }
-    cJSON_Delete(wanted);
-    support_discard(answer);
-}
-
-/** A failure object carrying a non-empty message and fix, with status 1. */
-static inline void expect_failure(support_answer *answer, const char *label) {
-    const cJSON *message = cJSON_GetObjectItemCaseSensitive(answer->result, "message");
-    const cJSON *fix = cJSON_GetObjectItemCaseSensitive(answer->result, "fix");
-    if (answer->status != 1 || !cJSON_IsString(message) || !cJSON_IsString(fix) || message->valuestring[0] == '\0' ||
-        fix->valuestring[0] == '\0') {
-        support_failf(label, "expected a failure object, got status %d: %s", (int)answer->status,
-                 answer->text);
-    }
-    support_discard(answer);
-}
-
-/** The value at a dotted path such as "accounts.0.id", for asserting one field. */
-static inline const cJSON *support_at(const cJSON *value, const char *path) {
-    char key[256];
-    while (value != NULL && *path != '\0') {
-        size_t length = strcspn(path, ".");
-        memcpy(key, path, length);
-        key[length] = '\0';
-        if (cJSON_IsArray(value)) {
-            value = cJSON_GetArrayItem(value, atoi(key));
-        } else {
-            value = cJSON_GetObjectItemCaseSensitive(value, key);
-        }
-        path += length + (path[length] == '.' ? 1 : 0);
-    }
-    return value;
 }
 
 static inline int support_summary(const char *suite) {

@@ -106,10 +106,14 @@ static int set_slot(cJSON *map, const char *slot, cJSON *chain) {
     if (chain == NULL) {
         return 0;
     }
-    if (cJSON_GetObjectItemCaseSensitive(map, slot) != NULL) {
-        return cJSON_ReplaceItemInObjectCaseSensitive(map, slot, chain);
+    if (cJSON_GetObjectItemCaseSensitive(map, slot) == NULL) {
+        return service_add(map, slot, chain);
     }
-    return service_add(map, slot, chain);
+    if (!cJSON_ReplaceItemInObjectCaseSensitive(map, slot, chain)) {
+        cJSON_Delete(chain);
+        return 0;
+    }
+    return 1;
 }
 
 static const cJSON *first_filled_slot(const cJSON *map, const cJSON *tiers) {
@@ -189,8 +193,13 @@ static cJSON *answer_for(const cJSON *tiers, const cJSON *catalog, const cJSON *
                          const routing_profile *profile) {
     cJSON *map = resolve_map(tiers, catalog, stored_map, profile);
     cJSON *healed = map == NULL ? NULL : healed_slots(map);
-    cJSON *result = cJSON_CreateObject();
-    if (healed == NULL || result == NULL || !service_add(result, "map", map)) {
+    cJSON *result = healed == NULL ? NULL : cJSON_CreateObject();
+    if (result == NULL) {
+        cJSON_Delete(map);
+        cJSON_Delete(healed);
+        return NULL;
+    }
+    if (!service_add(result, "map", map)) {
         cJSON_Delete(healed);
         cJSON_Delete(result);
         return NULL;
@@ -209,30 +218,30 @@ static const cJSON *stored_map_of(const cJSON *settings, const cJSON *empty) {
     return cJSON_IsObject(declared) ? declared : empty;
 }
 
-static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, const cJSON *models, uint8_t **out,
-                           size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
+static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, const cJSON *models,
+                           service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
     routing_profile profile;
-    if (!routing_read_profile(profile_json, NEEDS_TIERS | NEEDS_UNSERVED_PATTERN, &profile, out, out_len, &status)) {
+    if (!routing_read_profile(profile_json, NEEDS_TIERS | NEEDS_UNSERVED_PATTERN, &profile, reply, &status)) {
         return status;
     }
     routing_refusal refusal = {0, "", NULL};
     cJSON *tiers = routing_detect_tiers(&profile, models, &refusal);
     if (tiers == NULL) {
-        return routing_answer_refusal(&refusal, out, out_len);
+        return routing_answer_refusal(&refusal, reply);
     }
     routing_pattern *unserved = NULL;
     if (!routing_compile_unserved_pattern(&profile, &unserved, &refusal)) {
         cJSON_Delete(tiers);
-        return refusal.refused ? routing_answer_refusal(&refusal, out, out_len)
-                               : service_answer(NULL, out, out_len);
+        return refusal.refused ? routing_answer_refusal(&refusal, reply)
+                               : service_answer(NULL, reply);
     }
     cJSON *catalog = routing_catalog(models, unserved);
     cJSON *empty = cJSON_CreateObject();
     cJSON *result = (catalog == NULL || empty == NULL)
                         ? NULL
                         : answer_for(tiers, catalog, stored_map_of(settings, empty), &profile);
-    status = service_answer(result, out, out_len);
+    status = service_answer(result, reply);
     cJSON_Delete(tiers);
     cJSON_Delete(catalog);
     cJSON_Delete(empty);
@@ -240,20 +249,19 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, con
     return status;
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_model_map(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_model_map_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *profile = NULL;
     const cJSON *settings = NULL;
     const cJSON *models = NULL;
-    if (service_require(&call, "profile", service_is_object, "an object", &profile, out, out_len, &status) &&
-        service_require(&call, "settings", service_is_object, "an object", &settings, out, out_len, &status) &&
-        service_require(&call, "models", service_is_object, "an object", &models, out, out_len, &status)) {
-        status = answer_call(profile, settings, models, out, out_len);
+    if (service_require(&call, "profile", service_is_object, "an object", &profile, reply, &status) &&
+        service_require(&call, "settings", service_is_object, "an object", &settings, reply, &status) &&
+        service_require(&call, "models", service_is_object, "an object", &models, reply, &status)) {
+        status = answer_call(profile, settings, models, reply);
     }
-    service_discard_call(&call);
     return status;
 }

@@ -1,12 +1,12 @@
 #ifndef ROUTING_LIMITS_H
 #define ROUTING_LIMITS_H
 
-#include "routing_support.h"
+#include "forebay/routing.h"
 
 /**
  * The bounds every host applies to what a client sends its proxy, so a local process cannot grow a
- * host's memory without limit.
+ * host's memory without limit. It allocates nothing: every text it answers is static.
  */
-SERVICE_EXPORT int32_t forebay_library_routing_limits(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len);
+void routing_read_limits(forebay_limits_answer *answer);
 
 #endif

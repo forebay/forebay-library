@@ -88,19 +88,19 @@ static upstream_parse split_upstream(const char *upstream, routing_upstream *par
     return UPSTREAM_PARSED;
 }
 
-static int32_t refuse_upstream(const char *upstream, uint8_t **out, size_t *out_len) {
+static int32_t refuse_upstream(const char *upstream, service_reply *reply) {
     char cause[512];
     snprintf(cause, sizeof(cause), "the upstream %.400s is not an absolute http or https URL", upstream);
-    return service_refuse(cause, UPSTREAM_FIX, out, out_len);
+    return service_refuse(cause, UPSTREAM_FIX, reply);
 }
 
-int routing_read_upstream(const char *upstream, routing_upstream *parts, uint8_t **out, size_t *out_len,
+int routing_read_upstream(const char *upstream, routing_upstream *parts, service_reply *reply,
                           int32_t *status) {
     upstream_parse parsed = split_upstream(upstream, parts);
     if (parsed == UPSTREAM_OUT_OF_MEMORY) {
-        *status = service_out_of_memory(out, out_len);
+        *status = service_out_of_memory(reply);
     } else if (parsed == UPSTREAM_REFUSED) {
-        *status = refuse_upstream(upstream, out, out_len);
+        *status = refuse_upstream(upstream, reply);
     }
     return parsed == UPSTREAM_PARSED;
 }

@@ -140,8 +140,10 @@ static int add_notices(cJSON *result, const resolution *resolved) {
 
 static cJSON *answer_for(const resolution *resolved) {
     cJSON *result = cJSON_CreateObject();
-    cJSON *chain = resolved->chain == NULL ? cJSON_CreateArray() : cJSON_Duplicate(resolved->chain, 1);
-    if (result == NULL || !service_add(result, "chain", chain) || !add_notices(result, resolved)) {
+    if (result == NULL ||
+        !service_add(result, "chain",
+                     resolved->chain == NULL ? cJSON_CreateArray() : cJSON_Duplicate(resolved->chain, 1)) ||
+        !add_notices(result, resolved)) {
         cJSON_Delete(result);
         return NULL;
     }
@@ -190,34 +192,33 @@ cJSON *routing_resolution(const routing_profile *profile, const cJSON *map, cons
 }
 
 static int32_t answer_call(const cJSON *profile_json, const cJSON *map, const cJSON *models, const char *requested,
-                           uint8_t **out, size_t *out_len) {
-    int32_t status = SPISOR_STATUS_SUCCESS;
+                           service_reply *reply) {
+    int32_t status = SERVICE_SUCCESS;
     routing_profile profile;
-    if (!routing_read_profile(profile_json, ROUTING_RESOLUTION_NEEDS, &profile, out, out_len, &status)) {
+    if (!routing_read_profile(profile_json, ROUTING_RESOLUTION_NEEDS, &profile, reply, &status)) {
         return status;
     }
     routing_refusal refusal = {0, "", NULL};
     cJSON *result = routing_resolution(&profile, map, models, requested, &refusal);
-    return result == NULL ? routing_answer_refusal(&refusal, out, out_len) : service_answer(result, out, out_len);
+    return result == NULL ? routing_answer_refusal(&refusal, reply) : service_answer(result, reply);
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_resolve(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_resolve_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *profile = NULL;
     const cJSON *map = NULL;
     const cJSON *models = NULL;
     const cJSON *requested = NULL;
-    if (service_require(&call, "profile", service_is_object, "an object", &profile, out, out_len, &status) &&
-        service_require(&call, "map", service_is_object, "an object", &map, out, out_len, &status) &&
-        service_require(&call, "models", service_is_object, "an object", &models, out, out_len, &status) &&
-        service_require(&call, "requestedModel", service_is_string, "a string", &requested, out, out_len,
+    if (service_require(&call, "profile", service_is_object, "an object", &profile, reply, &status) &&
+        service_require(&call, "map", service_is_object, "an object", &map, reply, &status) &&
+        service_require(&call, "models", service_is_object, "an object", &models, reply, &status) &&
+        service_require(&call, "requestedModel", service_is_string, "a string", &requested, reply,
                         &status)) {
-        status = answer_call(profile, map, models, requested->valuestring, out, out_len);
+        status = answer_call(profile, map, models, requested->valuestring, reply);
     }
-    service_discard_call(&call);
     return status;
 }

@@ -137,7 +137,8 @@ static cJSON *pass_through_answer(const routing_upstream *parts, const cJSON *ur
     cJSON *result = cJSON_CreateObject();
     char *target = join_target(parts->base, url->valuestring);
     cJSON *forwarded = forwarded_headers(headers, placeholder->valuestring, parts->host, body_length);
-    if (result == NULL || target == NULL || forwarded == NULL || cJSON_AddStringToObject(result, "target", target) == NULL ||
+    if (result == NULL || target == NULL || forwarded == NULL ||
+        cJSON_AddStringToObject(result, "target", target) == NULL ||
         !cJSON_AddItemToObject(result, "headers", forwarded)) {
         cJSON_Delete(forwarded);
         cJSON_Delete(result);
@@ -159,67 +160,65 @@ static int is_body_length(const cJSON *value) {
     return cJSON_IsNumber(value) && value->valuedouble >= 0 && value->valuedouble == floor(value->valuedouble);
 }
 
-static int read_pass_through_arguments(const service_call *call, pass_through_arguments *read, uint8_t **out,
-                                       size_t *out_len, int32_t *status) {
-    return service_require(call, "upstream", service_is_string, "a string", &read->upstream, out, out_len, status) &&
-           service_require(call, "url", service_is_string, "a string", &read->url, out, out_len, status) &&
-           service_require(call, "headers", service_is_object, "an object", &read->headers, out, out_len, status) &&
-           service_require(call, "bodyLength", is_body_length, "a non-negative integer", &read->body_length, out,
-                           out_len, status) &&
-           service_require(call, "placeholderAuthorization", service_is_string, "a string", &read->placeholder, out,
-                           out_len, status);
+static int read_pass_through_arguments(const service_call *call, pass_through_arguments *read, service_reply *reply,
+                                       int32_t *status) {
+    return service_require(call, "upstream", service_is_string, "a string", &read->upstream, reply, status) &&
+           service_require(call, "url", service_is_string, "a string", &read->url, reply, status) &&
+           service_require(call, "headers", service_is_object, "an object", &read->headers, reply, status) &&
+           service_require(call, "bodyLength", is_body_length, "a non-negative integer", &read->body_length, reply,
+                           status) &&
+           service_require(call, "placeholderAuthorization", service_is_string, "a string", &read->placeholder, reply,
+                           status);
 }
 
-static int32_t refuse_url(const char *url, uint8_t **out, size_t *out_len) {
+static int32_t refuse_url(const char *url, service_reply *reply) {
     char cause[512];
     snprintf(cause, sizeof(cause), "the url %.400s is not a path starting with /", url);
-    return service_refuse(cause, URL_FIX, out, out_len);
+    return service_refuse(cause, URL_FIX, reply);
 }
 
 /** @implNote A url not starting with `/` would join onto the upstream's host, so it could name another host. */
-static int32_t answer_pass_through(const pass_through_arguments *arguments, uint8_t **out, size_t *out_len) {
+static int32_t answer_pass_through(const pass_through_arguments *arguments, service_reply *reply) {
     if (arguments->url->valuestring[0] != '/') {
-        return refuse_url(arguments->url->valuestring, out, out_len);
+        return refuse_url(arguments->url->valuestring, reply);
     }
     routing_upstream parts;
-    int32_t status = SPISOR_STATUS_SUCCESS;
-    if (!routing_read_upstream(arguments->upstream->valuestring, &parts, out, out_len, &status)) {
+    int32_t status = SERVICE_SUCCESS;
+    if (!routing_read_upstream(arguments->upstream->valuestring, &parts, reply, &status)) {
         return status;
     }
     status = service_answer(pass_through_answer(&parts, arguments->url, arguments->headers, arguments->placeholder,
                                                 arguments->body_length->valuedouble),
-                            out, out_len);
+                            reply);
     routing_free_upstream(&parts);
     return status;
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_pass_through(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_pass_through_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     pass_through_arguments arguments;
-    if (read_pass_through_arguments(&call, &arguments, out, out_len, &status)) {
-        status = answer_pass_through(&arguments, out, out_len);
+    if (read_pass_through_arguments(&call, &arguments, reply, &status)) {
+        status = answer_pass_through(&arguments, reply);
     }
-    service_discard_call(&call);
     return status;
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_reply_headers(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_reply_headers_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *headers = NULL;
     const cJSON *rewritten = NULL;
-    if (service_require(&call, "headers", service_is_object, "an object", &headers, out, out_len, &status) &&
-        service_require(&call, "rewritten", service_is_boolean, "a boolean", &rewritten, out, out_len, &status)) {
-        status = service_answer(service_wrap("headers", routing_end_to_end_headers(headers, cJSON_IsTrue(rewritten))), out,
-                                out_len);
+    if (service_require(&call, "headers", service_is_object, "an object", &headers, reply, &status) &&
+        service_require(&call, "rewritten", service_is_boolean, "a boolean", &rewritten, reply, &status)) {
+        status = service_answer(service_wrap("headers", routing_end_to_end_headers(headers, cJSON_IsTrue(rewritten))),
+                                reply);
     }
-    service_discard_call(&call);
     return status;
 }

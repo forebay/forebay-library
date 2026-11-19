@@ -34,9 +34,13 @@ add_library(forebay_objects OBJECT
     src/accounts_store.c
     src/accounts_support.c
     src/accounts_token.c
+    src/answer_storage.c
     src/definition_support.c
-    src/release.c
+    src/routing_answers.c
+    src/routing_arguments.c
     src/routing_arrival.c
+    src/routing_definition.c
+    src/routing_definition_step.c
     src/routing_environment.c
     src/routing_failure.c
     src/routing_headers.c
@@ -71,6 +75,8 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     enable_testing()
     include(${forebay_siblings}/library/cmake/test_timeouts.cmake)
     spisor_refuse_unbounded_tests("${CMAKE_CURRENT_SOURCE_DIR}")
+    include(${forebay_siblings}/library/cmake/weivel.cmake)
+    spisor_add_weivel()
     add_subdirectory(test)
 endif()
 

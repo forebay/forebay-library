@@ -68,20 +68,19 @@ cJSON *routing_outcome_of(const cJSON *argument) {
     return result;
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_outcome(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_outcome_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *reply_status = NULL;
     const cJSON *headers = NULL;
     const cJSON *now = NULL;
-    if (service_require(&call, "status", service_is_number, "a number", &reply_status, out, out_len, &status) &&
-        service_require(&call, "headers", service_is_object, "an object", &headers, out, out_len, &status) &&
-        service_require(&call, "now", service_is_number, "a number", &now, out, out_len, &status)) {
-        status = service_answer(routing_outcome_of(call.argument), out, out_len);
+    if (service_require(&call, "status", service_is_number, "a number", &reply_status, reply, &status) &&
+        service_require(&call, "headers", service_is_object, "an object", &headers, reply, &status) &&
+        service_require(&call, "now", service_is_number, "a number", &now, reply, &status)) {
+        status = service_answer(routing_outcome_of(call.argument), reply);
     }
-    service_discard_call(&call);
     return status;
 }

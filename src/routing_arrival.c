@@ -1,39 +1,50 @@
 #include "routing_arrival.h"
 
+#include "answer_storage.h"
 #include "spisor/allocation.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define FORBIDDEN_STATUS 403
+#define FORBIDDEN_STATUS 403u
+#define HEALTH_STATUS 200u
 #define HEALTH_PATH "/health"
 #define LOOPBACK_ADDRESS "127.0.0.1"
 #define LOOPBACK_NAME "localhost"
 
-static int is_addressed_to_the_port(const cJSON *headers, int port) {
-    const char *host = routing_header(headers, "host");
-    char *address = routing_formatted(LOOPBACK_ADDRESS ":%d", port);
-    char *name = routing_formatted(LOOPBACK_NAME ":%d", port);
-    int admitted = host != NULL && address != NULL && name != NULL &&
-                   (routing_equals_ignoring_case(host, address) || routing_equals_ignoring_case(host, name));
-    spisor_memory_release(address);
-    spisor_memory_release(name);
-    return admitted;
+/** The value of the header the JavaScript Headers API reads: the exact name first, else the first ignoring case. */
+static const char *header_value(const forebay_pair *headers, size_t count, const char *name) {
+    const char *exact = NULL;
+    for (size_t index = 0; index < count; index++) {
+        if (strcmp(headers[index].name, name) == 0) {
+            exact = headers[index].value;
+        }
+    }
+    for (size_t index = 0; exact == NULL && index < count; index++) {
+        if (routing_equals_ignoring_case(headers[index].name, name)) {
+            return header_value(headers, count, headers[index].name);
+        }
+    }
+    return exact;
 }
 
-/** @implNote Any value counts, since a header the caller could not read as a string was still sent. */
-static int carries_an_origin(const cJSON *headers) {
-    const cJSON *entry = NULL;
-    cJSON_ArrayForEach(entry, headers) {
-        if (routing_equals_ignoring_case(entry->string, "origin")) {
+static int is_addressed_to_the_port(const forebay_pair *headers, size_t count, uint32_t port) {
+    const char *host = header_value(headers, count, "host");
+    char address[32];
+    char name[32];
+    snprintf(address, sizeof address, LOOPBACK_ADDRESS ":%u", (unsigned)port);
+    snprintf(name, sizeof name, LOOPBACK_NAME ":%u", (unsigned)port);
+    return host != NULL && (routing_equals_ignoring_case(host, address) || routing_equals_ignoring_case(host, name));
+}
+
+static int carries_an_origin(const forebay_pair *headers, size_t count) {
+    for (size_t index = 0; index < count; index++) {
+        if (routing_equals_ignoring_case(headers[index].name, "origin")) {
             return 1;
         }
     }
     return 0;
-}
-
-static int is_admitted(const cJSON *headers, int port) {
-    return !carries_an_origin(headers) && is_addressed_to_the_port(headers, port);
 }
 
 static int is_health_probe(const char *path) {
@@ -41,68 +52,34 @@ static int is_health_probe(const char *path) {
     return length == strlen(HEALTH_PATH) && strncmp(path, HEALTH_PATH, length) == 0;
 }
 
-static cJSON *refusal_answer(int port) {
-    char *message = routing_formatted("the proxy answers only requests to " LOOPBACK_ADDRESS ":%d or " LOOPBACK_NAME
-                                ":%d that carry no Origin",
-                                port, port);
-    cJSON *answer = cJSON_CreateObject();
-    cJSON *reply = cJSON_CreateObject();
-    if (message == NULL || answer == NULL || reply == NULL || cJSON_AddStringToObject(answer, "kind", "refuse") == NULL ||
-        cJSON_AddStringToObject(reply, "kind", "proxyError") == NULL ||
-        cJSON_AddNumberToObject(reply, "status", FORBIDDEN_STATUS) == NULL ||
-        cJSON_AddStringToObject(reply, "message", message) == NULL || !service_add(answer, "reply", reply)) {
-        cJSON_Delete(reply);
-        cJSON_Delete(answer);
-        answer = NULL;
+static spisor_status refuse_arrival(uint32_t port, forebay_arrival_answer *answer) {
+    char message[160];
+    snprintf(message, sizeof message,
+             "the proxy answers only requests to " LOOPBACK_ADDRESS ":%u or " LOOPBACK_NAME ":%u that carry no Origin",
+             (unsigned)port, (unsigned)port);
+    if (!forebay_storage_text(&answer->storage, message, &answer->message)) {
+        return SPISOR_OUT_OF_MEMORY;
     }
-    spisor_memory_release(message);
-    return answer;
+    answer->kind = FOREBAY_ARRIVAL_REFUSE;
+    answer->reply_kind = FOREBAY_REPLY_PROXY_ERROR;
+    answer->status = FORBIDDEN_STATUS;
+    return SPISOR_OK;
 }
 
-static cJSON *health_answer(void) {
-    cJSON *answer = cJSON_CreateObject();
-    if (answer == NULL || cJSON_AddStringToObject(answer, "kind", "health") == NULL ||
-        cJSON_AddNumberToObject(answer, "status", 200) == NULL ||
-        cJSON_AddStringToObject(answer, "contentType", "text/plain") == NULL ||
-        cJSON_AddStringToObject(answer, "body", "ok") == NULL) {
-        cJSON_Delete(answer);
-        return NULL;
+spisor_status routing_decide_arrival(const forebay_arrival_argument *argument, forebay_arrival_answer *answer) {
+    if (carries_an_origin(argument->headers, argument->header_count) ||
+        !is_addressed_to_the_port(argument->headers, argument->header_count, argument->port)) {
+        return refuse_arrival(argument->port, answer);
     }
-    return answer;
-}
-
-static cJSON *route_answer(void) {
-    cJSON *answer = cJSON_CreateObject();
-    if (answer == NULL || cJSON_AddStringToObject(answer, "kind", "route") == NULL) {
-        cJSON_Delete(answer);
-        return NULL;
+    if (is_health_probe(argument->path)) {
+        answer->kind = FOREBAY_ARRIVAL_HEALTH;
+        answer->status = HEALTH_STATUS;
+        answer->content_type = "text/plain";
+        answer->body = "ok";
+    } else {
+        answer->kind = FOREBAY_ARRIVAL_ROUTE;
     }
-    return answer;
-}
-
-static cJSON *arrival_answer(const char *path, const cJSON *headers, int port) {
-    if (!is_admitted(headers, port)) {
-        return refusal_answer(port);
-    }
-    return is_health_probe(path) ? health_answer() : route_answer();
-}
-
-SERVICE_EXPORT int32_t forebay_library_routing_arrival(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
-    service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
-        return status;
-    }
-    const cJSON *path = NULL;
-    const cJSON *headers = NULL;
-    const cJSON *port = NULL;
-    if (service_require(&call, "path", service_is_string, "a string", &path, out, out_len, &status) &&
-        service_require(&call, "headers", service_is_object, "an object", &headers, out, out_len, &status) &&
-        service_require(&call, "port", routing_is_port, "a port number from 1 to 65535", &port, out, out_len, &status)) {
-        status = service_answer(arrival_answer(path->valuestring, headers, (int)port->valuedouble), out, out_len);
-    }
-    service_discard_call(&call);
-    return status;
+    return SPISOR_OK;
 }
 
 static int is_listen_failure(const cJSON *value) {
@@ -114,58 +91,60 @@ static int is_anything(const cJSON *value) {
     return value != NULL;
 }
 
-static int32_t refuse_the_setting(const cJSON *value, const char *settings_file, uint8_t **out, size_t *out_len) {
+static int32_t refuse_the_setting(const cJSON *value, const char *settings_file, service_reply *reply) {
     char *printed = cJSON_PrintUnformatted(value);
     char *cause = printed == NULL ? NULL : routing_formatted("proxy.port is %s, which is no port", printed);
     char *fix = routing_formatted("set proxy.port in %s to a port from 1 to 65535", settings_file);
-    int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(out, out_len) : service_refuse(cause, fix, out, out_len);
+    int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(reply) : service_refuse(cause, fix, reply);
     spisor_memory_release(printed);
     spisor_memory_release(cause);
     spisor_memory_release(fix);
     return status;
 }
 
-static int32_t refuse_the_listen(int port, const cJSON *failure, const char *settings_file, uint8_t **out, size_t *out_len) {
+static int32_t refuse_the_listen(int port, const cJSON *failure, const char *settings_file, service_reply *reply) {
     const char *detail = cJSON_GetObjectItemCaseSensitive(failure, "detail")->valuestring;
     int in_use = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(failure, "inUse"));
-    char *reason = in_use ? routing_formatted("is already in use") : routing_formatted("cannot be listened on (%s)", detail);
+    char *reason =
+        in_use ? routing_formatted("is already in use") : routing_formatted("cannot be listened on (%s)", detail);
     if (reason == NULL) {
-        return service_out_of_memory(out, out_len);
+        return service_out_of_memory(reply);
     }
     char *cause = routing_formatted("port %d on " LOOPBACK_ADDRESS " %s, so the proxy cannot listen", port, reason);
-    char *fix = routing_formatted("stop what listens on port %d, or set proxy.port in %s to a free port", port, settings_file);
-    int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(out, out_len) : service_refuse(cause, fix, out, out_len);
+    char *fix =
+        routing_formatted("stop what listens on port %d, or set proxy.port in %s to a free port", port, settings_file);
+    int32_t status = cause == NULL || fix == NULL ? service_out_of_memory(reply) : service_refuse(cause, fix, reply);
     spisor_memory_release(reason);
     spisor_memory_release(cause);
     spisor_memory_release(fix);
     return status;
 }
 
-static int32_t answer_the_port(int port, uint8_t **out, size_t *out_len) {
+static int32_t answer_the_port(int port, service_reply *reply) {
     cJSON *answer = cJSON_CreateObject();
     if (answer == NULL || cJSON_AddNumberToObject(answer, "port", port) == NULL ||
         cJSON_AddStringToObject(answer, "address", LOOPBACK_ADDRESS) == NULL) {
         cJSON_Delete(answer);
         answer = NULL;
     }
-    return service_answer(answer, out, out_len);
+    return service_answer(answer, reply);
 }
 
-static int32_t decide_the_port(const cJSON *value, const char *settings_file, const cJSON *failure, uint8_t **out,
-                               size_t *out_len) {
+static int32_t decide_the_port(const cJSON *value, const char *settings_file, const cJSON *failure,
+                               service_reply *reply) {
     if (!routing_is_port(value)) {
-        return refuse_the_setting(value, settings_file, out, out_len);
+        return refuse_the_setting(value, settings_file, reply);
     }
     if (failure != NULL) {
-        return refuse_the_listen((int)value->valuedouble, failure, settings_file, out, out_len);
+        return refuse_the_listen((int)value->valuedouble, failure, settings_file, reply);
     }
-    return answer_the_port((int)value->valuedouble, out, out_len);
+    return answer_the_port((int)value->valuedouble, reply);
 }
 
-SERVICE_EXPORT int32_t forebay_library_routing_port(const uint8_t *in, size_t in_len, uint8_t **out, size_t *out_len) {
+int32_t routing_port_call(const cJSON *argument, service_reply *reply) {
     service_call call;
-    int32_t status = service_open(in, in_len, &call, out, out_len);
-    if (status != SPISOR_STATUS_SUCCESS) {
+    int32_t status = service_open(argument, &call, reply);
+    if (status != SERVICE_SUCCESS) {
         return status;
     }
     const cJSON *value = NULL;
@@ -173,12 +152,11 @@ SERVICE_EXPORT int32_t forebay_library_routing_port(const uint8_t *in, size_t in
     const cJSON *failure = cJSON_GetObjectItemCaseSensitive(call.argument, "failure");
     if (failure != NULL && !is_listen_failure(failure)) {
         status = service_fail("argument", "member failure is not an object with inUse and detail",
-                              "pass failure as {inUse: boolean, detail: string}", out, out_len);
-    } else if (service_require(&call, "value", is_anything, "any value", &value, out, out_len, &status) &&
-               service_require(&call, "settingsFile", service_is_string, "a string", &settings_file, out, out_len,
+                              "pass failure as {inUse: boolean, detail: string}", reply);
+    } else if (service_require(&call, "value", is_anything, "any value", &value, reply, &status) &&
+               service_require(&call, "settingsFile", service_is_string, "a string", &settings_file, reply,
                                &status)) {
-        status = decide_the_port(value, settings_file->valuestring, failure, out, out_len);
+        status = decide_the_port(value, settings_file->valuestring, failure, reply);
     }
-    service_discard_call(&call);
     return status;
 }
