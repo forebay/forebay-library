@@ -34,9 +34,6 @@ int anthropic_decode_content(anthropic_reader *reader, const cJSON *content, con
 /** A wire response as an IR response in the reader's storage; NULL once memory has run out. */
 const forebay_ir_response *anthropic_decode_response(anthropic_reader *reader, const cJSON *root);
 
-/** The IR stop reason of a wire one, static text: a known one as it is, any other, or none, "error". */
-const char *anthropic_stop_reason_to_ir(const char *wire_reason);
-
 /**
  * The IR event of one stream frame, parsed, into `*event` and the reader's storage, as the translator's stream decoder
  * reads a frame.

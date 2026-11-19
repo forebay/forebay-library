@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "anthropic_decode.h"
+#include "anthropic_stop_reason.h"
 #include "anthropic_wire.h"
 
 static const char *const MESSAGE_START_CONSUMED[] = {"id",          "type",          "role",  "content", "model",
