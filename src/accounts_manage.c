@@ -152,10 +152,6 @@ int accounts_is_account_record(const spisor_value *account) {
 static spisor_status upsert_account(const char *path, const cJSON *account, forebay_accounts_upsert_answer *answer,
                                     spisor_refusal *refusal) {
     upsert_request request = {account, accounts_account_id(account)};
-    const char *token_member = accounts_find_token_member(account);
-    if (token_member != NULL) {
-        return accounts_refuse_token_member("account", token_member, refusal);
-    }
     return accounts_run_change(path, upsert_into, &request, answer, clear_upsert_answer, refusal);
 }
 
@@ -172,7 +168,10 @@ spisor_status accounts_upsert(void *context, const forebay_accounts_upsert_argum
     if (!accounts_is_account_record(argument->account)) {
         return forebay_refuse_member(refusal, "account", "a record whose id is non-empty text");
     }
-    spisor_status status = forebay_json_of_member(argument->account, "account", &account, refusal);
+    spisor_status status = accounts_refuse_credentials(argument->account, "account", refusal);
+    if (status == SPISOR_OK) {
+        status = forebay_json_of_member(argument->account, "account", &account, refusal);
+    }
     if (status == SPISOR_OK) {
         status = upsert_account(argument->store, account, answer, refusal);
     }

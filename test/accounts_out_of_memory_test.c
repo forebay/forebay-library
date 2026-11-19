@@ -134,8 +134,38 @@ static void every_failure_of(const char *path, allocation_failure_mode mode) {
     cJSON_Delete(vector);
 }
 
+static const spisor_entry token_entries[] = {
+    {"id", 2, {SPISOR_VALUE_TEXT, 0, 0, "a", 1, NULL, NULL, 0}},
+    {"accessToken", 11, {SPISOR_VALUE_TEXT, 0, 0, "secret", 6, NULL, NULL, 0}},
+};
+static const spisor_value token_account = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, token_entries, 2};
+
+/**
+ * An account carrying a token is refused with memory running out from the first allocation after its well-formedness
+ * check, which only a refusal read before any conversion can answer: a conversion would copy the token first.
+ *
+ * @implNote With no refusal to fill, since filling one is itself an allocation.
+ */
+static void a_token_is_refused_before_it_is_copied(void) {
+    const forebay_accounts_definition *accounts = accounts_definition();
+    forebay_accounts_upsert_argument argument = SPISOR_INIT(forebay_accounts_upsert_argument);
+    forebay_accounts_upsert_answer answer = SPISOR_INIT(forebay_accounts_upsert_answer);
+    uint64_t before = spisor_memory_attempts();
+    spisor_status checked = spisor_value_check(&token_account);
+    uint64_t check_attempts = spisor_memory_attempts() - before;
+    argument.store = "never-opened.json";
+    argument.account = &token_account;
+    fail_allocation(FAIL_EVERY_LATER_ALLOCATION, check_attempts + 1);
+    spisor_status status = accounts->upsert(NULL, &argument, &answer, NULL);
+    spisor_memory_fail_at(0);
+    if (checked != SPISOR_OK || status != SPISOR_REFUSED) {
+        support_failf("a token is refused before it is copied", "answered %d", (int)status);
+    }
+}
+
 int main(void) {
     spisor_json_use_library_allocator();
+    a_token_is_refused_before_it_is_copied();
     char *list = support_read_text(ACCOUNTS_VECTOR_LIST);
     int count = 0;
     if (list == NULL) {
