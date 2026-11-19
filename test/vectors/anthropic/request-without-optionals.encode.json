@@ -1,0 +1,23 @@
+{
+  "direction": "encodeRequest",
+  "input": {
+    "model": "m",
+    "messages": [
+      {
+        "role": "user",
+        "content": []
+      }
+    ],
+    "stream": false
+  },
+  "output": {
+    "model": "m",
+    "messages": [
+      {
+        "role": "user",
+        "content": []
+      }
+    ],
+    "stream": false
+  }
+}

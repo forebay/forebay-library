@@ -1,0 +1,24 @@
+{
+  "direction": "encodeResponse",
+  "input": {
+    "id": "msg_9",
+    "model": "m",
+    "content": [],
+    "stopReason": "error",
+    "extensions": {
+      "$stopReasonRaw": null,
+      "$stopSequenceRaw": null,
+      "$typeRaw": null,
+      "$roleRaw": null
+    }
+  },
+  "output": {
+    "id": "msg_9",
+    "type": "message",
+    "role": "assistant",
+    "content": [],
+    "model": "m",
+    "stop_reason": "error",
+    "stop_sequence": null
+  }
+}

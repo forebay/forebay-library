@@ -1,0 +1,69 @@
+{
+  "direction": "decodeStream",
+  "input": [
+    "event: ",
+    "ping\r\ndata: {\"type\":\"ping\"}\r\n\r\n: keepalive comment\n\nevent: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"m1\",\"model\":\"m\",\"role\":\"assistant\",\"content\":[],\"container\":{\"id\":\"c\"},\"usage\":{\"input_tokens\":5,\"cache_creation_input_tokens\":2}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"content_block\":{\"type\":\"redacted_thinking\",\"data\":\"X\"}}\n\nevent: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":3,\"delta\":{\"type\":\"citations_delta\",\"citation\":{}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":4,\"content_block\":{\"type\":\"server_tool_use\"}}\n\nevent: content_block_stop\ndata: {\"type\":\"content_block_stop\"}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":\"S\",\"container\":null}}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"usage\":{\"output_tokens\":9}}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":null,\"stop_sequence\":null}}\n\ndata: {\"type\":\"message_stop\"}\n\ndata: {\"type\":\ndata: \"mystery\"}\n\nevent: error\ndata: {\"type\":\"error\"}\n\ndata: [1,2]\n\ndata: {\"nottype\":1}\n\nevent: message_start\ndata: {\"type\":\"message_start\"}\n\n"
+  ],
+  "output": [
+    {
+      "event": "message_start",
+      "id": "m1",
+      "model": "m",
+      "role": "assistant",
+      "usage": {
+        "inputTokens": 5,
+        "outputTokens": null,
+        "cacheCreationInputTokens": 2
+      },
+      "extensions": {
+        "container": {
+          "id": "c"
+        }
+      }
+    },
+    {
+      "event": "content_block_start",
+      "index": 0,
+      "blockKind": "thinking"
+    },
+    {
+      "event": "content_block_start",
+      "index": 4,
+      "blockKind": "text"
+    },
+    {
+      "event": "content_block_stop",
+      "index": 0
+    },
+    {
+      "event": "message_delta",
+      "stopReason": "end_turn",
+      "extensions": {
+        "$stopSequenceRaw": "S",
+        "container": null
+      }
+    },
+    {
+      "event": "message_delta",
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": 9
+      }
+    },
+    {
+      "event": "message_delta",
+      "stopReason": "error",
+      "extensions": {
+        "$stopSequenceRaw": null
+      }
+    },
+    {
+      "event": "message_stop"
+    },
+    {
+      "event": "error",
+      "errorType": null,
+      "message": null
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "direction": "encodeResponse",
+  "input": {
+    "id": "msg_01",
+    "model": "claude-opus-4-8",
+    "content": [
+      {
+        "kind": "unknown",
+        "raw": {
+          "type": "search_result",
+          "url": "https://x",
+          "title": "t"
+        }
+      }
+    ],
+    "stopReason": "end_turn",
+    "usage": {
+      "inputTokens": 1,
+      "outputTokens": 1
+    },
+    "extensions": {
+      "$stopReasonRaw": "end_turn",
+      "$stopSequenceRaw": null,
+      "$typeRaw": "message",
+      "$roleRaw": "assistant"
+    }
+  },
+  "output": {
+    "id": "msg_01",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "search_result",
+        "url": "https://x",
+        "title": "t"
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "stop_reason": "end_turn",
+    "stop_sequence": null,
+    "usage": {
+      "input_tokens": 1,
+      "output_tokens": 1
+    }
+  }
+}

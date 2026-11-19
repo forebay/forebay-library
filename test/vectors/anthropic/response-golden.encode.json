@@ -1,0 +1,62 @@
+{
+  "direction": "encodeResponse",
+  "input": {
+    "id": "msg_01XYZ",
+    "model": "claude-opus-4-8",
+    "content": [
+      {
+        "kind": "text",
+        "text": "It's 18C and cloudy in Berlin."
+      },
+      {
+        "kind": "tool_use",
+        "id": "toolu_02",
+        "name": "get_weather",
+        "input": {
+          "city": "Berlin"
+        }
+      }
+    ],
+    "stopReason": "tool_use",
+    "usage": {
+      "inputTokens": 512,
+      "outputTokens": 128,
+      "cacheReadInputTokens": 50,
+      "cacheCreationInputTokens": 100
+    },
+    "extensions": {
+      "$stopReasonRaw": "tool_use",
+      "$stopSequenceRaw": null,
+      "$typeRaw": "message",
+      "$roleRaw": "assistant"
+    }
+  },
+  "output": {
+    "id": "msg_01XYZ",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "text",
+        "text": "It's 18C and cloudy in Berlin."
+      },
+      {
+        "type": "tool_use",
+        "id": "toolu_02",
+        "name": "get_weather",
+        "input": {
+          "city": "Berlin"
+        }
+      }
+    ],
+    "model": "claude-opus-4-8",
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "usage": {
+      "input_tokens": 512,
+      "output_tokens": 128,
+      "cache_creation_input_tokens": 100,
+      "cache_read_input_tokens": 50
+    }
+  }
+}

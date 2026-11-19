@@ -1,0 +1,43 @@
+{
+  "direction": "decodeRequest",
+  "input": {
+    "model": "claude-opus-4-8",
+    "max_tokens": 256,
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ],
+    "stream": false,
+    "tool_choice": {
+      "type": "any",
+      "disable_parallel_tool_use": true
+    }
+  },
+  "output": {
+    "model": "claude-opus-4-8",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "kind": "text",
+            "text": "hi"
+          }
+        ],
+        "extensions": {
+          "$contentIsString": true
+        }
+      }
+    ],
+    "toolChoice": {
+      "type": "any",
+      "extensions": {
+        "disable_parallel_tool_use": true
+      }
+    },
+    "maxTokens": 256,
+    "stream": false
+  }
+}

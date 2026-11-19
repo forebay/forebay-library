@@ -1,0 +1,249 @@
+{
+  "direction": "decodeRequest",
+  "input": {
+    "model": "m",
+    "max_tokens": 8,
+    "stream": true,
+    "system": [
+      {
+        "type": "text",
+        "text": "s",
+        "cache_control": {
+          "type": "ephemeral"
+        }
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "extra_message_key": {
+          "a": 1
+        },
+        "content": [
+          {
+            "type": "image",
+            "source": {
+              "type": "base64",
+              "media_type": "image/png",
+              "data": "AAAA"
+            },
+            "cache_control": {
+              "type": "ephemeral",
+              "ttl": "5m"
+            }
+          },
+          {
+            "type": "image",
+            "source": {
+              "type": "url",
+              "url": "https://x/i.png"
+            }
+          },
+          {
+            "type": "image",
+            "source": {
+              "type": "file",
+              "file_id": "file_1"
+            }
+          },
+          {
+            "type": "text",
+            "text": "t",
+            "citations": [
+              {
+                "k": 1
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "redacted_thinking",
+            "data": "ENC"
+          },
+          {
+            "type": "thinking",
+            "thinking": "hmm"
+          },
+          {
+            "type": "tool_use",
+            "id": "t1",
+            "name": "n",
+            "input": {},
+            "cache_control": {
+              "type": "ephemeral"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "tool_result",
+            "tool_use_id": "t1",
+            "is_error": true,
+            "content": [
+              {
+                "type": "text",
+                "text": "boom"
+              }
+            ],
+            "cache_control": {
+              "type": "ephemeral",
+              "ttl": "1h"
+            }
+          },
+          {
+            "type": "tool_result",
+            "tool_use_id": "t2"
+          }
+        ]
+      }
+    ],
+    "thinking": {
+      "type": "disabled"
+    },
+    "tool_choice": {
+      "type": "tool",
+      "name": "n"
+    },
+    "tools": [
+      {
+        "name": "n",
+        "input_schema": {}
+      }
+    ]
+  },
+  "output": {
+    "model": "m",
+    "system": [
+      {
+        "kind": "text",
+        "cacheControl": "ephemeral",
+        "text": "s"
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "kind": "image",
+            "cacheControl": "ephemeral",
+            "mediaType": "image/png",
+            "data": "AAAA",
+            "extensions": {
+              "$cacheControlExtra": {
+                "ttl": "5m"
+              }
+            }
+          },
+          {
+            "kind": "image",
+            "mediaType": null,
+            "url": "https://x/i.png"
+          },
+          {
+            "kind": "image",
+            "mediaType": null,
+            "extensions": {
+              "$imageSourceRaw": {
+                "type": "file",
+                "file_id": "file_1"
+              }
+            }
+          },
+          {
+            "kind": "text",
+            "text": "t",
+            "extensions": {
+              "citations": [
+                {
+                  "k": 1
+                }
+              ]
+            }
+          }
+        ],
+        "extensions": {
+          "extra_message_key": {
+            "a": 1
+          }
+        }
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "kind": "thinking",
+            "text": null,
+            "extensions": {
+              "$redacted": true,
+              "$redactedThinkingData": "ENC"
+            }
+          },
+          {
+            "kind": "thinking",
+            "text": "hmm"
+          },
+          {
+            "kind": "tool_use",
+            "cacheControl": "ephemeral",
+            "id": "t1",
+            "name": "n",
+            "input": {}
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "kind": "tool_result",
+            "cacheControl": "ephemeral",
+            "toolUseId": "t1",
+            "content": [
+              {
+                "kind": "text",
+                "text": "boom"
+              }
+            ],
+            "isError": true,
+            "extensions": {
+              "$cacheControlExtra": {
+                "ttl": "1h"
+              }
+            }
+          },
+          {
+            "kind": "tool_result",
+            "toolUseId": "t2",
+            "content": null
+          }
+        ]
+      }
+    ],
+    "tools": [
+      {
+        "name": "n",
+        "inputSchema": {}
+      }
+    ],
+    "toolChoice": {
+      "type": "tool",
+      "name": "n"
+    },
+    "maxTokens": 8,
+    "stream": true,
+    "thinking": {
+      "enabled": false
+    },
+    "extensions": {
+      "$thinkingType": "disabled"
+    }
+  }
+}

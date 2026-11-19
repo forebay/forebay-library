@@ -1,0 +1,63 @@
+{
+  "direction": "encodeStream",
+  "input": [
+    {
+      "event": "message_start",
+      "id": "msg_1",
+      "model": "claude-opus-4-8",
+      "role": "assistant",
+      "usage": {
+        "inputTokens": 10,
+        "outputTokens": 0
+      }
+    },
+    {
+      "event": "content_block_start",
+      "index": 0,
+      "blockKind": "text"
+    },
+    {
+      "event": "text_delta",
+      "index": 0,
+      "text": "Hello"
+    },
+    {
+      "event": "text_delta",
+      "index": 0,
+      "text": " there"
+    },
+    {
+      "event": "content_block_stop",
+      "index": 0
+    },
+    {
+      "event": "message_delta",
+      "stopReason": "end_turn",
+      "usage": {
+        "inputTokens": null,
+        "outputTokens": 5
+      },
+      "extensions": {
+        "$stopSequenceRaw": null
+      }
+    },
+    {
+      "event": "message_stop"
+    },
+    {
+      "event": "error",
+      "errorType": "overloaded_error",
+      "message": "try again"
+    }
+  ],
+  "output": [
+    "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_1\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"claude-opus-4-8\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":10,\"output_tokens\":0}}}\n\n",
+    "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n",
+    "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hello\"}}\n\n",
+    "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\" there\"}}\n\n",
+    "event: content_block_stop\ndata: {\"type\":\"content_block_stop\",\"index\":0}\n\n",
+    "event: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":5}}\n\n",
+    "event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n",
+    "event: error\ndata: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"try again\"}}\n\n"
+  ]
+}

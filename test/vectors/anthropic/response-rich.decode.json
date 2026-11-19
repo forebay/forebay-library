@@ -1,0 +1,77 @@
+{
+  "direction": "decodeResponse",
+  "input": {
+    "id": "msg_9",
+    "type": "message",
+    "role": "assistant",
+    "model": "m",
+    "content": [
+      {
+        "type": "redacted_thinking",
+        "data": "ENC"
+      },
+      {
+        "type": "thinking",
+        "thinking": "hm",
+        "signature": "sg"
+      },
+      {
+        "type": "text",
+        "text": "x",
+        "cache_control": {
+          "type": "ephemeral"
+        }
+      }
+    ],
+    "stop_reason": "max_tokens",
+    "stop_sequence": null,
+    "container": {
+      "id": "c"
+    },
+    "usage": {
+      "input_tokens": 1,
+      "output_tokens": 2,
+      "cache_read_input_tokens": 3,
+      "service_tier": "standard"
+    }
+  },
+  "output": {
+    "id": "msg_9",
+    "model": "m",
+    "content": [
+      {
+        "kind": "thinking",
+        "text": null,
+        "extensions": {
+          "$redacted": true,
+          "$redactedThinkingData": "ENC"
+        }
+      },
+      {
+        "kind": "thinking",
+        "text": "hm",
+        "signature": "sg"
+      },
+      {
+        "kind": "text",
+        "cacheControl": "ephemeral",
+        "text": "x"
+      }
+    ],
+    "stopReason": "max_tokens",
+    "usage": {
+      "inputTokens": 1,
+      "outputTokens": 2,
+      "cacheReadInputTokens": 3
+    },
+    "extensions": {
+      "$stopReasonRaw": "max_tokens",
+      "$stopSequenceRaw": null,
+      "$typeRaw": "message",
+      "$roleRaw": "assistant",
+      "container": {
+        "id": "c"
+      }
+    }
+  }
+}

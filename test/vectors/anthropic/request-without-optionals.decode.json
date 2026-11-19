@@ -1,0 +1,22 @@
+{
+  "direction": "decodeRequest",
+  "input": {
+    "model": "m",
+    "messages": [
+      {
+        "role": "user",
+        "content": []
+      }
+    ]
+  },
+  "output": {
+    "model": "m",
+    "messages": [
+      {
+        "role": "user",
+        "content": []
+      }
+    ],
+    "stream": false
+  }
+}

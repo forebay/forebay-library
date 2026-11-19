@@ -1,0 +1,36 @@
+{
+  "direction": "encodeRequest",
+  "input": {
+    "model": "m",
+    "messages": [],
+    "maxTokens": 8,
+    "temperature": 1,
+    "topK": 2,
+    "stopSequences": [
+      "a",
+      "b"
+    ],
+    "stream": false,
+    "thinking": {
+      "enabled": true
+    },
+    "extensions": {
+      "$thinkingType": "adaptive"
+    }
+  },
+  "output": {
+    "model": "m",
+    "messages": [],
+    "max_tokens": 8,
+    "temperature": 1,
+    "top_k": 2,
+    "stop_sequences": [
+      "a",
+      "b"
+    ],
+    "stream": false,
+    "thinking": {
+      "type": "adaptive"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "direction": "decodeRequest",
+  "input": {
+    "model": "claude-opus-4-8",
+    "max_tokens": 256,
+    "system": "be terse",
+    "messages": [
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ],
+    "stream": false
+  },
+  "output": {
+    "model": "claude-opus-4-8",
+    "system": [
+      {
+        "kind": "text",
+        "text": "be terse"
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "kind": "text",
+            "text": "hi"
+          }
+        ],
+        "extensions": {
+          "$contentIsString": true
+        }
+      }
+    ],
+    "maxTokens": 256,
+    "stream": false,
+    "extensions": {
+      "$systemIsString": true
+    }
+  }
+}
