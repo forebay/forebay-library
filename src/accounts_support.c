@@ -9,14 +9,14 @@ spisor_status accounts_refuse_store(accounts_store_status status, spisor_refusal
     case ACCOUNTS_STORE_READY:
         return SPISOR_OK;
     case ACCOUNTS_STORE_UNLOCKABLE:
-        return forebay_refuse_as(refusal, SPISOR_REFUSED, "the account store could not be locked",
-                                 "check that the store's folder and its .lock file can be created, opened and locked");
+        return spisor_refuse_as(refusal, SPISOR_REFUSED, "the account store could not be locked",
+                                "check that the store's folder and its .lock file can be created, opened and locked");
     case ACCOUNTS_STORE_UNREADABLE:
-        return forebay_refuse_as(refusal, SPISOR_REFUSED, "the account store is not valid JSON",
-                                 "repair or delete the account store file, then retry");
+        return spisor_refuse_as(refusal, SPISOR_REFUSED, "the account store is not valid JSON",
+                                "repair or delete the account store file, then retry");
     case ACCOUNTS_STORE_UNWRITABLE:
-        return forebay_refuse_as(refusal, SPISOR_REFUSED, "the account store could not be written",
-                                 "check that the store's folder is writable and has room");
+        return spisor_refuse_as(refusal, SPISOR_REFUSED, "the account store could not be written",
+                                "check that the store's folder is writable and has room");
     default:
         return SPISOR_OUT_OF_MEMORY;
     }

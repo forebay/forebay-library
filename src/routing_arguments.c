@@ -2,7 +2,7 @@
 
 #include "definition_support.h"
 
-#define PROFILE_SHAPE FOREBAY_SHAPE_THROUGH(forebay_routing_profile, unserved_model_pattern)
+#define PROFILE_SHAPE SPISOR_SHAPE_THROUGH(forebay_routing_profile, unserved_model_pattern)
 
 int routing_are_texts(const char *const *texts, size_t count) {
     if (!ROUTING_IS_ARRAY(texts, count)) {
@@ -75,7 +75,7 @@ int routing_is_catalog(const forebay_catalog_provider *providers, size_t count) 
 }
 
 int routing_is_profile(const forebay_routing_profile *profile, int needs_tiers) {
-    if (!FOREBAY_HAS_SHAPE(profile, PROFILE_SHAPE) ||
+    if (profile == NULL || !spisor_has_shape(profile->size, PROFILE_SHAPE) ||
         !routing_are_texts(profile->tier_order, profile->tier_order_count) ||
         !routing_are_texts(profile->tier_fallback, profile->tier_fallback_count)) {
         return 0;

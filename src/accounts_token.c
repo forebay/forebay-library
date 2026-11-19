@@ -3,8 +3,8 @@
 #include "definition_support.h"
 
 #define DEFAULT_SKEW_MILLISECONDS 60000.0
-#define TOKEN_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_token_argument, skew_milliseconds)
-#define TOKEN_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_token_answer, expired)
+#define TOKEN_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_token_argument, skew_milliseconds)
+#define TOKEN_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_token_answer, expired)
 
 /**
  * TokenRefresh.accessTokenExpired for an expiry the provider read from its secrets: no expiry is expired,
@@ -17,8 +17,9 @@ static int is_expired(const forebay_accounts_token_argument *argument, double sk
 spisor_status accounts_token_expired(void *context, const forebay_accounts_token_argument *argument,
                                      forebay_accounts_token_answer *answer, spisor_refusal *refusal) {
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, TOKEN_SHAPE) || !FOREBAY_HAS_SHAPE(answer, TOKEN_ANSWER_SHAPE)) {
-        return forebay_refuse_shape(refusal, "accounts' token_expired");
+    if (argument == NULL || !spisor_has_shape(argument->size, TOKEN_SHAPE) || answer == NULL ||
+        !spisor_has_shape(answer->size, TOKEN_ANSWER_SHAPE)) {
+        return spisor_refuse_shape(refusal, "accounts' token_expired");
     }
     if (!forebay_is_finite(argument->expires) || !forebay_is_finite(argument->now) ||
         !forebay_is_finite(argument->skew_milliseconds)) {

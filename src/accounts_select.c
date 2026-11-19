@@ -7,8 +7,8 @@
 #include "definition_support.h"
 #include "spisor/allocation.h"
 
-#define ACQUIRE_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_acquire_argument, now)
-#define ACQUIRE_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_acquire_answer, storage)
+#define ACQUIRE_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_acquire_argument, now)
+#define ACQUIRE_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_acquire_answer, storage)
 
 #define NO_ACCOUNT (-1)
 #define OUT_OF_MEMORY (-2)
@@ -157,11 +157,11 @@ static void release_acquire(void *filled) {
 
 void accounts_release_acquire_answer(void *context, forebay_accounts_acquire_answer *answer) {
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(answer, ACQUIRE_ANSWER_SHAPE)) {
+    if (answer == NULL || !spisor_has_shape(answer->size, ACQUIRE_ANSWER_SHAPE)) {
         return;
     }
     spisor_memory_release(answer->storage);
-    FOREBAY_CLEAR_ANSWER(answer, ACQUIRE_ANSWER_SHAPE);
+    SPISOR_CLEAR_ANSWER(answer, ACQUIRE_ANSWER_SHAPE);
 }
 
 static accounts_strategy strategy_of(uint32_t strategy) {
@@ -174,8 +174,9 @@ static accounts_strategy strategy_of(uint32_t strategy) {
 spisor_status accounts_acquire(void *context, const forebay_accounts_acquire_argument *argument,
                                forebay_accounts_acquire_answer *answer, spisor_refusal *refusal) {
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, ACQUIRE_SHAPE) || !FOREBAY_IS_EMPTY_ANSWER(answer, ACQUIRE_ANSWER_SHAPE)) {
-        return forebay_refuse_shape(refusal, "accounts' acquire");
+    if (argument == NULL || !spisor_has_shape(argument->size, ACQUIRE_SHAPE) ||
+        !SPISOR_IS_EMPTY_ANSWER(answer, ACQUIRE_ANSWER_SHAPE)) {
+        return spisor_refuse_shape(refusal, "accounts' acquire");
     }
     if (!forebay_is_text(argument->store)) {
         return forebay_refuse_member(refusal, "store", "the path of the accounts file");

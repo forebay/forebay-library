@@ -6,8 +6,8 @@
 #include "accounts_support.h"
 #include "definition_support.h"
 
-#define REPORT_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_report_argument, quota)
-#define REPORT_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_report_answer, changed)
+#define REPORT_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_report_argument, quota)
+#define REPORT_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_report_answer, changed)
 
 #define DEFAULT_JITTER 0.5
 #define DEFAULT_ERROR_REASON "transient error"
@@ -224,8 +224,9 @@ spisor_status accounts_report(void *context, const forebay_accounts_report_argum
                               forebay_accounts_report_answer *answer, spisor_refusal *refusal) {
     cJSON *quota = NULL;
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, REPORT_SHAPE) || !FOREBAY_HAS_SHAPE(answer, REPORT_ANSWER_SHAPE)) {
-        return forebay_refuse_shape(refusal, "accounts' report");
+    if (argument == NULL || !spisor_has_shape(argument->size, REPORT_SHAPE) || answer == NULL ||
+        !spisor_has_shape(answer->size, REPORT_ANSWER_SHAPE)) {
+        return spisor_refuse_shape(refusal, "accounts' report");
     }
     spisor_status status = check_argument(argument, refusal);
     if (status == SPISOR_OK && argument->outcome == FOREBAY_ACCOUNTS_QUOTA) {
