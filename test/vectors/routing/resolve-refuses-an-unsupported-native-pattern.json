@@ -22,7 +22,7 @@
     "requestedModel": "x"
   },
   "result": {
-    "refused": "nativeModelPattern uses an unsupported construct: alternation with |",
+    "refused": "native_model_pattern uses an unsupported construct: alternation with |",
     "fix": "write the pattern with only ^ $ literals . [] \\d \\w \\s * + ? and at most one capture group"
   }
 }

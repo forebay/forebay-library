@@ -4,9 +4,9 @@
 #include "routing_support.h"
 
 /**
- * The tier names the tier-source provider's ranking yields through tierRegex group 1, ordered by
+ * The tier names the tier-source provider's ranking yields through tier_regex group 1, ordered by
  * tierOrder with unknown tiers last and alphabetical within a rank, or tierFallback when none match.
- * Answers NULL with refusal set when tierRegex is unusable, or with it clear when memory runs out.
+ * Answers NULL with refusal set when tier_regex is unusable, or with it clear when memory runs out.
  */
 cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models, routing_refusal *refusal);
 

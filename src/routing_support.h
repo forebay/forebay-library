@@ -59,7 +59,7 @@ routing_pattern *routing_compile_profile_pattern(const char *member, const char 
                                                  routing_refusal *refusal);
 
 /**
- * Compiles the profile's unservedModelPattern into *pattern, which stays NULL when the profile declares none.
+ * Compiles the profile's unserved_model_pattern into *pattern, which stays NULL when the profile declares none.
  * Answers 0 with refusal filled, or with it clear when memory runs out.
  */
 int routing_compile_unserved_pattern(const routing_profile *profile, routing_pattern **pattern,

@@ -25,23 +25,36 @@ static int all_strings(const cJSON *list) {
     return 1;
 }
 
-static int profile_string(const cJSON *profile, const char *name, const char **value, service_reply *reply,
-                          int32_t *status) {
-    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, name);
+/** A profile member: its key in the decision's JSON, and the forebay_routing_profile field a refusal names. */
+typedef struct profile_member {
+    const char *key;
+    const char *field;
+} profile_member;
+
+static const profile_member tier_source_provider = {"tierSourceProvider", "tier_source_provider"};
+static const profile_member tier_order = {"tierOrder", "tier_order"};
+static const profile_member tier_fallback = {"tierFallback", "tier_fallback"};
+static const profile_member tier_regex = {"tierRegex", "tier_regex"};
+static const profile_member native_model_pattern = {"nativeModelPattern", "native_model_pattern"};
+static const profile_member unserved_model_pattern = {"unservedModelPattern", "unserved_model_pattern"};
+
+static int profile_string(const cJSON *profile, const profile_member *named, const char **value,
+                          service_reply *reply, int32_t *status) {
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, named->key);
     if (!cJSON_IsString(member)) {
-        *status = service_fail("the profile member", name, "set this member of the profile to text", reply);
+        *status = service_fail("the profile member", named->field, "set this member of the profile to text", reply);
         return 0;
     }
     *value = member->valuestring;
     return 1;
 }
 
-static int profile_list(const cJSON *profile, const char *name, const cJSON **value, service_reply *reply,
-                        int32_t *status) {
-    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, name);
+static int profile_list(const cJSON *profile, const profile_member *named, const cJSON **value,
+                        service_reply *reply, int32_t *status) {
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, named->key);
     if (!cJSON_IsArray(member) || !all_strings(member)) {
-        *status = service_fail("the profile member", name, "set this member of the profile to a list of texts",
-                               reply);
+        *status = service_fail("the profile member", named->field,
+                               "set this member of the profile to a list of texts", reply);
         return 0;
     }
     *value = member;
@@ -50,30 +63,30 @@ static int profile_list(const cJSON *profile, const char *name, const cJSON **va
 
 static int read_tier_members(const cJSON *profile, routing_profile *read, service_reply *reply,
                              int32_t *status) {
-    return profile_string(profile, "tierSourceProvider", &read->tier_source_provider, reply, status) &&
-           profile_list(profile, "tierOrder", &read->tier_order, reply, status) &&
-           profile_list(profile, "tierFallback", &read->tier_fallback, reply, status) &&
-           profile_string(profile, "tierRegex", &read->tier_regex, reply, status);
+    return profile_string(profile, &tier_source_provider, &read->tier_source_provider, reply, status) &&
+           profile_list(profile, &tier_order, &read->tier_order, reply, status) &&
+           profile_list(profile, &tier_fallback, &read->tier_fallback, reply, status) &&
+           profile_string(profile, &tier_regex, &read->tier_regex, reply, status);
 }
 
 static int read_native_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
                                int32_t *status) {
-    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, "nativeModelPattern");
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, native_model_pattern.key);
     if (member == NULL || cJSON_IsNull(member)) {
         read->native_model_pattern = NULL;
         return 1;
     }
-    return profile_string(profile, "nativeModelPattern", &read->native_model_pattern, reply, status);
+    return profile_string(profile, &native_model_pattern, &read->native_model_pattern, reply, status);
 }
 
 static int read_unserved_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
                                  int32_t *status) {
-    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, "unservedModelPattern");
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, unserved_model_pattern.key);
     if (member == NULL || cJSON_IsNull(member)) {
         read->unserved_model_pattern = NULL;
         return 1;
     }
-    return profile_string(profile, "unservedModelPattern", &read->unserved_model_pattern, reply, status);
+    return profile_string(profile, &unserved_model_pattern, &read->unserved_model_pattern, reply, status);
 }
 
 int routing_read_profile(const cJSON *profile, int need, routing_profile *read, service_reply *reply,
@@ -250,7 +263,8 @@ int routing_compile_unserved_pattern(const routing_profile *profile, routing_pat
     if (profile->unserved_model_pattern == NULL || profile->unserved_model_pattern[0] == '\0') {
         return 1;
     }
-    *pattern = routing_compile_profile_pattern("unservedModelPattern", profile->unserved_model_pattern, 0, refusal);
+    *pattern = routing_compile_profile_pattern(unserved_model_pattern.field, profile->unserved_model_pattern, 0,
+                                               refusal);
     return *pattern != NULL;
 }
 

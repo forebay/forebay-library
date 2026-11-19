@@ -171,7 +171,7 @@ static spisor_status check_numbers(const forebay_accounts_report_argument *argum
         return forebay_refuse_member(refusal, "every number", "finite");
     }
     if (argument->has_random && (argument->random < 0 || argument->random >= 1)) {
-        return forebay_refuse_member(refusal, "random", "a jitter in [0, 1), as Math.random() answers");
+        return forebay_refuse_member(refusal, "random", "a jitter from 0 up to but not including 1");
     }
     if (needs_backoff(argument) && (argument->base_milliseconds < 0 || argument->max_milliseconds < 0)) {
         return forebay_refuse_member(refusal, "base_milliseconds and max_milliseconds", "milliseconds from 0");
