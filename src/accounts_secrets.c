@@ -45,5 +45,5 @@ spisor_status accounts_refuse_credentials(const spisor_value *value, const char 
     }
     char cause[200];
     snprintf(cause, sizeof(cause), "the %s carries the token member %s", subject, member);
-    return forebay_refuse_as(refusal, SPISOR_REFUSED, cause, TOKEN_FIX);
+    return spisor_refuse_as(refusal, SPISOR_REFUSED, cause, TOKEN_FIX);
 }

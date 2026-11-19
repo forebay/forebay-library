@@ -2,8 +2,8 @@
 
 #include "definition_support.h"
 
-#define CAPACITY_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_capacity_argument, count)
-#define CAPACITY_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_capacity_answer, capacity)
+#define CAPACITY_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_capacity_argument, count)
+#define CAPACITY_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_capacity_answer, capacity)
 
 /** QuotaHealth.hasCapacity: a pool counts when its remainingFraction is a number above zero. */
 static int has_remaining(const spisor_value *pool) {
@@ -35,8 +35,9 @@ static spisor_status check_pools(const forebay_accounts_capacity_argument *argum
 spisor_status accounts_has_capacity(void *context, const forebay_accounts_capacity_argument *argument,
                                     forebay_accounts_capacity_answer *answer, spisor_refusal *refusal) {
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, CAPACITY_SHAPE) || !FOREBAY_HAS_SHAPE(answer, CAPACITY_ANSWER_SHAPE)) {
-        return forebay_refuse_shape(refusal, "accounts' has_capacity");
+    if (argument == NULL || !spisor_has_shape(argument->size, CAPACITY_SHAPE) || answer == NULL ||
+        !spisor_has_shape(answer->size, CAPACITY_ANSWER_SHAPE)) {
+        return spisor_refuse_shape(refusal, "accounts' has_capacity");
     }
     spisor_status status = check_pools(argument, refusal);
     if (status == SPISOR_OK) {

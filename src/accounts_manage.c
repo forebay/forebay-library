@@ -6,12 +6,12 @@
 #include "spisor/json_value.h"
 #include "spisor/allocation.h"
 
-#define LIST_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_list_argument, store)
-#define LIST_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_list_answer, storage)
-#define UPSERT_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_upsert_argument, account)
-#define UPSERT_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_upsert_answer, outcome)
-#define REMOVE_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_remove_argument, id)
-#define REMOVE_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_accounts_remove_answer, removed)
+#define LIST_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_list_argument, store)
+#define LIST_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_list_answer, storage)
+#define UPSERT_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_upsert_argument, account)
+#define UPSERT_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_upsert_answer, outcome)
+#define REMOVE_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_remove_argument, id)
+#define REMOVE_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_accounts_remove_answer, removed)
 
 typedef struct upsert_request {
     const cJSON *account;
@@ -55,9 +55,9 @@ spisor_status accounts_list(void *context, const forebay_accounts_list_argument 
                             forebay_accounts_list_answer *answer, spisor_refusal *refusal) {
     accounts_store store;
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, LIST_SHAPE) ||
-        !FOREBAY_IS_EMPTY_COUNTED_ANSWER(answer, LIST_ANSWER_SHAPE, answer->count)) {
-        return forebay_refuse_shape(refusal, "accounts' list");
+    if (argument == NULL || !spisor_has_shape(argument->size, LIST_SHAPE) ||
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, LIST_ANSWER_SHAPE, answer->count)) {
+        return spisor_refuse_shape(refusal, "accounts' list");
     }
     if (!forebay_is_text(argument->store)) {
         return forebay_refuse_member(refusal, "store", "the path of the accounts file");
@@ -76,11 +76,11 @@ spisor_status accounts_list(void *context, const forebay_accounts_list_argument 
 
 void accounts_release_list_answer(void *context, forebay_accounts_list_answer *answer) {
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(answer, LIST_ANSWER_SHAPE)) {
+    if (answer == NULL || !spisor_has_shape(answer->size, LIST_ANSWER_SHAPE)) {
         return;
     }
     spisor_memory_release(answer->storage);
-    FOREBAY_CLEAR_ANSWER(answer, LIST_ANSWER_SHAPE);
+    SPISOR_CLEAR_ANSWER(answer, LIST_ANSWER_SHAPE);
 }
 
 /** The incoming members laid over a copy of the stored account, in the stored order. */
@@ -159,8 +159,9 @@ spisor_status accounts_upsert(void *context, const forebay_accounts_upsert_argum
                               forebay_accounts_upsert_answer *answer, spisor_refusal *refusal) {
     cJSON *account = NULL;
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, UPSERT_SHAPE) || !FOREBAY_HAS_SHAPE(answer, UPSERT_ANSWER_SHAPE)) {
-        return forebay_refuse_shape(refusal, "accounts' upsert");
+    if (argument == NULL || !spisor_has_shape(argument->size, UPSERT_SHAPE) || answer == NULL ||
+        !spisor_has_shape(answer->size, UPSERT_ANSWER_SHAPE)) {
+        return spisor_refuse_shape(refusal, "accounts' upsert");
     }
     if (!forebay_is_text(argument->store)) {
         return forebay_refuse_member(refusal, "store", "the path of the accounts file");
@@ -201,8 +202,9 @@ static void clear_remove_answer(void *filled) {
 spisor_status accounts_remove(void *context, const forebay_accounts_remove_argument *argument,
                               forebay_accounts_remove_answer *answer, spisor_refusal *refusal) {
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, REMOVE_SHAPE) || !FOREBAY_HAS_SHAPE(answer, REMOVE_ANSWER_SHAPE)) {
-        return forebay_refuse_shape(refusal, "accounts' remove");
+    if (argument == NULL || !spisor_has_shape(argument->size, REMOVE_SHAPE) || answer == NULL ||
+        !spisor_has_shape(answer->size, REMOVE_ANSWER_SHAPE)) {
+        return spisor_refuse_shape(refusal, "accounts' remove");
     }
     if (!forebay_is_text(argument->store)) {
         return forebay_refuse_member(refusal, "store", "the path of the accounts file");

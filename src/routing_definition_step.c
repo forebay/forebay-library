@@ -8,9 +8,9 @@
 #include "routing_step.h"
 #include "spisor/allocation.h"
 
-#define STEP_SHAPE FOREBAY_SHAPE_THROUGH(forebay_step_argument, report)
-#define STEP_ANSWER_SHAPE FOREBAY_SHAPE_THROUGH(forebay_step_answer, storage)
-#define REPORT_SHAPE FOREBAY_SHAPE_THROUGH(forebay_report, now)
+#define STEP_SHAPE SPISOR_SHAPE_THROUGH(forebay_step_argument, report)
+#define STEP_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_step_answer, storage)
+#define REPORT_SHAPE SPISOR_SHAPE_THROUGH(forebay_report, now)
 
 struct forebay_walk {
     cJSON *tree;
@@ -141,7 +141,7 @@ static cJSON *later_step_json(const forebay_step_argument *argument) {
 }
 
 static int is_report(const forebay_report *report) {
-    return FOREBAY_HAS_SHAPE(report, REPORT_SHAPE) && report->kind >= FOREBAY_REPORT_RESPONSE &&
+    return report != NULL && spisor_has_shape(report->size, REPORT_SHAPE) && report->kind >= FOREBAY_REPORT_RESPONSE &&
            report->kind <= FOREBAY_REPORT_FAILURE && routing_are_pairs(report->headers, report->header_count) &&
            forebay_is_finite(report->status) && forebay_is_finite(report->retry_after_milliseconds) &&
            forebay_is_finite(report->now);
@@ -156,10 +156,10 @@ static int is_first_step(const forebay_step_argument *argument) {
 spisor_status routing_step(void *context, const forebay_step_argument *argument, forebay_step_answer *answer,
                            spisor_refusal *refusal) {
     (void)context;
-    if (!FOREBAY_HAS_SHAPE(argument, STEP_SHAPE) ||
-        !FOREBAY_IS_EMPTY_COUNTED_ANSWER(answer, STEP_ANSWER_SHAPE, answer->header_count | answer->log_count) ||
+    if (argument == NULL || !spisor_has_shape(argument->size, STEP_SHAPE) ||
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, STEP_ANSWER_SHAPE, answer->header_count | answer->log_count) ||
         answer->walk != NULL) {
-        return forebay_refuse_shape(refusal, "routing's step");
+        return spisor_refuse_shape(refusal, "routing's step");
     }
     if (!routing_are_texts(argument->providers, argument->provider_count) ||
         (argument->walk == NULL ? !is_first_step(argument) : !is_report(argument->report))) {
@@ -181,8 +181,8 @@ void routing_release_walk(void *context, forebay_walk *walk) {
 
 void routing_release_step_answer(void *context, forebay_step_answer *answer) {
     (void)context;
-    if (FOREBAY_HAS_SHAPE(answer, STEP_ANSWER_SHAPE)) {
+    if (answer != NULL && spisor_has_shape(answer->size, STEP_ANSWER_SHAPE)) {
         forebay_storage_release(answer->storage);
-        FOREBAY_CLEAR_ANSWER(answer, STEP_ANSWER_SHAPE);
+        SPISOR_CLEAR_ANSWER(answer, STEP_ANSWER_SHAPE);
     }
 }

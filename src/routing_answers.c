@@ -10,13 +10,13 @@ spisor_status routing_served(service_reply *reply, spisor_refusal *refusal) {
         return SPISOR_OUT_OF_MEMORY;
     }
     if (reply->status == SERVICE_MALFORMED) {
-        return forebay_refuse_as(refusal, SPISOR_MALFORMED, reply->message, reply->fix);
+        return spisor_refuse_as(refusal, SPISOR_MALFORMED, reply->message, reply->fix);
     }
     const cJSON *refused = cJSON_GetObjectItemCaseSensitive(reply->result, "refused");
     if (!cJSON_IsString(refused)) {
         return SPISOR_OK;
     }
-    spisor_status status = forebay_refuse_as(
+    spisor_status status = spisor_refuse_as(
         refusal, SPISOR_REFUSED, refused->valuestring,
         cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(reply->result, "fix")));
     cJSON_Delete(reply->result);
