@@ -269,8 +269,15 @@ static inline int anthropic_input_cut(anthropic_input *input, const size_t *leng
 /** A stream decode vector's input: its text chunks, joined, and fed as the vector lists them. */
 static inline int anthropic_read_stream_text(const cJSON *json, anthropic_input *input) {
     *input = (anthropic_input){0};
+    if (!cJSON_IsArray(json)) {
+        return 0;
+    }
     size_t count = (size_t)cJSON_GetArraySize(json);
     size_t *lengths = calloc(count == 0 ? 1 : count, sizeof *lengths);
+    if (lengths == NULL) {
+        support_fail("a stream text", "the test could not allocate its piece lengths");
+        return 0;
+    }
     size_t total = 0;
     size_t index = 0;
     const cJSON *chunk = NULL;
@@ -280,6 +287,11 @@ static inline int anthropic_read_stream_text(const cJSON *json, anthropic_input 
         total += lengths[index++];
     }
     input->joined = malloc(total + 1);
+    if (input->joined == NULL) {
+        support_fail("a stream text", "the test could not allocate its joined text");
+        free(lengths);
+        return 0;
+    }
     input->joined_length = total;
     size_t offset = 0;
     index = 0;
@@ -292,7 +304,7 @@ static inline int anthropic_read_stream_text(const cJSON *json, anthropic_input 
     input->joined[total] = '\0';
     int cut = anthropic_input_cut(input, lengths, count);
     free(lengths);
-    return cut && cJSON_IsArray(json);
+    return cut;
 }
 
 /** A stream encode vector's input: its IR events, in the arena. */
@@ -352,6 +364,11 @@ static inline spisor_status anthropic_call_decode_stream(const anthropic_input *
     spisor_status status = anthropic_definition()->stream_decoder_open(NULL, &opened, refusal);
     anthropic_stream_answer *stream = &answer->stream;
     stream->events = calloc(input->piece_count + 1, sizeof *stream->events);
+    if (stream->events == NULL) {
+        support_fail("a stream decode", "the test could not allocate its answers");
+        anthropic_definition()->release_stream_decoder(NULL, opened.decoder);
+        return SPISOR_OUT_OF_MEMORY;
+    }
     stream->count = input->piece_count + 1;
     for (size_t index = 0; status == SPISOR_OK && index <= input->piece_count; index++) {
         int finish = index == input->piece_count;
@@ -393,6 +410,11 @@ static inline spisor_status anthropic_call_encode_stream(const anthropic_input *
     spisor_status status = anthropic_definition()->stream_encoder_open(NULL, &opened, refusal);
     anthropic_stream_answer *stream = &answer->stream;
     stream->texts = calloc(input->event_count + 1, sizeof *stream->texts);
+    if (stream->texts == NULL) {
+        support_fail("a stream encode", "the test could not allocate its answers");
+        anthropic_definition()->release_stream_encoder(NULL, opened.encoder);
+        return SPISOR_OUT_OF_MEMORY;
+    }
     stream->count = input->event_count + 1;
     for (size_t index = 0; status == SPISOR_OK && index <= input->event_count; index++) {
         int finish = index == input->event_count;
@@ -456,11 +478,12 @@ static inline char *anthropic_joined_texts(const forebay_anthropic_body_answer *
 static inline int anthropic_stream_text_matches(const anthropic_answer *answer, const cJSON *expected) {
     size_t length = 0;
     char *actual = anthropic_joined_texts(answer->stream.texts, answer->stream.count, &length);
-    anthropic_input wanted;
+    anthropic_input wanted = {0};
     int same = anthropic_read_stream_text(expected, &wanted) && actual != NULL && length == wanted.joined_length &&
                memcmp(actual, wanted.joined, length) == 0;
     if (!same) {
-        fprintf(stderr, "  expected %s\n  actual   %s\n", wanted.joined, actual == NULL ? "(none)" : actual);
+        fprintf(stderr, "  expected %s\n  actual   %s\n", wanted.joined == NULL ? "(none)" : wanted.joined,
+                actual == NULL ? "(none)" : actual);
     }
     anthropic_input_release(&wanted);
     free(actual);
