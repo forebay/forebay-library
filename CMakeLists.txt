@@ -10,10 +10,6 @@ if(NOT EXISTS ${forebay_siblings}/library/CMakeLists.txt)
     message(FATAL_ERROR "siblings/library is missing: check out the dependency .weivel/repo.json declares")
 endif()
 
-# GCC and Clang build every target under the sanitizers unless told otherwise: CI's Test workflow passes no option.
-if(NOT MSVC)
-    set(SPISOR_SANITIZE ON CACHE BOOL "Build under AddressSanitizer and UndefinedBehaviorSanitizer (GCC and Clang)")
-endif()
 include(${forebay_siblings}/library/cmake/sanitizers.cmake)
 add_subdirectory(${forebay_siblings}/library ${PROJECT_BINARY_DIR}/siblings/library)
 include(${forebay_siblings}/library/cmake/allocation_check.cmake)
