@@ -31,6 +31,16 @@ add_library(forebay_objects OBJECT
     src/accounts_support.c
     src/accounts_token.c
     src/answer_storage.c
+    src/anthropic_check.c
+    src/anthropic_decode_blocks.c
+    src/anthropic_decode_request.c
+    src/anthropic_definition.c
+    src/anthropic_encode_blocks.c
+    src/anthropic_encode_request.c
+    src/anthropic_reader.c
+    src/anthropic_stringify.c
+    src/anthropic_wire.c
+    src/anthropic_writer.c
     src/definition_support.c
     src/routing_answers.c
     src/routing_arguments.c

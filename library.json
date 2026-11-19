@@ -21,6 +21,16 @@
           "kind": "definition"
         }
       ]
+    },
+    {
+      "id": "anthropic",
+      "functions": [
+        {
+          "name": "definition",
+          "symbol": "forebay_anthropic_definition_of",
+          "kind": "definition"
+        }
+      ]
     }
   ]
 }

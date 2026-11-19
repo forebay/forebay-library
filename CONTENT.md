@@ -1,11 +1,12 @@
 ## What this is
 
 The forebay ecosystem's C library, `forebay-library`. `library.json` declares it in the weivel standard's
-format, `forebay-library` 0.2.0, with two services, `routing` and `accounts`, each one function of kind
-`definition`: its exported symbol (`forebay_routing_definition_of`, `forebay_accounts_definition_of`)
+format, `forebay-library` 0.2.0, with three services, `routing`, `accounts` and `anthropic`, each one function of kind
+`definition`: its exported symbol (`forebay_routing_definition_of`, `forebay_accounts_definition_of`,
+`forebay_anthropic_definition_of`)
 answers a static C struct that begins with its `size`, then the provider's `context`, then one function pointer
 per operation and one release per kind of answer, living until the library is unloaded. The structs are declared
-in `include/forebay/routing.h` and `include/forebay/accounts.h`, which document every operation, what it takes
+in `include/forebay/routing.h`, `include/forebay/accounts.h` and `include/forebay/anthropic.h`, which document every operation, what it takes
 and answers, and every refusal; this file says what they decide. No JSON crosses the boundary.
 
 An operation takes the `context` and a size-prefixed argument struct, fills the caller's empty answer or, when it
@@ -103,6 +104,22 @@ Tokens never reach the store: `upsert` refuses an account, and `report` refuses 
 two processes sharing one store lose no update. The store stays a JSON file, its format above; one that is not a JSON object answers a refusal and is
 never overwritten. `test/vectors/accounts/` holds the vectors; `before` and `after` are the store, and `then`
 chains further calls against it.
+
+## The anthropic service
+
+`anthropic` translates the Anthropic Messages wire format to and from the IR of `include/forebay/ir.h`, the port of
+`anthropic-translator`. The wire body is the one place JSON is read and written: an operation takes bytes and answers
+IR structs, or takes IR structs and answers bytes, and the IR crosses the definition as C structs, never as JSON.
+Every body is answered as `forebay_anthropic_body_answer` and freed by the one `release_body`.
+
+| operation | does |
+| --- | --- |
+| `decode_request` | a request body to a `forebay_ir_request`: a string `content` or `system` becomes one text block flagged `$contentIsString` or `$systemIsString`, a member of the wrong type or a count outside 0 to 2^53 reads as absent, a stop sequence reads as JavaScript's `String` does, and every member nothing consumed is kept in `extensions`; a JSON root that is no object is the empty request; bytes that are not JSON are refused MALFORMED, saying to send a JSON body |
+| `encode_request` | an IR request to a body, the members in the order the translator builds them and keyed as `JSON.stringify` orders them; `$` keys in `extensions` are left out, except a tool's and a tool choice's, which are written whole |
+
+`test/vectors/anthropic/` holds the translator's vectors, copied unchanged; `anthropic_test` runs every `request-*` one in
+both directions through the definition, and `anthropic_out_of_memory_test` fails each allocation of them, singly and
+from that one on.
 
 ## Building and testing
 
