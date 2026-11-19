@@ -1,4 +1,5 @@
 #include "anthropic_call.h"
+#include "anthropic_shape_cases.h"
 
 #include "spisor/json_allocation.h"
 
@@ -575,6 +576,142 @@ static void a_response_that_breaks_its_header_is_malformed(void) {
     expect_malformed_response("extensions text without bytes", &response);
 }
 
+static void run_shape_cases(void) {
+    for (size_t index = 0; index < ANTHROPIC_SHAPE_CASE_COUNT; index++) {
+        const anthropic_shape_case *shape = &ANTHROPIC_SHAPE_CASES[index];
+        cJSON *input = parse(shape->input);
+        cJSON *expected = parse(shape->expected);
+        const anthropic_direction *direction = anthropic_direction_named(shape->direction);
+        if (input == NULL || expected == NULL || direction == NULL) {
+            support_fail(shape->label, "the case could not be read");
+        } else {
+            anthropic_check_vector_input(direction, shape->label, input, expected);
+        }
+        cJSON_Delete(input);
+        cJSON_Delete(expected);
+    }
+}
+
+static void expect_body_bytes(const char *label, spisor_status status, const forebay_anthropic_body_answer *answer,
+                              const char *expected) {
+    if (status != SPISOR_OK || answer->bytes == NULL) {
+        support_failf(label, "answered %d", (int)status);
+    } else if (answer->length != strlen(expected) || memcmp(answer->bytes, expected, answer->length) != 0 ||
+               answer->bytes[answer->length] != '\0') {
+        support_failf(label, "wrote %.*s", (int)answer->length, (const char *)answer->bytes);
+    }
+}
+
+/** The bytes JSON.stringify writes: members in the order the proxy builds them, a control character escaped. */
+static void the_shapes_have_the_bytes_the_proxy_writes(void) {
+    static const char message[] = "a\"b\\c\x01 caf\xc3\xa9";
+    static const char expected_error[] =
+        "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"a\\\"b\\\\c\\u0001 caf\xc3\xa9\"}}";
+    forebay_anthropic_error_argument error = SPISOR_INIT(forebay_anthropic_error_argument);
+    error.error_type = "api_error";
+    error.message = message;
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_definition()->error_envelope(NULL, &error, &answer, &refusal);
+    expect_body_bytes("the bytes of an error body", status, &answer, expected_error);
+    anthropic_definition()->release_body(NULL, &answer);
+
+    static const forebay_anthropic_listed_model models[] = {
+        {.id = "a", .name = "A", .has_context = 1, .context = 9, .has_output = 1, .output = 8}, {.id = "b"}};
+    const forebay_anthropic_listed_provider provider = {.models = models, .model_count = 2};
+    forebay_anthropic_model_listing_argument listing = SPISOR_INIT(forebay_anthropic_model_listing_argument);
+    listing.default_context = 5;
+    listing.default_output = 6;
+    listing.providers = &provider;
+    listing.provider_count = 1;
+    answer = (forebay_anthropic_body_answer)SPISOR_INIT(forebay_anthropic_body_answer);
+    status = anthropic_definition()->model_listing(NULL, &listing, &answer, &refusal);
+    expect_body_bytes("the bytes of a listing body", status, &answer,
+                      "{\"data\":[{\"type\":\"model\",\"id\":\"a\",\"display_name\":\"A\","
+                      "\"created_at\":\"2025-01-01T00:00:00Z\",\"max_input_tokens\":9,\"max_tokens\":8},"
+                      "{\"type\":\"model\",\"id\":\"b\",\"display_name\":\"b\","
+                      "\"created_at\":\"2025-01-01T00:00:00Z\",\"max_input_tokens\":5,\"max_tokens\":6}],"
+                      "\"first_id\":\"a\",\"last_id\":\"b\",\"has_more\":false}");
+    anthropic_definition()->release_body(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void expect_refused(const char *label, spisor_status status, const forebay_anthropic_body_answer *answer,
+                           const spisor_refusal *refusal) {
+    if (status != SPISOR_MALFORMED || refusal->detail == NULL || refusal->fix == NULL || answer->storage != NULL ||
+        answer->bytes != NULL) {
+        support_failf(label, "answered %d, not MALFORMED with a refusal and an empty answer", (int)status);
+    }
+}
+
+static void expect_error_malformed(const char *label, const char *error_type, const char *message) {
+    forebay_anthropic_error_argument error = SPISOR_INIT(forebay_anthropic_error_argument);
+    error.error_type = error_type;
+    error.message = message;
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    expect_refused(label, anthropic_definition()->error_envelope(NULL, &error, &answer, &refusal), &answer, &refusal);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void an_error_call_that_breaks_its_header_is_malformed(void) {
+    expect_error_malformed("a NULL error type", NULL, "m");
+    expect_error_malformed("an empty error type", "", "m");
+    expect_error_malformed("a NULL message", "api_error", NULL);
+    forebay_anthropic_error_argument error = SPISOR_INIT(forebay_anthropic_error_argument);
+    error.error_type = "api_error";
+    error.message = "m";
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    expect_refused("a NULL error argument", anthropic_definition()->error_envelope(NULL, NULL, &answer, &refusal),
+                   &answer, &refusal);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    error.size = (uint32_t)sizeof error.size;
+    expect_refused("an error argument short of its first shape",
+                   anthropic_definition()->error_envelope(NULL, &error, &answer, &refusal), &answer, &refusal);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    error.size = (uint32_t)sizeof error;
+    int held = 0;
+    answer.storage = &held;
+    spisor_status status = anthropic_definition()->error_envelope(NULL, &error, &answer, &refusal);
+    if (status != SPISOR_MALFORMED || refusal.detail == NULL) {
+        support_failf("an error answer that is not empty", "answered %d, not MALFORMED", (int)status);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void expect_listing_malformed(const char *label, const forebay_anthropic_model_listing_argument *listing,
+                                     const char *member) {
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    expect_refused(label, anthropic_definition()->model_listing(NULL, listing, &answer, &refusal), &answer, &refusal);
+    if (member != NULL && refusal.detail != NULL && strstr(refusal.detail, member) == NULL) {
+        support_failf(label, "the refusal does not name %s: %s", member, refusal.detail);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void a_listing_that_breaks_its_header_is_malformed(void) {
+    static const forebay_anthropic_listed_model nameless = {.name = "n"};
+    static const forebay_anthropic_listed_model fine = {.id = "a"};
+    const forebay_anthropic_listed_provider no_models = {.models = NULL, .model_count = 1};
+    const forebay_anthropic_listed_provider with_nameless = {.models = &nameless, .model_count = 1};
+    const forebay_anthropic_listed_provider good = {.models = &fine, .model_count = 1};
+    const forebay_anthropic_listed_provider providers[2] = {good, with_nameless};
+    forebay_anthropic_model_listing_argument listing = SPISOR_INIT(forebay_anthropic_model_listing_argument);
+    expect_listing_malformed("a NULL listing argument", NULL, NULL);
+    listing.size = (uint32_t)sizeof listing.size;
+    expect_listing_malformed("a listing argument short of its first shape", &listing, NULL);
+    listing = (forebay_anthropic_model_listing_argument)SPISOR_INIT(forebay_anthropic_model_listing_argument);
+    listing.provider_count = 1;
+    expect_listing_malformed("providers NULL beside a count", &listing, "providers");
+    listing.providers = &no_models;
+    expect_listing_malformed("models NULL beside a count", &listing, "providers[0].models");
+    listing.providers = providers;
+    listing.provider_count = 2;
+    expect_listing_malformed("a model without an id", &listing, "providers[1].models[0].id");
+}
+
 static void releasing_an_answer_never_filled_does_nothing(void) {
     forebay_anthropic_request_answer request_answer = {0};
     forebay_anthropic_response_answer response_answer = {0};
@@ -615,6 +752,10 @@ int main(void) {
     a_response_decoded_then_encoded_restores_the_wire();
     a_response_body_has_the_bytes_the_translator_writes();
     a_response_that_breaks_its_header_is_malformed();
+    run_shape_cases();
+    the_shapes_have_the_bytes_the_proxy_writes();
+    an_error_call_that_breaks_its_header_is_malformed();
+    a_listing_that_breaks_its_header_is_malformed();
     releasing_an_answer_never_filled_does_nothing();
     printf("anthropic_test: %d request vectors, %d response vectors\n", vectors, response_vectors);
     return support_summary("anthropic_test");

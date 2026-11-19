@@ -87,26 +87,6 @@ static spisor_status decode_response(void *context, const forebay_anthropic_body
     return status;
 }
 
-/** Fills the body from the wire object, which it deletes; the answer stays empty unless the status is OK. */
-static spisor_status write_body(cJSON *wire, forebay_anthropic_body_answer *answer) {
-    size_t length = 0;
-    char *text = anthropic_stringify(wire, &length);
-    cJSON_Delete(wire);
-    if (text == NULL) {
-        return SPISOR_OUT_OF_MEMORY;
-    }
-    void *storage = NULL;
-    char *body = forebay_storage_allocate(&storage, length + 1);
-    if (body != NULL) {
-        memcpy(body, text, length + 1);
-        answer->bytes = (const uint8_t *)body;
-        answer->length = length;
-        answer->storage = storage;
-    }
-    spisor_memory_release(text);
-    return body == NULL ? SPISOR_OUT_OF_MEMORY : SPISOR_OK;
-}
-
 /** Fills the answer from a built wire object, which it deletes, or refuses what the writer found malformed. */
 static spisor_status finish_encoding(const anthropic_writer *writer, cJSON *wire, anthropic_problem *problem,
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
@@ -119,7 +99,7 @@ static spisor_status finish_encoding(const anthropic_writer *writer, cJSON *wire
         cJSON_Delete(wire);
         return writer->status;
     }
-    return write_body(wire, answer);
+    return anthropic_write_body(wire, answer);
 }
 
 static spisor_status encode_request(void *context, const forebay_anthropic_encode_request_argument *argument,
@@ -186,6 +166,8 @@ static const forebay_anthropic_definition definition = {
     anthropic_stream_encode,
     anthropic_stream_encode_finish,
     anthropic_release_stream_encoder,
+    anthropic_error_envelope,
+    anthropic_model_listing,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_anthropic_definition_of(void) {

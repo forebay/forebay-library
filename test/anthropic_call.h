@@ -13,7 +13,8 @@
  * The anthropic service called through its definition, as a consumer calls it, with the IR and the wire JSON of the
  * vectors turned into the structs and bytes it takes and compared after the same schema form `ir_codec_test` applies.
  * A decode vector's `input` is the wire body, printed to bytes; an encode vector's `input` is the IR, read by the
- * test-only IR codec.
+ * test-only IR codec. A wire-shape vector's `input` is the operation's argument as JSON: `errorType` and `message`, or
+ * `defaultContext`, `defaultOutput` and `providers`, a list of lists of models with `id`, `name`, `context`, `output`.
  */
 
 static inline const forebay_anthropic_definition *anthropic_definition(void) {
@@ -138,6 +139,10 @@ typedef struct anthropic_input {
     forebay_ir_response response;
     const forebay_ir_event *events;
     size_t event_count;
+    forebay_anthropic_error_argument error;
+    forebay_anthropic_model_listing_argument listing;
+    forebay_anthropic_listed_provider *providers;
+    forebay_anthropic_listed_model *models;
 } anthropic_input;
 
 /** Every answer a whole stream through one handle gave, each feed's and the finish's, held until released. */
@@ -181,6 +186,8 @@ static inline void anthropic_input_release(anthropic_input *input) {
     cJSON_free(input->printed);
     free(input->joined);
     free(input->pieces);
+    free(input->providers);
+    free(input->models);
     ir_json_arena_release(&input->arena);
     *input = (anthropic_input){0};
 }
@@ -490,6 +497,82 @@ static inline int anthropic_stream_text_matches(const anthropic_answer *answer, 
     return same;
 }
 
+/** The count `member` of `json` holds, 0 when it is no number. */
+static inline uint64_t anthropic_count_member(const cJSON *json, const char *member) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(json, member);
+    return cJSON_IsNumber(item) ? (uint64_t)item->valuedouble : 0;
+}
+
+/** A wire-shape error vector's input: the error type and the message, borrowed from the JSON. */
+static inline int anthropic_read_error_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    input->error = (forebay_anthropic_error_argument)SPISOR_INIT(forebay_anthropic_error_argument);
+    input->error.error_type = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "errorType"));
+    input->error.message = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "message"));
+    return cJSON_IsObject(json);
+}
+
+static inline size_t anthropic_listed_model_total(const cJSON *providers) {
+    size_t total = 0;
+    const cJSON *provider = NULL;
+    cJSON_ArrayForEach(provider, providers) {
+        total += (size_t)cJSON_GetArraySize(provider);
+    }
+    return total;
+}
+
+static inline void anthropic_read_listed_model(const cJSON *json, forebay_anthropic_listed_model *model) {
+    const cJSON *context = cJSON_GetObjectItemCaseSensitive(json, "context");
+    const cJSON *output = cJSON_GetObjectItemCaseSensitive(json, "output");
+    model->id = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "id"));
+    model->name = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "name"));
+    model->has_context = cJSON_IsNumber(context) ? 1 : 0;
+    model->context = anthropic_count_member(json, "context");
+    model->has_output = cJSON_IsNumber(output) ? 1 : 0;
+    model->output = anthropic_count_member(json, "output");
+}
+
+/** A wire-shape listing vector's input: the defaults and the providers, the strings borrowed from the JSON. */
+static inline int anthropic_read_listing_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    const cJSON *providers = cJSON_GetObjectItemCaseSensitive(json, "providers");
+    size_t provider_count = (size_t)cJSON_GetArraySize(providers);
+    input->providers = calloc(provider_count + 1, sizeof *input->providers);
+    input->models = calloc(anthropic_listed_model_total(providers) + 1, sizeof *input->models);
+    if (!cJSON_IsArray(providers) || input->providers == NULL || input->models == NULL) {
+        support_fail("a listing input", "the test could not read or allocate its providers");
+        anthropic_input_release(input);
+        return 0;
+    }
+    size_t filled = 0;
+    size_t index = 0;
+    const cJSON *provider = NULL;
+    cJSON_ArrayForEach(provider, providers) {
+        input->providers[index].models = &input->models[filled];
+        input->providers[index++].model_count = (size_t)cJSON_GetArraySize(provider);
+        const cJSON *model = NULL;
+        cJSON_ArrayForEach(model, provider) {
+            anthropic_read_listed_model(model, &input->models[filled++]);
+        }
+    }
+    input->listing = (forebay_anthropic_model_listing_argument)SPISOR_INIT(forebay_anthropic_model_listing_argument);
+    input->listing.default_context = anthropic_count_member(json, "defaultContext");
+    input->listing.default_output = anthropic_count_member(json, "defaultOutput");
+    input->listing.providers = input->providers;
+    input->listing.provider_count = provider_count;
+    return 1;
+}
+
+static inline spisor_status anthropic_call_error_envelope(const anthropic_input *input, anthropic_answer *answer,
+                                                          spisor_refusal *refusal) {
+    return anthropic_definition()->error_envelope(NULL, &input->error, &answer->body, refusal);
+}
+
+static inline spisor_status anthropic_call_model_listing(const anthropic_input *input, anthropic_answer *answer,
+                                                         spisor_refusal *refusal) {
+    return anthropic_definition()->model_listing(NULL, &input->listing, &answer->body, refusal);
+}
+
 /** The direction a vector's `direction` member names, NULL for one this service does not have. */
 static inline const anthropic_direction *anthropic_direction_named(const char *name) {
     static const anthropic_direction directions[] = {
@@ -505,6 +588,10 @@ static inline const anthropic_direction *anthropic_direction_named(const char *n
          anthropic_call_decode_stream, anthropic_stream_events_match, anthropic_release_stream_answers},
         {"encodeStream", (uint32_t)sizeof(anthropic_stream_answer), anthropic_read_events_input,
          anthropic_call_encode_stream, anthropic_stream_text_matches, anthropic_release_stream_answers},
+        {"errorEnvelope", (uint32_t)sizeof(forebay_anthropic_body_answer), anthropic_read_error_input,
+         anthropic_call_error_envelope, anthropic_body_matches, anthropic_release_body},
+        {"modelListing", (uint32_t)sizeof(forebay_anthropic_body_answer), anthropic_read_listing_input,
+         anthropic_call_model_listing, anthropic_body_matches, anthropic_release_body},
     };
     for (size_t index = 0; name != NULL && index < sizeof directions / sizeof directions[0]; index++) {
         if (strcmp(directions[index].name, name) == 0) {

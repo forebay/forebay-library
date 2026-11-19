@@ -126,6 +126,53 @@ typedef struct forebay_anthropic_stream_encode_argument {
 } forebay_anthropic_stream_encode_argument;
 
 /**
+ * An Anthropic error body to write: the `error.type` the wire names, such as `api_error` or `loader_proxy_error`,
+ * required and not empty, and the `message`, required, empty allowed. The HTTP status is the caller's to send. First
+ * shape ends at `message`.
+ */
+typedef struct forebay_anthropic_error_argument {
+    uint32_t size;
+    const char *error_type;
+    const char *message;
+} forebay_anthropic_error_argument;
+
+/**
+ * One model a provider serves, an array element with no size. `id` is required; `name` NULL or empty lists the model
+ * under its id; `context` and `output` are the model's token limits when `has_context` and `has_output` are 1, and
+ * the profile's defaults otherwise.
+ *
+ * @implNote Routing's forebay_catalog_model carries no limits, and a model listing needs them, so the listing has its
+ * own model type rather than a second catalog that routing would not read.
+ */
+typedef struct forebay_anthropic_listed_model {
+    const char *id;
+    const char *name;
+    uint32_t has_context;
+    uint64_t context;
+    uint32_t has_output;
+    uint64_t output;
+} forebay_anthropic_listed_model;
+
+/** One provider's models in its catalog order, an array element with no size. `models` may be NULL beside a 0 count. */
+typedef struct forebay_anthropic_listed_provider {
+    const forebay_anthropic_listed_model *models;
+    size_t model_count;
+} forebay_anthropic_listed_provider;
+
+/**
+ * What a `/v1/models` body lists: every provider's models, in argument order, and the profile's default limits for a
+ * model that gives none. `providers` may be NULL beside a 0 count. Borrowed for the call. First shape ends at
+ * `provider_count`.
+ */
+typedef struct forebay_anthropic_model_listing_argument {
+    uint32_t size;
+    uint64_t default_context;
+    uint64_t default_output;
+    const forebay_anthropic_listed_provider *providers;
+    size_t provider_count;
+} forebay_anthropic_model_listing_argument;
+
+/**
  * The anthropic service. Every operation answers MALFORMED, before it allocates, for an argument or an answer absent
  * or short of its first shape, an answer that is not empty and `bytes` NULL beside a nonzero `length`; MALFORMED,
  * with the refusal saying what to repair, for a body that is not JSON and for an IR that breaks the rule its header
@@ -133,8 +180,8 @@ typedef struct forebay_anthropic_stream_encode_argument {
  * tree spisor_value_check refuses, which includes every `extensions` record and an unknown block's `raw`); and
  * OUT_OF_MEMORY, with the answer empty. JSON this library cannot read, a string holding a NUL (`\u0000`), is refused
  * as a body that is not JSON, and a number that is not finite (`1e400`) reads as null, as JSON.stringify writes it.
- * First shape ends at `release_refusal`; the response operations follow it, then the stream operations, and a later
- * operation is appended after those.
+ * First shape ends at `release_refusal`; the response operations follow it, then the stream operations, then the wire
+ * shapes, and a later operation is appended after those.
  */
 typedef struct forebay_anthropic_definition {
     uint32_t size;
@@ -203,6 +250,22 @@ typedef struct forebay_anthropic_definition {
                                           forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /** Frees a stream encoder, NULL doing nothing. */
     void (*release_stream_encoder)(void *context, forebay_anthropic_stream_encoder *encoder);
+    /**
+     * The body of an Anthropic error, `{"type":"error","error":{"type":<error_type>,"message":<message>}}`, with the
+     * message escaped as JSON text. MALFORMED, naming the member, for a NULL or empty `error_type` and a NULL
+     * `message`.
+     */
+    spisor_status (*error_envelope)(void *context, const forebay_anthropic_error_argument *argument,
+                                    forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
+    /**
+     * The `/v1/models` body, as the proxy's `model-listing.ts` writes it: every model id once, as the first provider
+     * in argument order offers it, each as `type`, `id`, `display_name` (its name, or its id when the name is NULL or
+     * empty), `created_at` the fixed 2025-01-01T00:00:00Z, `max_input_tokens` and `max_tokens` (the model's limits, or
+     * the defaults), inside `data`, `first_id` and `last_id` (null for no model) and `has_more` false. MALFORMED,
+     * naming the member, for a NULL `providers` beside a count, a NULL `models` beside a count and a NULL `id`.
+     */
+    spisor_status (*model_listing)(void *context, const forebay_anthropic_model_listing_argument *argument,
+                                   forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
 } forebay_anthropic_definition;
 
 /** The static forebay_anthropic_definition, living until the library is unloaded. */

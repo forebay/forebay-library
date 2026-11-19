@@ -31,6 +31,7 @@ add_library(forebay_objects OBJECT
     src/accounts_support.c
     src/accounts_token.c
     src/answer_storage.c
+    src/anthropic_body.c
     src/anthropic_check.c
     src/anthropic_decode_blocks.c
     src/anthropic_decode_request.c
@@ -50,6 +51,7 @@ add_library(forebay_objects OBJECT
     src/anthropic_stringify.c
     src/anthropic_usage.c
     src/anthropic_wire.c
+    src/anthropic_wire_shapes.c
     src/anthropic_writer.c
     src/definition_support.c
     src/routing_answers.c
