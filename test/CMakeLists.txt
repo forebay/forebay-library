@@ -48,6 +48,31 @@ set(forebay_accounts_vectors ACCOUNTS_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/a
 forebay_definition_test(accounts_test spisor_allocator ${forebay_accounts_vectors})
 forebay_definition_test(accounts_out_of_memory_test spisor_allocator_counting ${forebay_accounts_vectors})
 
+# IR JSON to forebay/ir.h's structs and back, for tests that build IR inputs and compare IR outputs.
+add_library(forebay_ir_json STATIC EXCLUDE_FROM_ALL
+    ir_json_arena.c
+    ir_json_names.c
+    ir_json_read.c
+    ir_json_read_blocks.c
+    ir_json_read_events.c
+    ir_json_read_members.c
+    ir_json_schema_form.c
+    ir_json_write.c
+    ir_json_write_blocks.c
+    ir_json_write_events.c
+    ir_json_write_members.c)
+target_include_directories(forebay_ir_json PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(forebay_ir_json PUBLIC spisor_library)
+set_target_properties(forebay_ir_json PROPERTIES SPISOR_TEST_ONLY TRUE)
+spisor_strict_warnings(forebay_ir_json)
+
+forebay_vector_list(ir)
+forebay_vector_list(anthropic)
+forebay_definition_test(ir_codec_test spisor_allocator
+    IR_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/ir_vectors.txt"
+    ANTHROPIC_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/anthropic_vectors.txt")
+target_link_libraries(ir_codec_test PRIVATE forebay_ir_json)
+
 add_executable(accounts_concurrent_test accounts_concurrent_test.c)
 target_link_libraries(accounts_concurrent_test PRIVATE forebay_library spisor_library spisor_allocator)
 target_include_directories(accounts_concurrent_test PRIVATE ${PROJECT_SOURCE_DIR}/include)

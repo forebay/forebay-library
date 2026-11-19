@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "forebay/accounts.h"
+#include "forebay/ir.h"
 #include "forebay/routing.h"
 
 /**
@@ -388,8 +389,124 @@ static void print_routing_layouts(void) {
     SIZE(forebay_routing_definition);
 }
 
+static void print_ir_layouts(void) {
+    FIELD(forebay_ir_usage, has_cache_creation_input_tokens);
+    FIELD(forebay_ir_usage, cache_creation_input_tokens);
+    FIELD(forebay_ir_usage, has_cache_read_input_tokens);
+    FIELD(forebay_ir_usage, cache_read_input_tokens);
+    FIELD(forebay_ir_usage, has_input_tokens);
+    FIELD(forebay_ir_usage, input_tokens);
+    FIELD(forebay_ir_usage, has_output_tokens);
+    FIELD(forebay_ir_usage, output_tokens);
+    FIELD(forebay_ir_usage, has_reasoning_tokens);
+    FIELD(forebay_ir_usage, reasoning_tokens);
+    FIELD(forebay_ir_usage, has_total_tokens);
+    FIELD(forebay_ir_usage, total_tokens);
+    SIZE(forebay_ir_usage);
+    FIELD(forebay_ir_tool, name);
+    FIELD(forebay_ir_tool, description);
+    FIELD(forebay_ir_tool, input_schema);
+    FIELD(forebay_ir_tool, extensions);
+    SIZE(forebay_ir_tool);
+    FIELD(forebay_ir_tool_choice, type);
+    FIELD(forebay_ir_tool_choice, name);
+    FIELD(forebay_ir_tool_choice, extensions);
+    SIZE(forebay_ir_tool_choice);
+    FIELD(forebay_ir_thinking, enabled);
+    FIELD(forebay_ir_thinking, has_budget_tokens);
+    FIELD(forebay_ir_thinking, budget_tokens);
+    SIZE(forebay_ir_thinking);
+    FIELD(forebay_ir_block, kind);
+    FIELD(forebay_ir_block, cache_control);
+    FIELD(forebay_ir_block, extensions);
+    FIELD(forebay_ir_block, text);
+    FIELD(forebay_ir_block, media_type);
+    FIELD(forebay_ir_block, data);
+    FIELD(forebay_ir_block, url);
+    FIELD(forebay_ir_block, id);
+    FIELD(forebay_ir_block, name);
+    FIELD(forebay_ir_block, input);
+    FIELD(forebay_ir_block, tool_use_id);
+    FIELD(forebay_ir_block, content);
+    FIELD(forebay_ir_block, content_count);
+    FIELD(forebay_ir_block, has_is_error);
+    FIELD(forebay_ir_block, is_error);
+    FIELD(forebay_ir_block, signature);
+    FIELD(forebay_ir_block, raw);
+    SIZE(forebay_ir_block);
+    FIELD(forebay_ir_message, role);
+    FIELD(forebay_ir_message, content);
+    FIELD(forebay_ir_message, content_count);
+    FIELD(forebay_ir_message, extensions);
+    SIZE(forebay_ir_message);
+    FIELD(forebay_ir_request, size);
+    FIELD(forebay_ir_request, model);
+    FIELD(forebay_ir_request, messages);
+    FIELD(forebay_ir_request, message_count);
+    FIELD(forebay_ir_request, stream);
+    FIELD(forebay_ir_request, has_system);
+    FIELD(forebay_ir_request, system);
+    FIELD(forebay_ir_request, system_count);
+    FIELD(forebay_ir_request, has_tools);
+    FIELD(forebay_ir_request, tools);
+    FIELD(forebay_ir_request, tool_count);
+    FIELD(forebay_ir_request, tool_choice);
+    FIELD(forebay_ir_request, thinking);
+    FIELD(forebay_ir_request, has_max_tokens);
+    FIELD(forebay_ir_request, max_tokens);
+    FIELD(forebay_ir_request, has_temperature);
+    FIELD(forebay_ir_request, temperature);
+    FIELD(forebay_ir_request, has_top_p);
+    FIELD(forebay_ir_request, top_p);
+    FIELD(forebay_ir_request, has_top_k);
+    FIELD(forebay_ir_request, top_k);
+    FIELD(forebay_ir_request, has_stop_sequences);
+    FIELD(forebay_ir_request, stop_sequences);
+    FIELD(forebay_ir_request, stop_sequence_count);
+    FIELD(forebay_ir_request, metadata);
+    FIELD(forebay_ir_request, extensions);
+    SIZE(forebay_ir_request);
+    FIELD(forebay_ir_response, size);
+    FIELD(forebay_ir_response, id);
+    FIELD(forebay_ir_response, model);
+    FIELD(forebay_ir_response, stop_reason);
+    FIELD(forebay_ir_response, content);
+    FIELD(forebay_ir_response, content_count);
+    FIELD(forebay_ir_response, usage);
+    FIELD(forebay_ir_response, extensions);
+    SIZE(forebay_ir_response);
+    FIELD(forebay_ir_event, kind);
+    FIELD(forebay_ir_event, extensions);
+    FIELD(forebay_ir_event, id);
+    FIELD(forebay_ir_event, model);
+    FIELD(forebay_ir_event, role);
+    FIELD(forebay_ir_event, usage);
+    FIELD(forebay_ir_event, index);
+    FIELD(forebay_ir_event, block_kind);
+    FIELD(forebay_ir_event, tool_use_id);
+    FIELD(forebay_ir_event, tool_name);
+    FIELD(forebay_ir_event, text);
+    FIELD(forebay_ir_event, signature);
+    FIELD(forebay_ir_event, partial_json);
+    FIELD(forebay_ir_event, stop_reason);
+    FIELD(forebay_ir_event, error_type);
+    FIELD(forebay_ir_event, message);
+    SIZE(forebay_ir_event);
+    FIELD(forebay_ir_header, name);
+    FIELD(forebay_ir_header, value);
+    SIZE(forebay_ir_header);
+    FIELD(forebay_ir_failure, status);
+    FIELD(forebay_ir_failure, headers);
+    FIELD(forebay_ir_failure, header_count);
+    FIELD(forebay_ir_failure, body);
+    FIELD(forebay_ir_failure, has_retry_after);
+    FIELD(forebay_ir_failure, retry_after_milliseconds);
+    SIZE(forebay_ir_failure);
+}
+
 int main(void) {
     print_accounts_layouts();
     print_routing_layouts();
+    print_ir_layouts();
     return 0;
 }
