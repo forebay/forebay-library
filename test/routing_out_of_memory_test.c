@@ -121,27 +121,69 @@ static void every_failure_of_step(const forebay_step_argument *argument, uint32_
     }
 }
 
-static void every_failure_of_both_steps(allocation_failure_mode mode) {
-    const forebay_routing_definition *routing = routing_definition();
-    forebay_step_argument first = first_step();
-    forebay_step_answer answer = SPISOR_INIT(forebay_step_answer);
-    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+static void every_failure_of_a_report(const forebay_walk *walk, uint32_t kind, const char *message,
+                                      uint32_t whole_kind, const char *name, allocation_failure_mode mode) {
     forebay_report report = SPISOR_INIT(forebay_report);
     forebay_step_argument later = SPISOR_INIT(forebay_step_argument);
+    report.kind = kind;
+    report.after_bytes = kind == FOREBAY_REPORT_STREAM_FAILED ? 1u : 0u;
+    report.message = message;
+    later.providers = running;
+    later.provider_count = 2;
+    later.walk = walk;
+    later.report = &report;
+    every_failure_of_step(&later, whole_kind, name, mode);
+}
+
+static void every_failure_of_the_steps(allocation_failure_mode mode) {
+    const forebay_routing_definition *routing = routing_definition();
+    forebay_step_argument first = first_step();
+    forebay_step_argument unnamed = first_step();
+    forebay_step_answer answer = SPISOR_INIT(forebay_step_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    unnamed.model = NULL;
     every_failure_of_step(&first, FOREBAY_STEP_CALL_PROVIDER, "first step", mode);
+    every_failure_of_step(&unnamed, FOREBAY_STEP_REFRESH_MODELS, "first step naming no model", mode);
     if (routing->step(NULL, &first, &answer, &refusal) != SPISOR_OK || answer.walk == NULL) {
         support_fail("later step", "the first step answered no walk");
         return;
     }
-    report.kind = FOREBAY_REPORT_THROWN;
-    report.message = "boom";
-    later.providers = running;
-    later.provider_count = 2;
-    later.walk = answer.walk;
-    later.report = &report;
-    every_failure_of_step(&later, FOREBAY_STEP_CALL_PROVIDER, "later step", mode);
+    every_failure_of_a_report(answer.walk, FOREBAY_REPORT_THROWN, "boom", FOREBAY_STEP_CALL_PROVIDER, "later step",
+                              mode);
+    every_failure_of_a_report(answer.walk, FOREBAY_REPORT_THROWN, NULL, FOREBAY_STEP_CALL_PROVIDER,
+                              "later step, a throw with no message", mode);
+    every_failure_of_a_report(answer.walk, FOREBAY_REPORT_STREAM_FAILED, NULL, FOREBAY_STEP_END_STREAM,
+                              "later step, a failed stream with no message", mode);
     routing->release_walk(NULL, answer.walk);
     routing->release_step_answer(NULL, &answer);
+}
+
+static const forebay_application application = {sizeof(forebay_application), "BASE_URL", "TOKEN", "placeholder",
+                                                 NULL, 0, NULL, NULL, NULL, NULL};
+
+/**
+ * A port out of range is MALFORMED before anything is allocated, so memory running out cannot answer it.
+ *
+ * @implNote With no refusal to fill, since filling one is itself an allocation.
+ */
+static void a_port_out_of_range_is_malformed_without_memory(uint32_t port) {
+    const forebay_routing_definition *routing = routing_definition();
+    forebay_environment_argument argument = SPISOR_INIT(forebay_environment_argument);
+    forebay_environment_answer answer = SPISOR_INIT(forebay_environment_answer);
+    char label[64];
+    snprintf(label, sizeof label, "environment on port %u", (unsigned)port);
+    argument.slots = slots;
+    argument.slot_count = 1;
+    argument.port = port;
+    argument.user_home = "/home";
+    argument.application = &application;
+    fail_allocation(FAIL_EVERY_LATER_ALLOCATION, 1);
+    spisor_status status = routing->environment(NULL, &argument, &answer, NULL);
+    spisor_memory_fail_at(0);
+    if (status != SPISOR_MALFORMED) {
+        support_failf(label, "answered %d with no memory to spare", (int)status);
+    }
+    routing->release_environment_answer(NULL, &answer);
 }
 
 int main(void) {
@@ -160,9 +202,11 @@ int main(void) {
         }
     }
     free(list);
-    every_failure_of_both_steps(FAIL_ONE_ALLOCATION);
-    every_failure_of_both_steps(FAIL_EVERY_LATER_ALLOCATION);
-    printf("routing_out_of_memory_test: %d vectors and two steps, every allocation failed singly and for good\n",
+    every_failure_of_the_steps(FAIL_ONE_ALLOCATION);
+    every_failure_of_the_steps(FAIL_EVERY_LATER_ALLOCATION);
+    a_port_out_of_range_is_malformed_without_memory(0);
+    a_port_out_of_range_is_malformed_without_memory(70000);
+    printf("routing_out_of_memory_test: %d vectors and the steps, every allocation failed singly and for good\n",
            count);
     return support_summary("routing_out_of_memory_test");
 }

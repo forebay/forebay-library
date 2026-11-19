@@ -11,6 +11,7 @@
 
 #define BAD_GATEWAY 502
 #define SERVICE_UNAVAILABLE 503
+#define NO_MESSAGE "no message given"
 
 typedef int32_t (*report_reader)(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply);
 
@@ -85,19 +86,19 @@ static int32_t read_served(step_walk *walk, const cJSON *providers, const cJSON 
     return service_answer(served(walk, routing_kind_step("done")), reply);
 }
 
+static const char *message_of(const cJSON *report) {
+    const cJSON *message = cJSON_GetObjectItemCaseSensitive(report, "message");
+    return message == NULL ? NO_MESSAGE : message->valuestring;
+}
+
 static int32_t read_thrown(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
-    int32_t status = SERVICE_SUCCESS;
-    const cJSON *message = NULL;
-    if (!service_require_member(report, "the report member", "message", service_is_string, "a string", &message, reply,
-                                &status)) {
-        return status;
-    }
+    const char *message = message_of(report);
     cJSON *answer = NULL;
-    if (routing_walk_remember_failure(walk, routing_formatted("%s", message->valuestring)) &&
+    if (routing_walk_remember_failure(walk, routing_formatted("%s", message)) &&
         routing_walk_log(walk, "warn", "%s failed %s, %s %s: %s",
                          routing_walk_entry_member(walk, walk->index, "provider"),
                          routing_walk_entry_member(walk, walk->index, "model"), what_follows(walk), walk->requested,
-                         message->valuestring)) {
+                         message)) {
         answer = next_entry(walk, providers, walk->index + 1);
     }
     return service_answer(answer, reply);
@@ -123,15 +124,13 @@ static cJSON *stream_failed_after_bytes(step_walk *walk, const char *message) {
 static int32_t read_stream_failed(step_walk *walk, const cJSON *providers, const cJSON *report, service_reply *reply) {
     int32_t status = SERVICE_SUCCESS;
     const cJSON *after_bytes = NULL;
-    const cJSON *message = NULL;
     if (!service_require_member(report, "the report member", "afterBytes", service_is_boolean, "a boolean",
-                                &after_bytes, reply, &status) ||
-        !service_require_member(report, "the report member", "message", service_is_string, "a string", &message, reply,
-                                &status)) {
+                                &after_bytes, reply, &status)) {
         return status;
     }
-    cJSON *answer = cJSON_IsTrue(after_bytes) ? stream_failed_after_bytes(walk, message->valuestring)
-                                              : stream_failed_before_bytes(walk, providers, message->valuestring);
+    const char *message = message_of(report);
+    cJSON *answer = cJSON_IsTrue(after_bytes) ? stream_failed_after_bytes(walk, message)
+                                              : stream_failed_before_bytes(walk, providers, message);
     return service_answer(answer, reply);
 }
 
@@ -286,22 +285,21 @@ static cJSON *walk_over(step_walk *walk, const cJSON *resolution, const cJSON *p
 static int32_t routed(const service_call *call, const cJSON *providers, step_walk *walk, service_reply *reply) {
     int32_t status = SERVICE_SUCCESS;
     const cJSON *request = cJSON_GetObjectItemCaseSensitive(call->argument, "request");
-    const cJSON *model = NULL;
+    const cJSON *model = cJSON_GetObjectItemCaseSensitive(request, "model");
+    const char *requested = model == NULL ? "" : model->valuestring;
     routing_profile profile;
-    if (!service_require_member(request, "the request member", "model", service_is_string, "a string", &model, reply,
-                                &status) ||
-        !routing_read_profile(cJSON_GetObjectItemCaseSensitive(call->argument, "profile"), ROUTING_RESOLUTION_NEEDS,
+    if (!routing_read_profile(cJSON_GetObjectItemCaseSensitive(call->argument, "profile"), ROUTING_RESOLUTION_NEEDS,
                               &profile, reply, &status)) {
         return status;
     }
     routing_refusal refusal = {0, "", NULL};
     cJSON *resolution = routing_resolution(&profile, cJSON_GetObjectItemCaseSensitive(call->argument, "map"),
                                            cJSON_GetObjectItemCaseSensitive(call->argument, "models"),
-                                           model->valuestring, &refusal);
+                                           requested, &refusal);
     if (resolution == NULL) {
         return routing_answer_refusal(&refusal, reply);
     }
-    walk->requested = model->valuestring;
+    walk->requested = requested;
     status = service_answer(walk_over(walk, resolution, providers, call), reply);
     cJSON_Delete(resolution);
     return status;

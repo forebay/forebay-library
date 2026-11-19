@@ -449,6 +449,9 @@ static spisor_status environment(void *context, const forebay_environment_argume
         return forebay_refuse_member(refusal, "the slots, the environment, user_home or the application",
                                      "complete, with every text the application needs set");
     }
+    if (argument->port < 1 || argument->port > 65535) {
+        return forebay_refuse_member(refusal, "port", "a port number from 1 to 65535");
+    }
     static const char *const names[] = {"map", "port", "providersEnabled", "environment", "userHome", "application"};
     cJSON *items[] = {routing_slots_json(argument->slots, argument->slot_count), cJSON_CreateNumber(argument->port),
                       cJSON_CreateBool(argument->providers_enabled != 0),

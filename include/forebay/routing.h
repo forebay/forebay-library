@@ -439,7 +439,10 @@ typedef struct forebay_application {
     const char *model_variable;
 } forebay_application;
 
-/** The environment an application starts with, from the one it would have had. First shape ends at `application`. */
+/**
+ * The environment an application starts with, from the one it would have had, pointed at the proxy on `port`, from 1
+ * to 65535. First shape ends at `application`.
+ */
 typedef struct forebay_environment_argument {
     uint32_t size;
     const forebay_slot *slots;
