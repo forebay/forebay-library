@@ -6,7 +6,7 @@
 
 #include "cJSON.h"
 #include "forebay/accounts.h"
-#include "json_value.h"
+#include "spisor/json_value.h"
 #include "vector_reader.h"
 
 /**
@@ -83,14 +83,14 @@ static inline void accounts_empty_call(accounts_call *call) {
 
 static inline void accounts_empty_answers(accounts_answers *answers) {
     memset(answers, 0, sizeof *answers);
-    answers->refusal = (spisor_refusal)SPISOR_INIT(spisor_refusal);
-    answers->list = (forebay_accounts_list_answer)SPISOR_INIT(forebay_accounts_list_answer);
-    answers->upsert = (forebay_accounts_upsert_answer)SPISOR_INIT(forebay_accounts_upsert_answer);
-    answers->remove = (forebay_accounts_remove_answer)SPISOR_INIT(forebay_accounts_remove_answer);
-    answers->acquire = (forebay_accounts_acquire_answer)SPISOR_INIT(forebay_accounts_acquire_answer);
-    answers->report = (forebay_accounts_report_answer)SPISOR_INIT(forebay_accounts_report_answer);
-    answers->token = (forebay_accounts_token_answer)SPISOR_INIT(forebay_accounts_token_answer);
-    answers->capacity = (forebay_accounts_capacity_answer)SPISOR_INIT(forebay_accounts_capacity_answer);
+    answers->refusal.size = (uint32_t)sizeof(spisor_refusal);
+    answers->list.size = (uint32_t)sizeof(forebay_accounts_list_answer);
+    answers->upsert.size = (uint32_t)sizeof(forebay_accounts_upsert_answer);
+    answers->remove.size = (uint32_t)sizeof(forebay_accounts_remove_answer);
+    answers->acquire.size = (uint32_t)sizeof(forebay_accounts_acquire_answer);
+    answers->report.size = (uint32_t)sizeof(forebay_accounts_report_answer);
+    answers->token.size = (uint32_t)sizeof(forebay_accounts_token_answer);
+    answers->capacity.size = (uint32_t)sizeof(forebay_accounts_capacity_answer);
 }
 
 static inline const char *accounts_optional_text(const cJSON *argument, const char *key) {

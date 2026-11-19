@@ -216,10 +216,6 @@ static report_request request_of(const forebay_accounts_report_argument *argumen
 
 static spisor_status report_with(const forebay_accounts_report_argument *argument, const cJSON *quota,
                                  forebay_accounts_report_answer *answer, spisor_refusal *refusal) {
-    const char *token_member = quota == NULL ? NULL : accounts_find_token_member(quota);
-    if (token_member != NULL) {
-        return accounts_refuse_token_member("quota", token_member, refusal);
-    }
     report_request request = request_of(argument, quota);
     return accounts_run_change(argument->store, record, &request, answer, clear_report_answer, refusal);
 }
@@ -232,6 +228,9 @@ spisor_status accounts_report(void *context, const forebay_accounts_report_argum
         return forebay_refuse_shape(refusal, "accounts' report");
     }
     spisor_status status = check_argument(argument, refusal);
+    if (status == SPISOR_OK && argument->outcome == FOREBAY_ACCOUNTS_QUOTA) {
+        status = accounts_refuse_credentials(argument->quota, "quota", refusal);
+    }
     if (status == SPISOR_OK && argument->outcome == FOREBAY_ACCOUNTS_QUOTA) {
         status = forebay_json_of_member(argument->quota, "quota", &quota, refusal);
     }

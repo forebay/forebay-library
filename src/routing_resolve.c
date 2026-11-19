@@ -204,18 +204,8 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *map, const cJ
 }
 
 int32_t routing_resolve_call(const cJSON *argument, service_reply *reply) {
-    service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
-    const cJSON *profile = NULL;
-    const cJSON *map = NULL;
-    const cJSON *models = NULL;
-    const cJSON *requested = NULL;
-    if (service_require(&call, "profile", service_is_object, "an object", &profile, reply, &status) &&
-        service_require(&call, "map", service_is_object, "an object", &map, reply, &status) &&
-        service_require(&call, "models", service_is_object, "an object", &models, reply, &status) &&
-        service_require(&call, "requestedModel", service_is_string, "a string", &requested, reply,
-                        &status)) {
-        status = answer_call(profile, map, models, requested->valuestring, reply);
-    }
-    return status;
+    return answer_call(cJSON_GetObjectItemCaseSensitive(argument, "profile"),
+                       cJSON_GetObjectItemCaseSensitive(argument, "map"),
+                       cJSON_GetObjectItemCaseSensitive(argument, "models"),
+                       cJSON_GetObjectItemCaseSensitive(argument, "requestedModel")->valuestring, reply);
 }

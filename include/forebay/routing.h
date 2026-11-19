@@ -169,7 +169,10 @@ typedef struct forebay_outcome_answer {
     double reset_at;
 } forebay_outcome_answer;
 
-/** One request's way along its chain, the provider's own: handed back unchanged, freed by `release_walk`. */
+/**
+ * One request's way along its chain, the provider's own: never changed once answered, so it may be handed back more
+ * than once and from any thread. Freed by `release_walk` only after every step it was handed to has returned.
+ */
 typedef struct forebay_walk forebay_walk;
 
 /** How the entry a walk last called went. Append-only: a published value keeps its number. */
@@ -439,7 +442,10 @@ typedef struct forebay_application {
     const char *model_variable;
 } forebay_application;
 
-/** The environment an application starts with, from the one it would have had. First shape ends at `application`. */
+/**
+ * The environment an application starts with, from the one it would have had, pointed at the proxy on `port`, from 1
+ * to 65535. First shape ends at `application`.
+ */
 typedef struct forebay_environment_argument {
     uint32_t size;
     const forebay_slot *slots;
@@ -506,6 +512,7 @@ typedef struct forebay_routing_definition {
     void (*release_resolve_answer)(void *context, forebay_resolve_answer *answer);
     void (*release_step_answer)(void *context, forebay_step_answer *answer);
     void (*release_arrival_answer)(void *context, forebay_arrival_answer *answer);
+    /** Frees a walk, NULL doing nothing; only after every step using it has returned, since a step reads it. */
     void (*release_walk)(void *context, forebay_walk *walk);
     void (*release_pass_through_answer)(void *context, forebay_pass_through_answer *answer);
     void (*release_reply_headers_answer)(void *context, forebay_reply_headers_answer *answer);

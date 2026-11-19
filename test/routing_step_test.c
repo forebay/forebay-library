@@ -1,6 +1,6 @@
 #include "support.h"
 
-#include "json_allocation.h"
+#include "spisor/json_allocation.h"
 #include "routing_blocks.h"
 
 /**
@@ -17,6 +17,8 @@
     "{\"large\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\",\"name\":\"Alpha Large\",\"derived\":false}," \
     "{\"provider\":\"beta\",\"model\":\"beta-large\",\"name\":\"Beta Large\",\"derived\":false}]}"
 #define BOTH_RUNNING "[\"alpha\",\"beta\"]"
+#define DEFAULT_ENTRY \
+    "{\"default\":[{\"provider\":\"alpha\",\"model\":\"alpha-large\",\"name\":\"Alpha Large\",\"derived\":false}]}"
 
 /** What one step answered: the step and the log as JSON, the walk handle, and the status with its refusal. */
 typedef struct step_result {
@@ -461,10 +463,33 @@ static void a_refused_resolve_is_refused(void) {
     expect_refused(&answer, "a_refused_resolve_is_refused");
 }
 
+static void a_report_without_a_message_reads_as_none(void) {
+    const char *label = "a_report_without_a_message_reads_as_none";
+    forebay_walk *walk = walk_calling_alpha(label);
+    step_result thrown = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"thrown\"}");
+    release_walk(expect_step(&thrown, "{\"kind\":\"callProvider\",\"provider\":\"beta\",\"model\":\"beta-large\"}",
+                             "[{\"level\":\"warn\",\"message\":\"alpha failed alpha-large, so the next chain entry "
+                             "serves " REQUESTED ": no message given\"}]",
+                             1, label));
+    step_result before = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"streamFailed\",\"afterBytes\":false}");
+    release_walk(expect_step(&before, "{\"kind\":\"callProvider\",\"provider\":\"beta\",\"model\":\"beta-large\"}",
+                             NULL, 1, label));
+    step_result after = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"streamFailed\",\"afterBytes\":true}");
+    release_walk(expect_step(&after,
+                             "{\"kind\":\"endStream\",\"event\":{\"event\":\"error\",\"errorType\":\"api_error\","
+                             "\"message\":\"no message given\"}}",
+                             NULL, 0, label));
+    release_walk(walk);
+}
+
+static void a_request_naming_no_model_takes_the_default_chain(void) {
+    step_result answer = first_step("{}", DEFAULT_ENTRY, BOTH_RUNNING, "{}", 0);
+    release_walk(expect_step(&answer, "{\"kind\":\"callProvider\",\"provider\":\"alpha\",\"model\":\"alpha-large\"}",
+                             "[]", 1, "a_request_naming_no_model_takes_the_default_chain"));
+}
+
 static void refuses_a_malformed_call(void) {
     forebay_walk *walk = walk_calling_alpha("refuses_a_malformed_call");
-    step_result no_message = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"thrown\"}");
-    expect_malformed(&no_message, "step with a thrown report lacking its message");
     step_result unknown = reported_step(walk, BOTH_RUNNING, "{\"kind\":\"vanished\"}");
     expect_malformed(&unknown, "step with a report kind the header does not name");
     release_walk(walk);
@@ -506,6 +531,8 @@ int main(void) {
     resolve_notices_are_info_lines();
     a_refused_resolve_is_refused();
     the_same_walk_serves_two_reports();
+    a_report_without_a_message_reads_as_none();
+    a_request_naming_no_model_takes_the_default_chain();
     refuses_a_malformed_call();
     return support_summary("routing_step_test");
 }

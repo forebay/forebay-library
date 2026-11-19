@@ -250,15 +250,7 @@ static int32_t answer_call(const cJSON *profile_json, const cJSON *settings, con
 }
 
 int32_t routing_model_map_call(const cJSON *argument, service_reply *reply) {
-    service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
-    const cJSON *profile = NULL;
-    const cJSON *settings = NULL;
-    const cJSON *models = NULL;
-    if (service_require(&call, "profile", service_is_object, "an object", &profile, reply, &status) &&
-        service_require(&call, "settings", service_is_object, "an object", &settings, reply, &status) &&
-        service_require(&call, "models", service_is_object, "an object", &models, reply, &status)) {
-        status = answer_call(profile, settings, models, reply);
-    }
-    return status;
+    return answer_call(cJSON_GetObjectItemCaseSensitive(argument, "profile"),
+                       cJSON_GetObjectItemCaseSensitive(argument, "settings"),
+                       cJSON_GetObjectItemCaseSensitive(argument, "models"), reply);
 }

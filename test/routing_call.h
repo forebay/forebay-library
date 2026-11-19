@@ -65,7 +65,8 @@ typedef struct routing_answers {
     forebay_failure_answer failure;
 } routing_answers;
 
-#define ROUTING_INIT_INTO(target, type) (target) = (type)SPISOR_INIT(type)
+/** Sets the size of a struct its caller zeroed whole, padding included, so an empty one compares byte for byte. */
+#define ROUTING_INIT_INTO(target, type) ((target).size = (uint32_t)sizeof(type))
 
 static inline const forebay_routing_definition *routing_definition(void) {
     return forebay_library_routing_definition();

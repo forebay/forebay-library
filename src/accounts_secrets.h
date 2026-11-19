@@ -1,21 +1,19 @@
 #ifndef ACCOUNTS_SECRETS_H
 #define ACCOUNTS_SECRETS_H
 
-#include "cJSON.h"
 #include "spisor/status.h"
+#include "spisor/value.h"
 
 /**
- * The name of the first member, at any depth, that would hold a credential: exactly access, refresh,
- * accessToken, refreshToken, idToken or apiKey, case-sensitively. NULL when there is none; the name
- * belongs to the tree.
+ * OK for a well-formed value (an account, a quota) carrying no credential member at any depth: exactly access,
+ * refresh, accessToken, refreshToken, idToken or apiKey, case-sensitively. REFUSED naming the member;
+ * MALFORMED, refused as `subject`, for a value spisor_value_check refuses; OUT_OF_MEMORY.
  *
  * @implNote Tokens live in the plugin secrets, never in the account store, so the store refuses the
  * value instead of trusting every caller to strip them. The list is exact because a quota reading
- * legitimately has members such as tokensRemaining and inputTokens, and expires is not a secret.
+ * legitimately has members such as tokensRemaining and inputTokens, and expires is not a secret. Read from the
+ * caller's value before anything converts it, so a refused call never copies a token.
  */
-const char *accounts_find_token_member(const cJSON *value);
-
-/** REFUSED, naming the member, for a value (an account, a quota) that carries a credential member. */
-spisor_status accounts_refuse_token_member(const char *subject, const char *member, spisor_refusal *refusal);
+spisor_status accounts_refuse_credentials(const spisor_value *value, const char *subject, spisor_refusal *refusal);
 
 #endif

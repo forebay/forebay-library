@@ -3,7 +3,6 @@
 #include "spisor/allocation.h"
 
 #include <ctype.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -156,19 +155,15 @@ typedef struct pass_through_arguments {
     const cJSON *placeholder;
 } pass_through_arguments;
 
-static int is_body_length(const cJSON *value) {
-    return cJSON_IsNumber(value) && value->valuedouble >= 0 && value->valuedouble == floor(value->valuedouble);
-}
-
-static int read_pass_through_arguments(const service_call *call, pass_through_arguments *read, service_reply *reply,
-                                       int32_t *status) {
-    return service_require(call, "upstream", service_is_string, "a string", &read->upstream, reply, status) &&
-           service_require(call, "url", service_is_string, "a string", &read->url, reply, status) &&
-           service_require(call, "headers", service_is_object, "an object", &read->headers, reply, status) &&
-           service_require(call, "bodyLength", is_body_length, "a non-negative integer", &read->body_length, reply,
-                           status) &&
-           service_require(call, "placeholderAuthorization", service_is_string, "a string", &read->placeholder, reply,
-                           status);
+static pass_through_arguments read_pass_through_arguments(const cJSON *argument) {
+    pass_through_arguments read = {
+        cJSON_GetObjectItemCaseSensitive(argument, "upstream"),
+        cJSON_GetObjectItemCaseSensitive(argument, "url"),
+        cJSON_GetObjectItemCaseSensitive(argument, "headers"),
+        cJSON_GetObjectItemCaseSensitive(argument, "bodyLength"),
+        cJSON_GetObjectItemCaseSensitive(argument, "placeholderAuthorization"),
+    };
+    return read;
 }
 
 static int32_t refuse_url(const char *url, service_reply *reply) {
@@ -195,24 +190,12 @@ static int32_t answer_pass_through(const pass_through_arguments *arguments, serv
 }
 
 int32_t routing_pass_through_call(const cJSON *argument, service_reply *reply) {
-    service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
-    pass_through_arguments arguments;
-    if (read_pass_through_arguments(&call, &arguments, reply, &status)) {
-        status = answer_pass_through(&arguments, reply);
-    }
-    return status;
+    pass_through_arguments arguments = read_pass_through_arguments(argument);
+    return answer_pass_through(&arguments, reply);
 }
 
 int32_t routing_reply_headers_call(const cJSON *argument, service_reply *reply) {
-    service_call call = {argument};
-    int32_t status = SERVICE_SUCCESS;
-    const cJSON *headers = NULL;
-    const cJSON *rewritten = NULL;
-    if (service_require(&call, "headers", service_is_object, "an object", &headers, reply, &status) &&
-        service_require(&call, "rewritten", service_is_boolean, "a boolean", &rewritten, reply, &status)) {
-        status = service_answer(service_wrap("headers", routing_end_to_end_headers(headers, cJSON_IsTrue(rewritten))),
-                                reply);
-    }
-    return status;
+    const cJSON *headers = cJSON_GetObjectItemCaseSensitive(argument, "headers");
+    int rewritten = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(argument, "rewritten"));
+    return service_answer(service_wrap("headers", routing_end_to_end_headers(headers, rewritten)), reply);
 }

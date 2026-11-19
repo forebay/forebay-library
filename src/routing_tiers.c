@@ -125,12 +125,10 @@ cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models,
 int32_t routing_tiers_call(const cJSON *argument, service_reply *reply) {
     service_call call = {argument};
     int32_t status = SERVICE_SUCCESS;
-    const cJSON *profile_json = NULL;
-    const cJSON *models = NULL;
+    const cJSON *profile_json = cJSON_GetObjectItemCaseSensitive(call.argument, "profile");
+    const cJSON *models = cJSON_GetObjectItemCaseSensitive(call.argument, "models");
     routing_profile profile;
-    if (service_require(&call, "profile", service_is_object, "an object", &profile_json, reply, &status) &&
-        service_require(&call, "models", service_is_object, "an object", &models, reply, &status) &&
-        routing_read_profile(profile_json, NEEDS_TIERS, &profile, reply, &status)) {
+    if (routing_read_profile(profile_json, NEEDS_TIERS, &profile, reply, &status)) {
         routing_refusal refusal = {0, "", NULL};
         cJSON *tiers = routing_detect_tiers(&profile, models, &refusal);
         if (tiers == NULL) {

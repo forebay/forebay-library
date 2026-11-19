@@ -237,33 +237,6 @@ static cJSON *build_environment(const request *asked) {
     return built;
 }
 
-static int is_text_list(const cJSON *value) {
-    if (!cJSON_IsArray(value)) {
-        return 0;
-    }
-    const cJSON *item;
-    cJSON_ArrayForEach(item, value) {
-        if (!cJSON_IsString(item)) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-static int is_state_file(const cJSON *state_file) {
-    return state_file == NULL || (cJSON_IsObject(state_file) && text_member(state_file, "name") != NULL &&
-                                  text_member(state_file, "member") != NULL);
-}
-
-static int is_application_proxy(const cJSON *value) {
-    const cJSON *placeholder = cJSON_GetObjectItemCaseSensitive(value, "placeholder");
-    const cJSON *own_login = cJSON_GetObjectItemCaseSensitive(value, "ownLogin");
-    return cJSON_IsObject(value) && text_member(value, "baseUrlVariable") != NULL &&
-           text_member(placeholder, "variable") != NULL && text_member(placeholder, "value") != NULL &&
-           is_text_list(cJSON_GetObjectItemCaseSensitive(own_login, "variables")) &&
-           is_state_file(cJSON_GetObjectItemCaseSensitive(own_login, "stateFile"));
-}
-
 static int refuses_tier_template(const cJSON *variables, const char *member, service_reply *reply,
                                   int32_t *status) {
     const char *name_template = text_member(variables, member);
@@ -280,28 +253,18 @@ static int refuses_tier_template(const cJSON *variables, const char *member, ser
 }
 
 static int read_request(const service_call *call, request *asked, service_reply *reply, int32_t *status) {
-    const cJSON *port = NULL;
-    const cJSON *enabled = NULL;
-    const cJSON *home = NULL;
     memset(asked, 0, sizeof(*asked));
-    if (!service_require(call, "map", service_is_object, "an object", &asked->map, reply, status) ||
-        !service_require(call, "port", routing_is_port, "a port number from 1 to 65535", &port, reply, status) ||
-        !service_require(call, "providersEnabled", service_is_boolean, "a boolean", &enabled, reply, status) ||
-        !service_require(call, "environment", service_is_object, "an object", &asked->environment, reply, status) ||
-        !service_require(call, "userHome", service_is_string, "a string", &home, reply, status) ||
-        !service_require(call, "application", is_application_proxy,
-                         "an object with baseUrlVariable, placeholder and ownLogin", &asked->application, reply,
-                         status)) {
-        return 0;
-    }
+    asked->map = cJSON_GetObjectItemCaseSensitive(call->argument, "map");
+    asked->environment = cJSON_GetObjectItemCaseSensitive(call->argument, "environment");
+    asked->application = cJSON_GetObjectItemCaseSensitive(call->argument, "application");
     const cJSON *variables = cJSON_GetObjectItemCaseSensitive(asked->application, "modelVariables");
     if (refuses_tier_template(variables, "tierModel", reply, status) ||
         refuses_tier_template(variables, "tierModelName", reply, status)) {
         return 0;
     }
-    asked->port = (int)port->valuedouble;
-    asked->providers_enabled = cJSON_IsTrue(enabled);
-    asked->user_home = home->valuestring;
+    asked->port = (int)cJSON_GetObjectItemCaseSensitive(call->argument, "port")->valuedouble;
+    asked->providers_enabled = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(call->argument, "providersEnabled"));
+    asked->user_home = cJSON_GetObjectItemCaseSensitive(call->argument, "userHome")->valuestring;
     return 1;
 }
 
