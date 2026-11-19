@@ -16,7 +16,8 @@
  * A writer answers OK with a new cJSON tree the caller frees with cJSON_Delete, writing a NULL text, an absent count
  * and a NULL pointer as no member at all; MALFORMED for a kind the header does not name or a value tree
  * spisor_value_check refuses; OUT_OF_MEMORY. `*json` is NULL whenever the answer is not OK. Every allocation goes
- * through the library's allocator, so a counting allocator fails these too.
+ * through the library's allocator once the caller has called spisor_json_use_library_allocator(), so a counting
+ * allocator fails these too; without that call cJSON allocates with its own default.
  */
 
 #include <stddef.h>

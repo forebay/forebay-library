@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "forebay/accounts.h"
+#include "forebay/anthropic.h"
 #include "forebay/ir.h"
 #include "forebay/routing.h"
 
@@ -389,6 +390,33 @@ static void print_routing_layouts(void) {
     SIZE(forebay_routing_definition);
 }
 
+static void print_anthropic_layouts(void) {
+    FIELD(forebay_anthropic_body_argument, size);
+    FIELD(forebay_anthropic_body_argument, bytes);
+    FIELD(forebay_anthropic_body_argument, length);
+    SIZE(forebay_anthropic_body_argument);
+    FIELD(forebay_anthropic_request_answer, size);
+    FIELD(forebay_anthropic_request_answer, request);
+    FIELD(forebay_anthropic_request_answer, storage);
+    SIZE(forebay_anthropic_request_answer);
+    FIELD(forebay_anthropic_encode_request_argument, size);
+    FIELD(forebay_anthropic_encode_request_argument, request);
+    SIZE(forebay_anthropic_encode_request_argument);
+    FIELD(forebay_anthropic_body_answer, size);
+    FIELD(forebay_anthropic_body_answer, bytes);
+    FIELD(forebay_anthropic_body_answer, length);
+    FIELD(forebay_anthropic_body_answer, storage);
+    SIZE(forebay_anthropic_body_answer);
+    FIELD(forebay_anthropic_definition, size);
+    FIELD(forebay_anthropic_definition, context);
+    FIELD(forebay_anthropic_definition, decode_request);
+    FIELD(forebay_anthropic_definition, encode_request);
+    FIELD(forebay_anthropic_definition, release_request);
+    FIELD(forebay_anthropic_definition, release_body);
+    FIELD(forebay_anthropic_definition, release_refusal);
+    SIZE(forebay_anthropic_definition);
+}
+
 static void print_ir_layouts(void) {
     FIELD(forebay_ir_usage, has_cache_creation_input_tokens);
     FIELD(forebay_ir_usage, cache_creation_input_tokens);
@@ -492,9 +520,6 @@ static void print_ir_layouts(void) {
     FIELD(forebay_ir_event, error_type);
     FIELD(forebay_ir_event, message);
     SIZE(forebay_ir_event);
-    FIELD(forebay_ir_header, name);
-    FIELD(forebay_ir_header, value);
-    SIZE(forebay_ir_header);
     FIELD(forebay_ir_failure, status);
     FIELD(forebay_ir_failure, headers);
     FIELD(forebay_ir_failure, header_count);
@@ -508,5 +533,6 @@ int main(void) {
     print_accounts_layouts();
     print_routing_layouts();
     print_ir_layouts();
+    print_anthropic_layouts();
     return 0;
 }

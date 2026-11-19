@@ -46,6 +46,9 @@ void ir_read_flag(ir_reader *reader, const cJSON *object, const char *key, ir_pr
 /** An opaque member as a value tree in the arena, null kept as a node of kind NULL; NULL when absent. */
 const spisor_value *ir_read_opaque(ir_reader *reader, const cJSON *object, const char *key, ir_presence presence);
 
+/** An opaque member that must be an object or null, as `extensions` and `metadata` are; MALFORMED otherwise. */
+const spisor_value *ir_read_record_opaque(ir_reader *reader, const cJSON *object, const char *key);
+
 /** An array member, NULL when absent or null; MALFORMED when it is not an array. */
 const cJSON *ir_read_array(ir_reader *reader, const cJSON *object, const char *key, ir_presence presence);
 

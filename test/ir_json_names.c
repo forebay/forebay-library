@@ -66,3 +66,7 @@ uint32_t ir_json_event_kind_of(const char *name) {
 int ir_json_is_started_block_kind(uint32_t kind) {
     return kind == FOREBAY_IR_BLOCK_TEXT || kind == FOREBAY_IR_BLOCK_TOOL_USE || kind == FOREBAY_IR_BLOCK_THINKING;
 }
+
+int ir_json_event_has_index(uint32_t kind) {
+    return kind >= FOREBAY_IR_EVENT_CONTENT_BLOCK_START && kind <= FOREBAY_IR_EVENT_CONTENT_BLOCK_STOP;
+}

@@ -122,6 +122,14 @@ const spisor_value *ir_read_opaque(ir_reader *reader, const cJSON *object, const
     return value;
 }
 
+const spisor_value *ir_read_record_opaque(ir_reader *reader, const cJSON *object, const char *key) {
+    const spisor_value *value = ir_read_opaque(reader, object, key, IR_OPTIONAL);
+    if (value != NULL && value->kind != SPISOR_VALUE_RECORD && value->kind != SPISOR_VALUE_NULL) {
+        ir_read_malformed(reader, key, "is neither an object nor null");
+    }
+    return value;
+}
+
 const cJSON *ir_read_array(ir_reader *reader, const cJSON *object, const char *key, ir_presence presence) {
     const cJSON *member = ir_read_member(reader, object, key, presence);
     if (member != NULL && !cJSON_IsArray(member)) {

@@ -73,6 +73,12 @@ forebay_definition_test(ir_codec_test spisor_allocator
     ANTHROPIC_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/anthropic_vectors.txt")
 target_link_libraries(ir_codec_test PRIVATE forebay_ir_json)
 
+set(forebay_anthropic_vectors ANTHROPIC_VECTOR_LIST="${CMAKE_CURRENT_BINARY_DIR}/anthropic_vectors.txt")
+forebay_definition_test(anthropic_test spisor_allocator ${forebay_anthropic_vectors})
+forebay_definition_test(anthropic_out_of_memory_test spisor_allocator_counting ${forebay_anthropic_vectors})
+target_link_libraries(anthropic_test PRIVATE forebay_ir_json)
+target_link_libraries(anthropic_out_of_memory_test PRIVATE forebay_ir_json)
+
 add_executable(accounts_concurrent_test accounts_concurrent_test.c)
 target_link_libraries(accounts_concurrent_test PRIVATE forebay_library spisor_library spisor_allocator)
 target_include_directories(accounts_concurrent_test PRIVATE ${PROJECT_SOURCE_DIR}/include)

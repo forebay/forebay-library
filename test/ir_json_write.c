@@ -124,7 +124,7 @@ spisor_status ir_json_write_events(const forebay_ir_event *events, size_t count,
     return ir_write_finish(&writer, array, json);
 }
 
-static cJSON *write_headers(ir_writer *writer, const forebay_ir_header *headers, size_t count) {
+static cJSON *write_headers(ir_writer *writer, const forebay_pair *headers, size_t count) {
     cJSON *json = ir_write_object(writer);
     for (size_t index = 0; index < count && writer->status == SPISOR_OK; index++) {
         ir_write_text(writer, json, headers[index].name, headers[index].value);

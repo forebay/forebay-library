@@ -243,6 +243,76 @@ static void keeps_a_null_opaque_member(void) {
     cJSON_Delete(block);
 }
 
+/** Reads `text` as a request, failure or other document through `round_trip` and answers its read status. */
+static spisor_status read_status_of(round_trip_function round_trip, const char *text) {
+    cJSON *json = parse(text);
+    ir_json_arena arena = {0};
+    cJSON *written = NULL;
+    spisor_status status = json == NULL ? SPISOR_OUT_OF_MEMORY : round_trip(json, &arena, &written).read;
+    cJSON_Delete(written);
+    ir_json_arena_release(&arena);
+    cJSON_Delete(json);
+    return status;
+}
+
+static void expect_read_status(round_trip_function round_trip, const char *text, spisor_status expected,
+                               const char *label) {
+    spisor_status status = read_status_of(round_trip, text);
+    if (status != expected) {
+        support_failf(label, "read with status %d, expected %d", (int)status, (int)expected);
+    }
+}
+
+/** A null member that is not opaque reads as an absent one, so a null `toolChoice` leaves no choice behind. */
+static void reads_a_null_member_as_absent(void) {
+    cJSON *json = parse("{\"model\":\"m\",\"stream\":false,\"messages\":[],\"toolChoice\":null}");
+    ir_json_arena arena = {0};
+    forebay_ir_request request = {0};
+    spisor_status status = json == NULL ? SPISOR_OUT_OF_MEMORY : ir_json_read_request(json, &arena, &request);
+    if (status != SPISOR_OK || request.tool_choice != NULL) {
+        support_failf("a null toolChoice", "read with status %d and a choice %s", (int)status,
+                      request.tool_choice == NULL ? "absent" : "present");
+    }
+    ir_json_arena_release(&arena);
+    cJSON_Delete(json);
+}
+
+/**
+ * @implNote Built by hand: the parser keeps only the last of a key given twice, so a repeated header name can only
+ * reach the reader in a tree that was not parsed.
+ */
+static void refuses_a_repeated_header_name(void) {
+    cJSON *failure = parse("{\"status\":429,\"body\":\"\"}");
+    cJSON *headers = cJSON_CreateObject();
+    cJSON_AddItemToObject(headers, "a", cJSON_CreateString("1"));
+    cJSON_AddItemToObject(headers, "a", cJSON_CreateString("2"));
+    cJSON_AddItemToObject(failure, "headers", headers);
+    ir_json_arena arena = {0};
+    forebay_ir_failure read;
+    spisor_status status = ir_json_read_failure(failure, &arena, &read);
+    if (status != SPISOR_MALFORMED) {
+        support_failf("a repeated header name", "read with status %d, not MALFORMED", (int)status);
+    }
+    ir_json_arena_release(&arena);
+    cJSON_Delete(failure);
+    expect_read_status(failure_round_trip, "{\"status\":429,\"headers\":{\"a\":\"1\",\"b\":\"2\"},\"body\":\"\"}",
+                       SPISOR_OK, "two different header names");
+}
+
+static void refuses_extensions_that_are_not_a_record(void) {
+    const char *const bad[] = {
+        "{\"model\":\"m\",\"stream\":false,\"messages\":[],\"extensions\":\"x\"}",
+        "{\"model\":\"m\",\"stream\":false,\"messages\":[{\"role\":\"user\",\"content\":[],\"extensions\":[]}]}",
+    };
+    for (size_t index = 0; index < sizeof bad / sizeof bad[0]; index++) {
+        expect_read_status(request_round_trip, bad[index], SPISOR_MALFORMED, "extensions that are not a record");
+    }
+    expect_read_status(request_round_trip, "{\"model\":\"m\",\"stream\":false,\"messages\":[],\"extensions\":null}",
+                       SPISOR_OK, "null extensions");
+    expect_read_status(block_round_trip, "{\"kind\":\"text\",\"text\":\"t\",\"extensions\":5}", SPISOR_MALFORMED,
+                       "a block's extensions that are a number");
+}
+
 static void expect_count(const char *what, int count, int expected) {
     if (count != expected) {
         support_failf(what, "%d files, expected %d", count, expected);
@@ -259,6 +329,9 @@ int main(void) {
         check_schema_form(&SCHEMA_FORM_CASES[index]);
     }
     keeps_a_null_opaque_member();
+    reads_a_null_member_as_absent();
+    refuses_a_repeated_header_name();
+    refuses_extensions_that_are_not_a_record();
     printf("ir_codec_test: %d schema documents, %d anthropic vectors\n", documents, vectors);
     return support_summary("ir_codec_test");
 }

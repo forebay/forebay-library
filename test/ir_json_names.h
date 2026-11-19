@@ -18,4 +18,7 @@ uint32_t ir_json_event_kind_of(const char *name);
 /** Whether a content block start may name the block kind: text, tool use or thinking. */
 int ir_json_is_started_block_kind(uint32_t kind);
 
+/** Whether an event of the kind carries a block `index`: a content block start, delta or stop. */
+int ir_json_event_has_index(uint32_t kind);
+
 #endif
