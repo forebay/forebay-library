@@ -72,7 +72,7 @@ void ir_read_block_into(ir_reader *reader, const cJSON *json, forebay_ir_block *
         return;
     }
     block->cache_control = ir_read_text(reader, json, "cacheControl", IR_OPTIONAL);
-    block->extensions = ir_read_opaque(reader, json, "extensions", IR_OPTIONAL);
+    block->extensions = ir_read_record_opaque(reader, json, "extensions");
     read_members_of_kind(reader, json, block);
 }
 

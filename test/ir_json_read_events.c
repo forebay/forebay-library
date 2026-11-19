@@ -1,10 +1,6 @@
 #include "ir_json_names.h"
 #include "ir_json_reader.h"
 
-static int has_index(uint32_t kind) {
-    return kind >= FOREBAY_IR_EVENT_CONTENT_BLOCK_START && kind <= FOREBAY_IR_EVENT_CONTENT_BLOCK_STOP;
-}
-
 static void read_message_start(ir_reader *reader, const cJSON *json, forebay_ir_event *event) {
     event->id = ir_read_text(reader, json, "id", IR_OPTIONAL);
     event->model = ir_read_text(reader, json, "model", IR_OPTIONAL);
@@ -75,8 +71,8 @@ void ir_read_event_into(ir_reader *reader, const cJSON *json, forebay_ir_event *
         ir_read_malformed(reader, "event", "names no event kind");
         return;
     }
-    event->extensions = ir_read_opaque(reader, json, "extensions", IR_OPTIONAL);
-    if (has_index(event->kind)) {
+    event->extensions = ir_read_record_opaque(reader, json, "extensions");
+    if (ir_json_event_has_index(event->kind)) {
         uint32_t has_block_index = 0;
         ir_read_count(reader, json, "index", IR_REQUIRED, &has_block_index, &event->index);
     }

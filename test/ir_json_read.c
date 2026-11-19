@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "ir_json_reader.h"
 
 static int is_object(ir_reader *reader, const cJSON *json, const char *what) {
@@ -35,7 +37,7 @@ static void read_message(ir_reader *reader, const cJSON *json, forebay_ir_messag
     message->role = ir_read_text(reader, json, "role", IR_REQUIRED);
     message->content = ir_read_blocks(reader, ir_read_array(reader, json, "content", IR_REQUIRED),
                                       &message->content_count);
-    message->extensions = ir_read_opaque(reader, json, "extensions", IR_OPTIONAL);
+    message->extensions = ir_read_record_opaque(reader, json, "extensions");
 }
 
 static const forebay_ir_message *read_messages(ir_reader *reader, const cJSON *array, size_t *count) {
@@ -61,7 +63,7 @@ static void read_tool(ir_reader *reader, const cJSON *json, forebay_ir_tool *too
     tool->name = ir_read_text(reader, json, "name", IR_REQUIRED);
     tool->description = ir_read_text(reader, json, "description", IR_OPTIONAL);
     tool->input_schema = ir_read_opaque(reader, json, "inputSchema", IR_REQUIRED);
-    tool->extensions = ir_read_opaque(reader, json, "extensions", IR_OPTIONAL);
+    tool->extensions = ir_read_record_opaque(reader, json, "extensions");
 }
 
 static const forebay_ir_tool *read_tools(ir_reader *reader, const cJSON *array, size_t *count) {
@@ -89,7 +91,7 @@ static const forebay_ir_tool_choice *read_tool_choice(ir_reader *reader, const c
     if (choice != NULL) {
         choice->type = ir_read_text(reader, json, "type", IR_REQUIRED);
         choice->name = ir_read_text(reader, json, "name", IR_OPTIONAL);
-        choice->extensions = ir_read_opaque(reader, json, "extensions", IR_OPTIONAL);
+        choice->extensions = ir_read_record_opaque(reader, json, "extensions");
     }
     return choice;
 }
@@ -143,12 +145,8 @@ spisor_status ir_json_read_request(const cJSON *json, ir_json_arena *arena, fore
     request->tool_choice = read_tool_choice(&reader, json);
     request->thinking = read_thinking(&reader, json);
     read_request_numbers(&reader, json, request);
-    const spisor_value *metadata = ir_read_opaque(&reader, json, "metadata", IR_OPTIONAL);
-    if (metadata != NULL && metadata->kind != SPISOR_VALUE_RECORD && metadata->kind != SPISOR_VALUE_NULL) {
-        ir_read_malformed(&reader, "metadata", "is neither an object nor null");
-    }
-    request->metadata = metadata;
-    request->extensions = ir_read_opaque(&reader, json, "extensions", IR_OPTIONAL);
+    request->metadata = ir_read_record_opaque(&reader, json, "metadata");
+    request->extensions = ir_read_record_opaque(&reader, json, "extensions");
     return reader.status;
 }
 
@@ -164,7 +162,7 @@ spisor_status ir_json_read_response(const cJSON *json, ir_json_arena *arena, for
     response->content = ir_read_blocks(&reader, ir_read_array(&reader, json, "content", IR_REQUIRED),
                                        &response->content_count);
     response->usage = ir_read_usage(&reader, json, "usage");
-    response->extensions = ir_read_opaque(&reader, json, "extensions", IR_OPTIONAL);
+    response->extensions = ir_read_record_opaque(&reader, json, "extensions");
     return reader.status;
 }
 
@@ -207,6 +205,15 @@ spisor_status ir_json_read_events(const cJSON *json, ir_json_arena *arena, const
     return reader.status;
 }
 
+static int has_header_named(const forebay_pair *headers, size_t count, const char *name) {
+    for (size_t index = 0; index < count; index++) {
+        if (strcmp(headers[index].name, name) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static const forebay_pair *read_headers(ir_reader *reader, const cJSON *json, size_t *count) {
     *count = 0;
     if (json == NULL || !is_object(reader, json, "headers")) {
@@ -222,6 +229,10 @@ static const forebay_pair *read_headers(ir_reader *reader, const cJSON *json, si
     cJSON_ArrayForEach(item, json) {
         if (!cJSON_IsString(item)) {
             ir_read_malformed(reader, item->string, "is a header that is not a string");
+            return NULL;
+        }
+        if (has_header_named(headers, index, item->string)) {
+            ir_read_malformed(reader, item->string, "is a header name given twice");
             return NULL;
         }
         headers[index].name = ir_read_copy(reader, item->string);

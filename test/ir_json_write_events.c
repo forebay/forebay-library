@@ -1,10 +1,6 @@
 #include "ir_json_names.h"
 #include "ir_json_writer.h"
 
-static int has_index(uint32_t kind) {
-    return kind >= FOREBAY_IR_EVENT_CONTENT_BLOCK_START && kind <= FOREBAY_IR_EVENT_CONTENT_BLOCK_STOP;
-}
-
 static void write_message_start(ir_writer *writer, cJSON *json, const forebay_ir_event *event) {
     ir_write_text(writer, json, "id", event->id);
     ir_write_text(writer, json, "model", event->model);
@@ -60,7 +56,7 @@ cJSON *ir_write_event_object(ir_writer *writer, const forebay_ir_event *event) {
     cJSON *json = ir_write_object(writer);
     ir_write_text(writer, json, "event", kind);
     ir_write_opaque(writer, json, "extensions", event->extensions);
-    ir_write_count(writer, json, "index", (uint32_t)has_index(event->kind), event->index);
+    ir_write_count(writer, json, "index", (uint32_t)ir_json_event_has_index(event->kind), event->index);
     write_members_of_kind(writer, json, event);
     if (writer->status != SPISOR_OK) {
         cJSON_Delete(json);

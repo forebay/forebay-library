@@ -204,8 +204,8 @@ typedef struct forebay_ir_event {
 } forebay_ir_event;
 
 /**
- * An upstream failure: its HTTP `status`, from 100 to 599, its response headers, each name once, its `body` as text, and the
- * wait it asked for when `has_retry_after` is 1.
+ * An upstream failure: its HTTP `status`, from 100 to 599, its response headers, each name once, its `body` as text,
+ * and the wait it asked for when `has_retry_after` is 1.
  */
 typedef struct forebay_ir_failure {
     uint32_t status;
