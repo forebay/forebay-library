@@ -7,16 +7,18 @@
  * events of a stream, member for member as `contracts/ir.schema.json` defines them. An IR value an operation answers
  * is the provider's, held by that operation's answer until the release for its kind; an IR value the caller builds
  * and hands in is borrowed for the call. A size-prefixed struct is read only up to its `size`; every other struct
- * here is an element or a member of one, carries no size and never grows. Text is NUL-terminated UTF-8. An array is
+ * here is an element or a member of one, carries no size and never grows. Text is NUL-terminated UTF-8; text the
+ * caller builds that is not valid UTF-8 is written as it is, so the body it reaches is not valid JSON. An array is
  * `count` elements at its pointer, which may be NULL only when `count` is 0.
  *
  * The schema's shared definitions map the same way everywhere. A nullable text (NullableString) is NULL when it is
  * null or absent. A nullable count (NullableCount) and any other nullable number has a `has_` flag beside it, 1 when
- * it is present, since 0 is a real value. A block index (BlockIndex) is a plain count. An `extensions` record, an
- * unknown block's `raw`, a tool use's `input`, a tool's `input_schema` and a request's `metadata` are spisor_value
- * trees, since their shape belongs to the client or the vendor: NULL when absent, and a node of kind NULL when the
- * member is present and null. A stop reason (IrStopReason) is text, never a closed enum, so a reason a vendor adds
- * later survives decoding and encoding unchanged.
+ * it is present, since 0 is a real value. A count is written as a double, so one above 2^53 is not exact, and a
+ * binding holds it in a double, as TypeScript's `number` does. A block index (BlockIndex) is a plain count. An
+ * `extensions` record, an unknown block's `raw`, a tool use's `input`, a tool's `input_schema` and a request's
+ * `metadata` are spisor_value trees, since their shape belongs to the client or the vendor: NULL when absent, and a
+ * node of kind NULL when the member is present and null. A stop reason (IrStopReason) is text, never a closed enum,
+ * so a reason a vendor adds later survives decoding and encoding unchanged.
  */
 
 #include <stddef.h>
@@ -205,15 +207,17 @@ typedef struct forebay_ir_event {
 
 /**
  * An upstream failure: its HTTP `status`, from 100 to 599, its response headers, each name once, its `body` as text,
- * and the wait it asked for when `has_retry_after` is 1.
+ * and the wait it asked for when `has_retry_after` is 1, a double as forebay_outcome_argument takes it. First shape
+ * ends at `retry_after_milliseconds`.
  */
 typedef struct forebay_ir_failure {
+    uint32_t size;
     uint32_t status;
     const forebay_pair *headers;
     size_t header_count;
     const char *body;
     uint32_t has_retry_after;
-    uint64_t retry_after_milliseconds;
+    double retry_after_milliseconds;
 } forebay_ir_failure;
 
 #ifdef __cplusplus

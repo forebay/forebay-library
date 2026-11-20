@@ -7,39 +7,25 @@
 static const char DATA_FIELD[] = "data:";
 static const uint8_t STREAM_END[] = {'\n', '\n'};
 
-/** Room for `needed` bytes, the pending text kept; 0 when memory runs out, the decoder unchanged. */
-static int reserve(forebay_anthropic_stream_decoder *decoder, size_t needed) {
-    if (needed <= decoder->capacity) {
-        return 1;
-    }
-    size_t grown = decoder->capacity > SIZE_MAX / 2 ? needed : decoder->capacity * 2;
-    size_t capacity = grown > needed ? grown : needed;
-    uint8_t *pending = spisor_memory_reallocate(decoder->pending, capacity);
-    if (pending == NULL) {
-        return 0;
-    }
-    decoder->pending = pending;
-    decoder->capacity = capacity;
-    return 1;
-}
-
 int anthropic_frames_begin(forebay_anthropic_stream_decoder *decoder, const uint8_t *bytes, size_t length, int ends,
                            anthropic_frame_scan *scan) {
     size_t ending = ends ? sizeof STREAM_END : 0;
-    if (length > SIZE_MAX - ending - decoder->length || !reserve(decoder, decoder->length + length + ending)) {
+    anthropic_byte_buffer *pending = &decoder->pending;
+    if (length > SIZE_MAX - ending - pending->length ||
+        !anthropic_byte_buffer_reserve(pending, pending->length + length + ending)) {
         return 0;
     }
     if (length > 0) {
-        memcpy(decoder->pending + decoder->length, bytes, length);
+        memcpy(pending->bytes + pending->length, bytes, length);
     }
     if (ending > 0) {
-        memcpy(decoder->pending + decoder->length + length, STREAM_END, ending);
+        memcpy(pending->bytes + pending->length + length, STREAM_END, ending);
     }
-    scan->text = decoder->pending;
-    scan->end = decoder->length + length + ending;
+    scan->text = pending->bytes;
+    scan->end = pending->length + length + ending;
     scan->frame_start = 0;
     scan->line_start = decoder->line_start;
-    scan->search_from = decoder->length;
+    scan->search_from = pending->length;
     return 1;
 }
 
@@ -125,8 +111,8 @@ char *anthropic_frame_payload(const anthropic_frame_scan *scan, const anthropic_
 void anthropic_frames_commit(forebay_anthropic_stream_decoder *decoder, const anthropic_frame_scan *scan) {
     size_t kept = scan->end - scan->frame_start;
     if (kept > 0 && scan->frame_start > 0) {
-        memmove(decoder->pending, decoder->pending + scan->frame_start, kept);
+        memmove(decoder->pending.bytes, decoder->pending.bytes + scan->frame_start, kept);
     }
-    decoder->length = kept;
+    decoder->pending.length = kept;
     decoder->line_start = scan->line_start - scan->frame_start;
 }

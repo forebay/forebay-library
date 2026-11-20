@@ -20,16 +20,12 @@ typedef struct listing_view {
     size_t provider_count;
 } listing_view;
 
-static const char LISTED_CREATED_AT[] = "2025-01-01T00:00:00Z";
+/** The view of a listing or a lookup argument, which name these members alike. */
+#define LISTING_VIEW_OF(argument)                                                                  \
+    ((listing_view){(argument)->default_context, (argument)->default_output, (argument)->providers, \
+                    (argument)->provider_count})
 
-/** Fills the answer from a built wire object, which it deletes, or answers the writer's failure, which is memory. */
-static spisor_status finish_shape(const anthropic_writer *writer, cJSON *wire, forebay_anthropic_body_answer *answer) {
-    if (writer->status != SPISOR_OK) {
-        cJSON_Delete(wire);
-        return writer->status;
-    }
-    return anthropic_write_body(wire, answer);
-}
+static const char LISTED_CREATED_AT[] = "2025-01-01T00:00:00Z";
 
 /** The wire object of an Anthropic error, NULL once the writer has failed. */
 static cJSON *error_object(anthropic_writer *writer, const char *error_type, const char *message) {
@@ -57,7 +53,7 @@ spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_er
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
     cJSON *wire = error_object(&writer, argument->error_type, argument->message);
-    return finish_shape(&writer, wire, answer);
+    return anthropic_finish_body(&writer, wire, answer, refusal);
 }
 
 /** The refusal of a model id named by its position; the longest name, two 20-digit indexes, fits the buffer. */
@@ -86,8 +82,7 @@ static spisor_status check_listed_provider(const forebay_anthropic_listed_provid
     return SPISOR_OK;
 }
 
-static spisor_status check_listing(const listing_view *view,
-                                   spisor_refusal *refusal) {
+static spisor_status check_listing(const listing_view *view, spisor_refusal *refusal) {
     if (view->providers == NULL && view->provider_count > 0) {
         return forebay_refuse_member(refusal, "providers", "a pointer to provider_count providers");
     }
@@ -118,9 +113,9 @@ static cJSON *listed_model_object(anthropic_writer *writer, const forebay_anthro
     anthropic_set_text(writer, object, "display_name", forebay_is_text(model->name) ? model->name : model->id);
     anthropic_set_text(writer, object, "created_at", LISTED_CREATED_AT);
     anthropic_set_count(writer, object, "max_input_tokens",
-                        model->has_context == 1 ? model->context : view->default_context);
+                        model->has_context ? model->context : view->default_context);
     anthropic_set_count(writer, object, "max_tokens",
-                        model->has_output == 1 ? model->output : view->default_output);
+                        model->has_output ? model->output : view->default_output);
     return object;
 }
 
@@ -144,11 +139,6 @@ static const char *edge_id(const cJSON *listed, int last) {
     return cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(listed, index), "id"));
 }
 
-static listing_view view_of_listing(const forebay_anthropic_model_listing_argument *argument) {
-    return (listing_view){argument->default_context, argument->default_output, argument->providers,
-                          argument->provider_count};
-}
-
 spisor_status anthropic_model_listing(void *context, const forebay_anthropic_model_listing_argument *argument,
                                       forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
@@ -156,7 +146,7 @@ spisor_status anthropic_model_listing(void *context, const forebay_anthropic_mod
         !SPISOR_IS_EMPTY_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE)) {
         return spisor_refuse_shape(refusal, "anthropic's model_listing");
     }
-    listing_view view = view_of_listing(argument);
+    listing_view view = LISTING_VIEW_OF(argument);
     spisor_status checked = check_listing(&view, refusal);
     if (checked != SPISOR_OK) {
         return checked;
@@ -168,7 +158,7 @@ spisor_status anthropic_model_listing(void *context, const forebay_anthropic_mod
     anthropic_set_text_or_null(&writer, wire, "first_id", edge_id(attached, 0));
     anthropic_set_text_or_null(&writer, wire, "last_id", edge_id(attached, 1));
     anthropic_set_flag(&writer, wire, "has_more", 0);
-    return finish_shape(&writer, wire, answer);
+    return anthropic_finish_body(&writer, wire, answer, refusal);
 }
 
 /** The listed model `id` names, detached from `listed` and so the caller's to delete, NULL for none. */
@@ -217,8 +207,7 @@ spisor_status anthropic_model_lookup(void *context, const forebay_anthropic_mode
         !SPISOR_IS_EMPTY_ANSWER(answer, LOOKUP_ANSWER_SHAPE)) {
         return spisor_refuse_shape(refusal, "anthropic's model_lookup");
     }
-    listing_view view = {argument->default_context, argument->default_output, argument->providers,
-                         argument->provider_count};
+    listing_view view = LISTING_VIEW_OF(argument);
     spisor_status checked = check_lookup(argument, &view, refusal);
     if (checked != SPISOR_OK) {
         return checked;
@@ -232,7 +221,7 @@ spisor_status anthropic_model_lookup(void *context, const forebay_anthropic_mode
     }
     cJSON_Delete(listed);
     forebay_anthropic_body_answer body = SPISOR_INIT(forebay_anthropic_body_answer);
-    spisor_status status = finish_shape(&writer, wire, &body);
+    spisor_status status = anthropic_finish_body(&writer, wire, &body, refusal);
     if (status == SPISOR_OK) {
         answer->bytes = body.bytes;
         answer->length = body.length;

@@ -138,7 +138,7 @@ spisor_status ir_json_write_failure(const forebay_ir_failure *failure, cJSON **j
     ir_write_count(&writer, built, "status", 1, failure->status);
     ir_write_item(&writer, built, "headers", write_headers(&writer, failure->headers, failure->header_count));
     ir_write_text(&writer, built, "body", failure->body);
-    ir_write_count(&writer, built, "retryAfterMilliseconds", failure->has_retry_after,
-                   failure->retry_after_milliseconds);
+    ir_write_number(&writer, built, "retryAfterMilliseconds", failure->has_retry_after,
+                    failure->retry_after_milliseconds);
     return ir_write_finish(&writer, built, json);
 }

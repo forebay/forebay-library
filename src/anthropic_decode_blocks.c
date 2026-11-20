@@ -3,6 +3,9 @@
 #include "anthropic_decode.h"
 #include "anthropic_wire.h"
 
+/** $imageSourceRaw, $redacted, $redactedThinkingData, $contentIsString and $cacheControlExtra. */
+#define BLOCK_TRANSLATOR_KEYS 5
+
 static const char *const TEXT_CONSUMED[] = {"type", "cache_control", "text"};
 static const char *const IMAGE_CONSUMED[] = {"type", "cache_control", "source"};
 static const char *const TOOL_USE_CONSUMED[] = {"type", "cache_control", "id", "name", "input"};
@@ -152,7 +155,7 @@ static void decode_block(anthropic_reader *reader, const cJSON *wire, forebay_ir
         return;
     }
     anthropic_extension_list extensions;
-    anthropic_extensions_begin(reader, &extensions, (size_t)cJSON_GetArraySize(wire));
+    anthropic_extensions_begin(reader, &extensions, BLOCK_TRANSLATOR_KEYS, (size_t)cJSON_GetArraySize(wire));
     type->decode(reader, wire, block, &extensions);
     decode_cache_control(reader, wire, block, &extensions);
     anthropic_extensions_put_unconsumed(reader, &extensions, wire, type->consumed, type->consumed_count);

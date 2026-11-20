@@ -6,10 +6,9 @@
 /**
  * @file
  * The anthropic service's translation through its definition: every `request-*` and `response-*` vector in both
- * directions (a
- * decode vector's `input` as bytes against its `output`, an encode vector's `input` against its `output`), then the
- * cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is not an object, an IR
- * that breaks its header, and the byte form of a body.
+ * directions (a decode vector's `input` as bytes against its `output`, an encode vector's `input` against its
+ * `output`), then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
+ * not an object, an IR that breaks its header, and the byte form of a body.
  */
 
 #define REQUEST_VECTOR_COUNT 18
@@ -351,6 +350,31 @@ static void an_ir_that_breaks_its_header_is_malformed(void) {
     expect_malformed("a metadata value tree that spisor_value_check refuses", &request);
 }
 
+/** `extensions` as a block's, a tool's and a tool choice's own, each in a request otherwise valid. */
+static void expect_malformed_in_a_block_a_tool_and_a_tool_choice(const char *label, const spisor_value *extensions) {
+    static const spisor_value empty_record = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, NULL, NULL, 0};
+    char where[96];
+    const forebay_ir_block block = {.kind = FOREBAY_IR_BLOCK_TEXT, .text = "t", .extensions = extensions};
+    const forebay_ir_message message = {"user", &block, 1, NULL};
+    forebay_ir_request request = valid_request();
+    request.messages = &message;
+    request.message_count = 1;
+    snprintf(where, sizeof where, "%s, on a block", label);
+    expect_malformed(where, &request);
+    const forebay_ir_tool tool = {"n", NULL, &empty_record, extensions};
+    request = valid_request();
+    request.has_tools = 1;
+    request.tools = &tool;
+    request.tool_count = 1;
+    snprintf(where, sizeof where, "%s, on a tool", label);
+    expect_malformed(where, &request);
+    const forebay_ir_tool_choice choice = {"auto", NULL, extensions};
+    request = valid_request();
+    request.tool_choice = &choice;
+    snprintf(where, sizeof where, "%s, on a tool choice", label);
+    expect_malformed(where, &request);
+}
+
 /** Value trees a request holds in places the encoder reads at once: each must be MALFORMED, never a crash. */
 static void an_extension_tree_that_is_not_well_formed_is_malformed(void) {
     static const spisor_value empty_text = {SPISOR_VALUE_TEXT, 0, 0, NULL, 0, NULL, NULL, 0};
@@ -381,6 +405,7 @@ static void an_extension_tree_that_is_not_well_formed_is_malformed(void) {
         request.messages = &message;
         request.message_count = 1;
         expect_malformed(names[index], &request);
+        expect_malformed_in_a_block_a_tool_and_a_tool_choice(names[index], bad[index]);
     }
     forebay_ir_request request = valid_request();
     request.messages = &raw_message;
@@ -395,6 +420,10 @@ typedef struct response_case {
 } response_case;
 
 static const response_case RESPONSE_DECODE_CASES[] = {
+    {"an empty object keeps all four raw members, though the wire gives room for none",
+     "{}",
+     "{\"id\":\"\",\"model\":\"\",\"content\":[],\"stopReason\":\"error\",\"extensions\":{\"$stopReasonRaw\":null,"
+     "\"$stopSequenceRaw\":null,\"$typeRaw\":null,\"$roleRaw\":null}}"},
     {"a member of the wrong type reads as absent and is kept raw",
      "{\"id\":5,\"model\":null,\"content\":\"x\",\"stop_reason\":7,\"stop_sequence\":\"s\",\"type\":3,\"role\":[],"
      "\"usage\":\"u\"}",
@@ -713,7 +742,8 @@ static void a_listing_that_breaks_its_header_is_malformed(void) {
 }
 
 static void expect_lookup(const char *label, const char *id, uint32_t found, const char *expected_bytes) {
-    static const forebay_anthropic_listed_model models[] = {{.id = "a", .name = "A"}, {.id = "b"}};
+    static const forebay_anthropic_listed_model models[] = {
+        {.id = "a", .name = "A"}, {.id = "b", .has_context = 2, .context = 7, .has_output = 3, .output = 8}};
     static const forebay_anthropic_listed_model later[] = {{.id = "a", .name = "A later"}};
     const forebay_anthropic_listed_provider providers[2] = {{models, 2}, {later, 1}};
     forebay_anthropic_model_lookup_argument argument = SPISOR_INIT(forebay_anthropic_model_lookup_argument);
@@ -739,6 +769,9 @@ static void a_lookup_answers_found_or_not_found_with_the_proxys_bodies(void) {
     expect_lookup("a found model", "a", 1,
                   "{\"type\":\"model\",\"id\":\"a\",\"display_name\":\"A\",\"created_at\":\"2025-01-01T00:00:00Z\","
                   "\"max_input_tokens\":5,\"max_tokens\":6}");
+    expect_lookup("limits whose has_ flags are set but not 1", "b", 1,
+                  "{\"type\":\"model\",\"id\":\"b\",\"display_name\":\"b\",\"created_at\":\"2025-01-01T00:00:00Z\","
+                  "\"max_input_tokens\":7,\"max_tokens\":8}");
     expect_lookup("a model not found", "zz", 0,
                   "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: zz\"}}");
 }

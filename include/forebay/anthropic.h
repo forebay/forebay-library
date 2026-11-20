@@ -206,8 +206,7 @@ typedef struct forebay_anthropic_model_lookup_answer {
  * tree spisor_value_check refuses, which includes every `extensions` record and an unknown block's `raw`); and
  * OUT_OF_MEMORY, with the answer empty. JSON this library cannot read, a string holding a NUL (`\u0000`), is refused
  * as a body that is not JSON, and a number that is not finite (`1e400`) reads as null, as JSON.stringify writes it.
- * First shape ends at `release_refusal`; the response operations follow it, then the stream operations, then the wire
- * shapes (listing and lookup), and a later operation is appended after those.
+ * First shape ends at `release_refusal`.
  */
 typedef struct forebay_anthropic_definition {
     uint32_t size;
@@ -222,9 +221,6 @@ typedef struct forebay_anthropic_definition {
     /** An IR request to a body, as encodeRequest does, the members in the order it builds them. */
     spisor_status (*encode_request)(void *context, const forebay_anthropic_encode_request_argument *argument,
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
-    void (*release_request)(void *context, forebay_anthropic_request_answer *answer);
-    void (*release_body)(void *context, forebay_anthropic_body_answer *answer);
-    void (*release_refusal)(void *context, spisor_refusal *refusal);
     /**
      * A body to an IR response, as decodeResponse does. The stop reason is a known one as it is, any other or none
      * "error", and the wire's own is kept in `$stopReasonRaw`, with `$stopSequenceRaw`, `$typeRaw` and `$roleRaw`
@@ -236,7 +232,6 @@ typedef struct forebay_anthropic_definition {
     /** An IR response to a body, as encodeResponse does, the members in the order it builds them. */
     spisor_status (*encode_response)(void *context, const forebay_anthropic_encode_response_argument *argument,
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
-    void (*release_response)(void *context, forebay_anthropic_response_answer *answer);
     /** A new, empty stream decoder. */
     spisor_status (*stream_decoder_open)(void *context, forebay_anthropic_stream_decoder_answer *answer,
                                          spisor_refusal *refusal);
@@ -244,10 +239,11 @@ typedef struct forebay_anthropic_definition {
      * Feeds a piece of SSE text and answers the IR events of the frames it completed, as `anthropic-translator`'s
      * stream decoder does: a line ends at LF, one CR before it dropped (a lone CR ends no line); a frame ends at a
      * blank line and is its `data:` lines joined with LF; a comment, any other field, a `ping`, a frame of another
-     * type or of no JSON (JSON that cannot be parsed, or holds a NUL in a string, is no JSON here, where a body is
-     * refused), and a delta of another type yield nothing. A message delta keeps its stop sequence in
-     * `$stopSequenceRaw`, and a message start's and a message delta's other members are kept in `extensions`. An index
-     * that is no count from 0 to 2^53 reads as 0. MALFORMED when `decoder` is NULL.
+     * type or of no JSON (JSON that cannot be parsed, holds a NUL in a string or is not valid UTF-8, is no JSON here,
+     * where a body is refused, and where a TypeScript TextDecoder would read U+FFFD instead), and a delta of another
+     * type yield nothing. A message delta keeps its stop sequence in `$stopSequenceRaw`, and a message start's and a
+     * message delta's other members are kept in `extensions`. An index that is no count from 0 to 2^53 reads as 0.
+     * MALFORMED when `decoder` is NULL.
      */
     spisor_status (*stream_decode)(void *context, const forebay_anthropic_stream_decode_argument *argument,
                                    forebay_anthropic_events_answer *answer, spisor_refusal *refusal);
@@ -257,9 +253,6 @@ typedef struct forebay_anthropic_definition {
      */
     spisor_status (*stream_decode_finish)(void *context, const forebay_anthropic_stream_decode_argument *argument,
                                           forebay_anthropic_events_answer *answer, spisor_refusal *refusal);
-    void (*release_events)(void *context, forebay_anthropic_events_answer *answer);
-    /** Frees a stream decoder, NULL doing nothing. */
-    void (*release_stream_decoder)(void *context, forebay_anthropic_stream_decoder *decoder);
     /** A new stream encoder. */
     spisor_status (*stream_encoder_open)(void *context, forebay_anthropic_stream_encoder_answer *answer,
                                          spisor_refusal *refusal);
@@ -274,8 +267,6 @@ typedef struct forebay_anthropic_definition {
     /** Writes the last events, possibly none, then ends the stream; an Anthropic stream needs nothing after them. */
     spisor_status (*stream_encode_finish)(void *context, const forebay_anthropic_stream_encode_argument *argument,
                                           forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
-    /** Frees a stream encoder, NULL doing nothing. */
-    void (*release_stream_encoder)(void *context, forebay_anthropic_stream_encoder *encoder);
     /**
      * The body of an Anthropic error, `{"type":"error","error":{"type":<error_type>,"message":<message>}}`, with the
      * message escaped as JSON text. MALFORMED, naming the member, for a NULL or empty `error_type` and a NULL
@@ -301,8 +292,17 @@ typedef struct forebay_anthropic_definition {
      */
     spisor_status (*model_lookup)(void *context, const forebay_anthropic_model_lookup_argument *argument,
                                   forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal);
+    void (*release_request)(void *context, forebay_anthropic_request_answer *answer);
+    void (*release_body)(void *context, forebay_anthropic_body_answer *answer);
+    void (*release_response)(void *context, forebay_anthropic_response_answer *answer);
+    void (*release_events)(void *context, forebay_anthropic_events_answer *answer);
+    /** Frees a stream decoder, NULL doing nothing. */
+    void (*release_stream_decoder)(void *context, forebay_anthropic_stream_decoder *decoder);
+    /** Frees a stream encoder, NULL doing nothing. */
+    void (*release_stream_encoder)(void *context, forebay_anthropic_stream_encoder *encoder);
     /** Frees a lookup answer, NULL or one never filled doing nothing. */
     void (*release_model_lookup)(void *context, forebay_anthropic_model_lookup_answer *answer);
+    void (*release_refusal)(void *context, spisor_refusal *refusal);
 } forebay_anthropic_definition;
 
 /** The static forebay_anthropic_definition, living until the library is unloaded. */

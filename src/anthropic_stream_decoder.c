@@ -123,7 +123,7 @@ ANTHROPIC_RELEASE_ANSWER(anthropic_release_events, forebay_anthropic_events_answ
 void anthropic_release_stream_decoder(void *context, forebay_anthropic_stream_decoder *decoder) {
     (void)context;
     if (decoder != NULL) {
-        spisor_memory_release(decoder->pending);
+        spisor_memory_release(decoder->pending.bytes);
         spisor_memory_release(decoder);
     }
 }

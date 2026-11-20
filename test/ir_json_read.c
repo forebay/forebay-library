@@ -245,7 +245,7 @@ static const forebay_pair *read_headers(ir_reader *reader, const cJSON *json, si
 
 spisor_status ir_json_read_failure(const cJSON *json, ir_json_arena *arena, forebay_ir_failure *failure) {
     ir_reader reader = {arena, SPISOR_OK};
-    *failure = (forebay_ir_failure){0};
+    *failure = (forebay_ir_failure){.size = (uint32_t)sizeof(forebay_ir_failure)};
     if (!is_object(&reader, json, "failure")) {
         return reader.status;
     }
@@ -259,7 +259,9 @@ spisor_status ir_json_read_failure(const cJSON *json, ir_json_arena *arena, fore
     failure->headers = read_headers(&reader, ir_read_member(&reader, json, "headers", IR_REQUIRED),
                                     &failure->header_count);
     failure->body = ir_read_text(&reader, json, "body", IR_REQUIRED);
+    uint64_t retry_after_milliseconds = 0;
     ir_read_count(&reader, json, "retryAfterMilliseconds", IR_OPTIONAL, &failure->has_retry_after,
-                  &failure->retry_after_milliseconds);
+                  &retry_after_milliseconds);
+    failure->retry_after_milliseconds = (double)retry_after_milliseconds;
     return reader.status;
 }

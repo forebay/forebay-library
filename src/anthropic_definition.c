@@ -3,7 +3,6 @@
 #include "anthropic_decode.h"
 #include "anthropic_encode.h"
 #include "anthropic_operations.h"
-#include "anthropic_stringify.h"
 #include "forebay/anthropic.h"
 #include "spisor/allocation.h"
 #include "spisor/definition.h"
@@ -87,21 +86,6 @@ static spisor_status decode_response(void *context, const forebay_anthropic_body
     return status;
 }
 
-/** Fills the answer from a built wire object, which it deletes, or refuses what the writer found malformed. */
-static spisor_status finish_encoding(const anthropic_writer *writer, cJSON *wire, anthropic_problem *problem,
-                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
-    if (writer->status == SPISOR_MALFORMED) {
-        cJSON_Delete(wire);
-        anthropic_writer_problem(writer, problem);
-        return anthropic_refuse_problem(refusal, problem);
-    }
-    if (writer->status != SPISOR_OK) {
-        cJSON_Delete(wire);
-        return writer->status;
-    }
-    return anthropic_write_body(wire, answer);
-}
-
 static spisor_status encode_request(void *context, const forebay_anthropic_encode_request_argument *argument,
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
@@ -119,7 +103,7 @@ static spisor_status encode_request(void *context, const forebay_anthropic_encod
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
     cJSON *wire = anthropic_encode_request_object(&writer, argument->request);
-    return finish_encoding(&writer, wire, &problem, answer, refusal);
+    return anthropic_finish_body(&writer, wire, answer, refusal);
 }
 
 static spisor_status encode_response(void *context, const forebay_anthropic_encode_response_argument *argument,
@@ -139,7 +123,7 @@ static spisor_status encode_response(void *context, const forebay_anthropic_enco
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
     cJSON *wire = anthropic_encode_response_object(&writer, argument->response);
-    return finish_encoding(&writer, wire, &problem, answer, refusal);
+    return anthropic_finish_body(&writer, wire, answer, refusal);
 }
 
 static ANTHROPIC_RELEASE_ANSWER(release_request, forebay_anthropic_request_answer, REQUEST_ANSWER_SHAPE)
@@ -151,25 +135,25 @@ static const forebay_anthropic_definition definition = {
     NULL,
     decode_request,
     encode_request,
-    release_request,
-    anthropic_release_body,
-    spisor_release_refusal,
     decode_response,
     encode_response,
-    release_response,
     anthropic_stream_decoder_open,
     anthropic_stream_decode,
     anthropic_stream_decode_finish,
-    anthropic_release_events,
-    anthropic_release_stream_decoder,
     anthropic_stream_encoder_open,
     anthropic_stream_encode,
     anthropic_stream_encode_finish,
-    anthropic_release_stream_encoder,
     anthropic_error_envelope,
     anthropic_model_listing,
     anthropic_model_lookup,
+    release_request,
+    anthropic_release_body,
+    release_response,
+    anthropic_release_events,
+    anthropic_release_stream_decoder,
+    anthropic_release_stream_encoder,
     anthropic_release_model_lookup,
+    spisor_release_refusal,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_anthropic_definition_of(void) {

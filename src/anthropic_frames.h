@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "anthropic_byte_buffer.h"
 #include "forebay/anthropic.h"
 
 /**
@@ -11,9 +12,7 @@
  * ended, none of them blank; the line from `line_start` on has no LF yet.
  */
 struct forebay_anthropic_stream_decoder {
-    uint8_t *pending;
-    size_t length;
-    size_t capacity;
+    anthropic_byte_buffer pending;
     size_t line_start;
 };
 

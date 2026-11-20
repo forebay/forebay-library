@@ -30,8 +30,13 @@ void anthropic_writer_problem(const anthropic_writer *writer, anthropic_problem 
 /** The MALFORMED refusal of bytes NULL beside a length that is not 0. */
 spisor_status anthropic_refuse_bytes(spisor_refusal *refusal);
 
-/** Fills the answer with the JSON of a wire object, which it deletes; the answer is left empty unless OK. */
-spisor_status anthropic_write_body(cJSON *wire, forebay_anthropic_body_answer *answer);
+/**
+ * Fills the answer with the JSON of a wire object the writer built, which it deletes, or answers what the writer
+ * failed with: MALFORMED with the refusal of the problem it found, or OUT_OF_MEMORY. The answer is left empty unless
+ * OK.
+ */
+spisor_status anthropic_finish_body(const anthropic_writer *writer, cJSON *wire, forebay_anthropic_body_answer *answer,
+                                    spisor_refusal *refusal);
 
 void anthropic_release_body(void *context, forebay_anthropic_body_answer *answer);
 
