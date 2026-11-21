@@ -369,22 +369,22 @@ static inline spisor_status anthropic_feed_decoder(forebay_anthropic_stream_deco
 static inline spisor_status anthropic_call_decode_stream(const anthropic_input *input, anthropic_answer *answer,
                                                          spisor_refusal *refusal) {
     static const anthropic_piece nothing = {"", 0};
-    forebay_anthropic_stream_decoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_decoder_answer);
+    forebay_anthropic_stream_decoder *opened = NULL;
     spisor_status status = anthropic_definition()->stream_decoder_open(NULL, &opened, refusal);
     anthropic_stream_answer *stream = &answer->stream;
     stream->events = calloc(input->piece_count + 1, sizeof *stream->events);
     if (stream->events == NULL) {
         support_fail("a stream decode", "the test could not allocate its answers");
-        anthropic_definition()->release_stream_decoder(NULL, opened.decoder);
+        anthropic_definition()->release_stream_decoder(NULL, opened);
         return SPISOR_OUT_OF_MEMORY;
     }
     stream->count = input->piece_count + 1;
     for (size_t index = 0; status == SPISOR_OK && index <= input->piece_count; index++) {
         int finish = index == input->piece_count;
-        status = anthropic_feed_decoder(opened.decoder, finish ? &nothing : &input->pieces[index], finish,
+        status = anthropic_feed_decoder(opened, finish ? &nothing : &input->pieces[index], finish,
                                         &stream->events[index], refusal);
     }
-    anthropic_definition()->release_stream_decoder(NULL, opened.decoder);
+    anthropic_definition()->release_stream_decoder(NULL, opened);
     if (status != SPISOR_OK) {
         anthropic_release_stream_answers(answer);
     }
@@ -415,22 +415,22 @@ static inline spisor_status anthropic_feed_encoder(forebay_anthropic_stream_enco
 /** Opens an encoder, writes the events one feed each, as the translator's transform does, then finishes it. */
 static inline spisor_status anthropic_call_encode_stream(const anthropic_input *input, anthropic_answer *answer,
                                                          spisor_refusal *refusal) {
-    forebay_anthropic_stream_encoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_encoder_answer);
+    forebay_anthropic_stream_encoder *opened = NULL;
     spisor_status status = anthropic_definition()->stream_encoder_open(NULL, &opened, refusal);
     anthropic_stream_answer *stream = &answer->stream;
     stream->texts = calloc(input->event_count + 1, sizeof *stream->texts);
     if (stream->texts == NULL) {
         support_fail("a stream encode", "the test could not allocate its answers");
-        anthropic_definition()->release_stream_encoder(NULL, opened.encoder);
+        anthropic_definition()->release_stream_encoder(NULL, opened);
         return SPISOR_OUT_OF_MEMORY;
     }
     stream->count = input->event_count + 1;
     for (size_t index = 0; status == SPISOR_OK && index <= input->event_count; index++) {
         int finish = index == input->event_count;
-        status = anthropic_feed_encoder(opened.encoder, finish ? NULL : &input->events[index], finish ? 0 : 1, finish,
+        status = anthropic_feed_encoder(opened, finish ? NULL : &input->events[index], finish ? 0 : 1, finish,
                                         &stream->texts[index], refusal);
     }
-    anthropic_definition()->release_stream_encoder(NULL, opened.encoder);
+    anthropic_definition()->release_stream_encoder(NULL, opened);
     if (status != SPISOR_OK) {
         anthropic_release_stream_answers(answer);
     }

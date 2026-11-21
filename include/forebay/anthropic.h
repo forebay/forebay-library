@@ -86,12 +86,6 @@ typedef struct forebay_anthropic_stream_decoder forebay_anthropic_stream_decoder
  */
 typedef struct forebay_anthropic_stream_encoder forebay_anthropic_stream_encoder;
 
-/** A new stream decoder, empty before the call. First shape ends at `decoder`. */
-typedef struct forebay_anthropic_stream_decoder_answer {
-    uint32_t size;
-    forebay_anthropic_stream_decoder *decoder;
-} forebay_anthropic_stream_decoder_answer;
-
 /**
  * The next piece of a stream for `decoder`: `bytes` of `length`, which may be NULL only when `length` is 0, split
  * anywhere, inside a line, a frame or a CRLF included. Borrowed for the call. First shape ends at `length`.
@@ -110,12 +104,6 @@ typedef struct forebay_anthropic_events_answer {
     size_t event_count;
     void *storage;
 } forebay_anthropic_events_answer;
-
-/** A new stream encoder, empty before the call. First shape ends at `encoder`. */
-typedef struct forebay_anthropic_stream_encoder_answer {
-    uint32_t size;
-    forebay_anthropic_stream_encoder *encoder;
-} forebay_anthropic_stream_encoder_answer;
 
 /** The next events of a stream for `encoder`, borrowed for the call. First shape ends at `event_count`. */
 typedef struct forebay_anthropic_stream_encode_argument {
@@ -232,8 +220,13 @@ typedef struct forebay_anthropic_definition {
     /** An IR response to a body, as encodeResponse does, the members in the order it builds them. */
     spisor_status (*encode_response)(void *context, const forebay_anthropic_encode_response_argument *argument,
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
-    /** A new, empty stream decoder. */
-    spisor_status (*stream_decoder_open)(void *context, forebay_anthropic_stream_decoder_answer *answer,
+    /**
+     * A new, empty stream decoder.
+     *
+     * @param decoder the consumer's empty handle, freed by `release_stream_decoder`. Required.
+     * @return OK; MALFORMED for a NULL `decoder` or one already holding a decoder.
+     */
+    spisor_status (*stream_decoder_open)(void *context, forebay_anthropic_stream_decoder **decoder,
                                          spisor_refusal *refusal);
     /**
      * Feeds a piece of SSE text and answers the IR events of the frames it completed, as `anthropic-translator`'s
@@ -253,8 +246,13 @@ typedef struct forebay_anthropic_definition {
      */
     spisor_status (*stream_decode_finish)(void *context, const forebay_anthropic_stream_decode_argument *argument,
                                           forebay_anthropic_events_answer *answer, spisor_refusal *refusal);
-    /** A new stream encoder. */
-    spisor_status (*stream_encoder_open)(void *context, forebay_anthropic_stream_encoder_answer *answer,
+    /**
+     * A new stream encoder.
+     *
+     * @param encoder the consumer's empty handle, freed by `release_stream_encoder`. Required.
+     * @return OK; MALFORMED for a NULL `encoder` or one already holding an encoder.
+     */
+    spisor_status (*stream_encoder_open)(void *context, forebay_anthropic_stream_encoder **encoder,
                                          spisor_refusal *refusal);
     /**
      * The SSE text of the events, one `event:` and one `data:` line and a blank line per event, as the translator's

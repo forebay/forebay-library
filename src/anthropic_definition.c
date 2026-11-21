@@ -90,7 +90,7 @@ static spisor_status encode_request(void *context, const forebay_anthropic_encod
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ENCODE_REQUEST_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE)) {
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
         return spisor_refuse_shape(refusal, "anthropic's encode_request");
     }
     anthropic_problem problem;
@@ -110,7 +110,7 @@ static spisor_status encode_response(void *context, const forebay_anthropic_enco
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ENCODE_RESPONSE_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE)) {
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
         return spisor_refuse_shape(refusal, "anthropic's encode_response");
     }
     anthropic_problem problem;

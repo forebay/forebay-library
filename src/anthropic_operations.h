@@ -40,7 +40,7 @@ spisor_status anthropic_finish_body(const anthropic_writer *writer, cJSON *wire,
 
 void anthropic_release_body(void *context, forebay_anthropic_body_answer *answer);
 
-spisor_status anthropic_stream_decoder_open(void *context, forebay_anthropic_stream_decoder_answer *answer,
+spisor_status anthropic_stream_decoder_open(void *context, forebay_anthropic_stream_decoder **decoder,
                                             spisor_refusal *refusal);
 spisor_status anthropic_stream_decode(void *context, const forebay_anthropic_stream_decode_argument *argument,
                                       forebay_anthropic_events_answer *answer, spisor_refusal *refusal);
@@ -49,7 +49,7 @@ spisor_status anthropic_stream_decode_finish(void *context, const forebay_anthro
 void anthropic_release_events(void *context, forebay_anthropic_events_answer *answer);
 void anthropic_release_stream_decoder(void *context, forebay_anthropic_stream_decoder *decoder);
 
-spisor_status anthropic_stream_encoder_open(void *context, forebay_anthropic_stream_encoder_answer *answer,
+spisor_status anthropic_stream_encoder_open(void *context, forebay_anthropic_stream_encoder **encoder,
                                             spisor_refusal *refusal);
 spisor_status anthropic_stream_encode(void *context, const forebay_anthropic_stream_encode_argument *argument,
                                       forebay_anthropic_body_answer *answer, spisor_refusal *refusal);

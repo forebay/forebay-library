@@ -140,7 +140,10 @@ typedef enum forebay_resolve_notice {
     FOREBAY_HEALED = 2
 } forebay_resolve_notice;
 
-/** The chain, best first, and the forebay_resolve_notice values it raised. First shape ends at `storage`. */
+/**
+ * The chain, best first, and the notices it raised, each FOREBAY_MODEL_SWITCHED or FOREBAY_HEALED. First shape ends
+ * at `storage`.
+ */
 typedef struct forebay_resolve_answer {
     uint32_t size;
     const forebay_assignment *chain;
@@ -258,6 +261,7 @@ typedef enum forebay_log_level {
 
 /** One line for the proxy's log. */
 typedef struct forebay_log_line {
+    /** A forebay_log_level. */
     uint32_t level;
     const char *message;
 } forebay_log_line;
@@ -275,6 +279,7 @@ typedef struct forebay_step_answer {
     uint32_t kind;
     const char *provider;
     const char *model;
+    /** A forebay_reply_kind. */
     uint32_t reply_kind;
     uint32_t status;
     const char *message;
@@ -290,16 +295,8 @@ typedef struct forebay_step_answer {
 } forebay_step_answer;
 
 /**
- * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply. First
- * shape ends at `size`.
- */
-typedef struct forebay_limits_argument {
-    uint32_t size;
-} forebay_limits_argument;
-
-/**
- * The limits; `too_large_message` is static text. It owns nothing. First shape ends at
- * `refresh_every_milliseconds`.
+ * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, and
+ * `too_large_message` is static text. It owns nothing. First shape ends at `refresh_every_milliseconds`.
  */
 typedef struct forebay_limits_answer {
     uint32_t size;
@@ -372,10 +369,12 @@ typedef enum forebay_arrival_kind {
  */
 typedef struct forebay_arrival_answer {
     uint32_t size;
+    /** A forebay_arrival_kind. */
     uint32_t kind;
     uint32_t status;
     const char *content_type;
     const char *body;
+    /** A forebay_reply_kind. */
     uint32_t reply_kind;
     const char *message;
     void *storage;
@@ -416,12 +415,10 @@ typedef enum forebay_failure_reason {
     FOREBAY_REQUEST_FAILED = 2
 } forebay_failure_reason;
 
-/**
- * A forebay_failure_reason, the `upstream` an unreachable one names, and the `detail`. First shape ends at
- * `detail`.
- */
+/** Why it failed, the `upstream` an unreachable one names, and the `detail`. First shape ends at `detail`. */
 typedef struct forebay_failure_argument {
     uint32_t size;
+    /** A forebay_failure_reason. */
     uint32_t reason;
     const char *upstream;
     const char *detail;
@@ -430,6 +427,7 @@ typedef struct forebay_failure_argument {
 /** The reply to answer with and the lines to log. First shape ends at `storage`. */
 typedef struct forebay_failure_answer {
     uint32_t size;
+    /** A forebay_reply_kind. */
     uint32_t reply_kind;
     uint32_t status;
     const char *message;
@@ -514,8 +512,8 @@ typedef struct forebay_routing_definition {
     /** The next thing to do for one request; REFUSED for a pattern the matcher cannot run. */
     spisor_status (*step)(void *context, const forebay_step_argument *argument, forebay_step_answer *answer,
                           spisor_refusal *refusal);
-    spisor_status (*limits)(void *context, const forebay_limits_argument *argument, forebay_limits_answer *answer,
-                            spisor_refusal *refusal);
+    /** The fixed limits; they read nothing. */
+    spisor_status (*limits)(void *context, forebay_limits_answer *answer, spisor_refusal *refusal);
     /** REFUSED for an upstream or URL the request cannot be sent to. */
     spisor_status (*pass_through)(void *context, const forebay_pass_through_argument *argument,
                                   forebay_pass_through_answer *answer, spisor_refusal *refusal);

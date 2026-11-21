@@ -136,10 +136,21 @@ target_include_directories(weivel_host_load_test PRIVATE ${forebay_spisor_test_d
 target_compile_definitions(weivel_host_load_test PRIVATE
     FOREBAY_DECLARATION_PATH="${PROJECT_SOURCE_DIR}/library.json"
     FOREBAY_LIBRARY_PATH="$<TARGET_FILE:forebay_library>" WEIVEL_CORE_PATH="$<TARGET_FILE:weivel_core_shared>")
-target_link_libraries(weivel_host_load_test PRIVATE weivel_c weivel_standard)
+target_link_libraries(weivel_host_load_test PRIVATE weivel_c_standard)
 add_dependencies(weivel_host_load_test forebay_library weivel_core_shared)
 spisor_strict_warnings(weivel_host_load_test)
 add_test(NAME weivel_host_load_test COMMAND weivel_host_load_test)
+
+add_executable(description_test description_test.c)
+target_include_directories(description_test PRIVATE ${forebay_spisor_test_directory})
+target_compile_definitions(description_test PRIVATE FOREBAY_DECLARATION_PATH="${PROJECT_SOURCE_DIR}/library.json"
+    FOREBAY_LIBRARY_PATH="$<TARGET_FILE:forebay_library>")
+target_link_libraries(description_test PRIVATE weivel_standard ${CMAKE_DL_LIBS})
+add_dependencies(description_test forebay_library)
+spisor_strict_warnings(description_test)
+add_test(NAME description_test COMMAND description_test)
+
+spisor_add_described_checks(LIBRARY forebay_library DECLARATION ${PROJECT_SOURCE_DIR}/library.json)
 
 if(MSVC)
     set(forebay_export_lister ${CMAKE_LINKER})
@@ -151,21 +162,13 @@ else()
     set(forebay_export_lister ${CMAKE_NM})
     set(forebay_export_format elf)
 endif()
-string(JOIN "," forebay_expected_exports ${forebay_definition_symbols})
+set(forebay_description_symbols "")
+foreach(symbol IN LISTS forebay_definition_symbols)
+    string(REGEX REPLACE "_of$" "_description" description_symbol "${symbol}")
+    list(APPEND forebay_description_symbols ${description_symbol})
+endforeach()
+string(JOIN "," forebay_expected_exports ${forebay_definition_symbols} ${forebay_description_symbols})
 add_test(NAME forebay_exports_only_definitions_test
     COMMAND ${CMAKE_COMMAND} -DLIBRARY=$<TARGET_FILE:forebay_library> -DLISTER=${forebay_export_lister}
         -DFORMAT=${forebay_export_format} -DEXPECTED=${forebay_expected_exports}
         -P ${spisor_library_SOURCE_DIR}/cmake/exports_check.cmake)
-
-include(${spisor_library_SOURCE_DIR}/cmake/definition_calls.cmake)
-set(forebay_definition_operations ${CMAKE_CURRENT_BINARY_DIR}/generated/definition_operations.c)
-spisor_definition_operations(${forebay_definition_operations} DEFINITIONS ${PROJECT_SOURCE_DIR}/include/forebay
-    INCLUDE_ROOT ${PROJECT_SOURCE_DIR}/include PREFIX forebay_ LAYOUTS layouts SHAPES ${PROJECT_SOURCE_DIR}/include)
-# Both tests compile the generated table, so it is generated once ahead of them rather than by each in a parallel build.
-add_custom_target(forebay_definition_operations DEPENDS ${forebay_definition_operations})
-foreach(name IN ITEMS short_shape_test empty_answer_test)
-    spisor_add_definition_call_test(${name} SOURCE ${name}.c LIBRARY forebay_library
-        OPERATIONS ${forebay_definition_operations})
-    target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR}/include)
-    add_dependencies(${name} forebay_definition_operations)
-endforeach()
