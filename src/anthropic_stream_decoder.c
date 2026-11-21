@@ -7,21 +7,20 @@
 #include "spisor/allocation.h"
 #include "spisor/json_kind.h"
 
-#define DECODER_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_stream_decoder_answer, decoder)
 #define DECODE_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_stream_decode_argument, length)
 #define EVENTS_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_events_answer, storage)
 
-spisor_status anthropic_stream_decoder_open(void *context, forebay_anthropic_stream_decoder_answer *answer,
+spisor_status anthropic_stream_decoder_open(void *context, forebay_anthropic_stream_decoder **decoder,
                                             spisor_refusal *refusal) {
     (void)context;
-    if (answer == NULL || !spisor_has_shape(answer->size, DECODER_ANSWER_SHAPE) || answer->decoder != NULL) {
+    if (decoder == NULL || *decoder != NULL) {
         return spisor_refuse_shape(refusal, "anthropic's stream_decoder_open");
     }
-    forebay_anthropic_stream_decoder *decoder = spisor_memory_allocate_zeroed(1, sizeof *decoder);
-    if (decoder == NULL) {
+    forebay_anthropic_stream_decoder *opened = spisor_memory_allocate_zeroed(1, sizeof *opened);
+    if (opened == NULL) {
         return SPISOR_OUT_OF_MEMORY;
     }
-    answer->decoder = decoder;
+    *decoder = opened;
     return SPISOR_OK;
 }
 

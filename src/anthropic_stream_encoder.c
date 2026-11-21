@@ -7,7 +7,6 @@
 #include "spisor/allocation.h"
 #include "spisor/json_write.h"
 
-#define ENCODER_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_stream_encoder_answer, encoder)
 #define ENCODE_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_stream_encode_argument, event_count)
 
 /**
@@ -21,17 +20,17 @@ struct forebay_anthropic_stream_encoder {
     uint32_t reserved;
 };
 
-spisor_status anthropic_stream_encoder_open(void *context, forebay_anthropic_stream_encoder_answer *answer,
+spisor_status anthropic_stream_encoder_open(void *context, forebay_anthropic_stream_encoder **encoder,
                                             spisor_refusal *refusal) {
     (void)context;
-    if (answer == NULL || !spisor_has_shape(answer->size, ENCODER_ANSWER_SHAPE) || answer->encoder != NULL) {
+    if (encoder == NULL || *encoder != NULL) {
         return spisor_refuse_shape(refusal, "anthropic's stream_encoder_open");
     }
-    forebay_anthropic_stream_encoder *encoder = spisor_memory_allocate_zeroed(1, sizeof *encoder);
-    if (encoder == NULL) {
+    forebay_anthropic_stream_encoder *opened = spisor_memory_allocate_zeroed(1, sizeof *opened);
+    if (opened == NULL) {
         return SPISOR_OUT_OF_MEMORY;
     }
-    answer->encoder = encoder;
+    *encoder = opened;
     return SPISOR_OK;
 }
 

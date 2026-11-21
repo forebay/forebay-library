@@ -182,13 +182,13 @@ static void expect_events(const char *label, forebay_anthropic_stream_decoder *d
 }
 
 static forebay_anthropic_stream_decoder *open_decoder(void) {
-    forebay_anthropic_stream_decoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_decoder_answer);
+    forebay_anthropic_stream_decoder *opened = NULL;
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
     if (anthropic_definition()->stream_decoder_open(NULL, &opened, &refusal) != SPISOR_OK) {
         support_fail("open a decoder", "did not answer OK");
     }
     anthropic_definition()->release_refusal(NULL, &refusal);
-    return opened.decoder;
+    return opened;
 }
 
 /** Two decoders keep their frames apart, and a finished decoder reads a new stream from nothing. */
@@ -224,11 +224,16 @@ static void a_decode_without_a_decoder_or_its_bytes_is_malformed(void) {
     argument.decoder = open_decoder();
     argument.length = 3;
     expect_malformed_decode("NULL bytes beside a length", &argument);
-    forebay_anthropic_stream_decoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_decoder_answer);
+    forebay_anthropic_stream_decoder *opened = argument.decoder;
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
-    opened.decoder = argument.decoder;
-    if (anthropic_definition()->stream_decoder_open(NULL, &opened, &refusal) != SPISOR_MALFORMED) {
-        support_fail("open into an answer holding a decoder", "was not MALFORMED");
+    if (anthropic_definition()->stream_decoder_open(NULL, &opened, &refusal) != SPISOR_MALFORMED ||
+        refusal.detail == NULL || opened != argument.decoder) {
+        support_fail("open into a handle holding a decoder", "was not MALFORMED with the decoder kept");
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    if (anthropic_definition()->stream_decoder_open(NULL, NULL, &refusal) != SPISOR_MALFORMED ||
+        refusal.detail == NULL) {
+        support_fail("open a decoder into no handle", "was not MALFORMED with a refusal");
     }
     anthropic_definition()->release_refusal(NULL, &refusal);
     anthropic_definition()->release_stream_decoder(NULL, argument.decoder);
@@ -236,14 +241,14 @@ static void a_decode_without_a_decoder_or_its_bytes_is_malformed(void) {
 
 static void expect_malformed_encode(const char *label, const forebay_ir_event *events, size_t count,
                                     int with_encoder) {
-    forebay_anthropic_stream_encoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_encoder_answer);
+    forebay_anthropic_stream_encoder *opened = NULL;
     forebay_anthropic_stream_encode_argument argument = SPISOR_INIT(forebay_anthropic_stream_encode_argument);
     forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
     if (with_encoder && anthropic_definition()->stream_encoder_open(NULL, &opened, &refusal) != SPISOR_OK) {
         support_fail(label, "the encoder did not open");
     }
-    argument.encoder = opened.encoder;
+    argument.encoder = opened;
     argument.events = events;
     argument.event_count = count;
     spisor_status status = anthropic_definition()->stream_encode(NULL, &argument, &answer, &refusal);
@@ -252,7 +257,7 @@ static void expect_malformed_encode(const char *label, const forebay_ir_event *e
         support_failf(label, "answered %d, not MALFORMED with a refusal and an empty answer", (int)status);
     }
     anthropic_definition()->release_refusal(NULL, &refusal);
-    anthropic_definition()->release_stream_encoder(NULL, opened.encoder);
+    anthropic_definition()->release_stream_encoder(NULL, opened);
 }
 
 static void events_that_break_their_header_are_malformed(void) {
@@ -273,20 +278,41 @@ static void events_that_break_their_header_are_malformed(void) {
     expect_malformed_encode("a bad event after a good one", after_a_good_one, 2, 1);
 }
 
+/** An open refuses no handle and one already holding an encoder, leaving the held encoder as it was. */
+static void an_encoder_opens_only_into_an_empty_handle(void) {
+    forebay_anthropic_stream_encoder *opened = NULL;
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    if (anthropic_definition()->stream_encoder_open(NULL, &opened, &refusal) != SPISOR_OK || opened == NULL) {
+        support_fail("open an encoder", "did not answer OK with an encoder");
+    }
+    forebay_anthropic_stream_encoder *held = opened;
+    if (anthropic_definition()->stream_encoder_open(NULL, &opened, &refusal) != SPISOR_MALFORMED ||
+        refusal.detail == NULL || opened != held) {
+        support_fail("open into a handle holding an encoder", "was not MALFORMED with the encoder kept");
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    if (anthropic_definition()->stream_encoder_open(NULL, NULL, &refusal) != SPISOR_MALFORMED ||
+        refusal.detail == NULL) {
+        support_fail("open an encoder into no handle", "was not MALFORMED with a refusal");
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    anthropic_definition()->release_stream_encoder(NULL, opened);
+}
+
 /** An encode of no events answers empty text, and a finish of no events is how a stream ends. */
 static void an_encode_of_no_events_answers_empty_text(void) {
-    forebay_anthropic_stream_encoder_answer opened = SPISOR_INIT(forebay_anthropic_stream_encoder_answer);
+    forebay_anthropic_stream_encoder *opened = NULL;
     forebay_anthropic_body_answer answer;
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
     anthropic_definition()->stream_encoder_open(NULL, &opened, &refusal);
-    spisor_status status = anthropic_feed_encoder(opened.encoder, NULL, 0, 1, &answer, &refusal);
+    spisor_status status = anthropic_feed_encoder(opened, NULL, 0, 1, &answer, &refusal);
     if (status != SPISOR_OK || answer.length != 0 || answer.bytes == NULL || answer.bytes[0] != '\0') {
         support_failf("an encode of no events", "answered %d with %llu bytes", (int)status,
                       (unsigned long long)answer.length);
     }
     anthropic_definition()->release_body(NULL, &answer);
     anthropic_definition()->release_refusal(NULL, &refusal);
-    anthropic_definition()->release_stream_encoder(NULL, opened.encoder);
+    anthropic_definition()->release_stream_encoder(NULL, opened);
 }
 
 static void releasing_an_answer_never_filled_does_nothing(void) {
@@ -305,6 +331,7 @@ int main(void) {
     a_decoder_keeps_its_own_stream_and_starts_anew_after_finishing();
     a_decode_without_a_decoder_or_its_bytes_is_malformed();
     events_that_break_their_header_are_malformed();
+    an_encoder_opens_only_into_an_empty_handle();
     an_encode_of_no_events_answers_empty_text();
     releasing_an_answer_never_filled_does_nothing();
     printf("anthropic_stream_test: %d stream vectors\n", vectors);
