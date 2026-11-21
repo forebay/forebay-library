@@ -79,12 +79,15 @@ typedef struct forebay_routing_profile {
     const char *unserved_model_pattern;
 } forebay_routing_profile;
 
-/** The tiers of a profile over a catalog; the tier members of `profile` are required. First shape ends at `count`. */
+/**
+ * The tiers of a profile over a catalog; the tier members of `profile` are required. First shape ends at
+ * `provider_count`.
+ */
 typedef struct forebay_tiers_argument {
     uint32_t size;
     const forebay_routing_profile *profile;
     const forebay_catalog_provider *providers;
-    size_t count;
+    size_t provider_count;
 } forebay_tiers_argument;
 
 /** The tiers, best first. First shape ends at `storage`. */
@@ -188,12 +191,13 @@ typedef enum forebay_report_kind {
 } forebay_report_kind;
 
 /**
- * A forebay_report_kind and what it carries: `after_bytes` 1 when a stream failed after bytes went out, `message`
- * (NULL for none) for a throw or a failed stream, and the upstream `status`, 0 for none or an HTTP status from 100
- * to 599, and `headers` at `now` for a failure. First shape ends at `now`.
+ * How an entry went and what it carries: `after_bytes` 1 when a stream failed after bytes went out, `message` (NULL for
+ * none) for a throw or a failed stream, and the upstream `status`, 0 for none or an HTTP status from 100 to 599, and
+ * `headers` at `now` for a failure. First shape ends at `now`.
  */
 typedef struct forebay_report {
     uint32_t size;
+    /** A forebay_report_kind. */
     uint32_t kind;
     uint32_t after_bytes;
     const char *message;
@@ -259,7 +263,7 @@ typedef struct forebay_log_line {
 } forebay_log_line;
 
 /**
- * A forebay_step_kind. Call provider fills `provider` and `model`. Reply fills `reply_kind`: a proxy or API error its
+ * What a step answers. Call provider fills `provider` and `model`. Reply fills `reply_kind`: a proxy or API error its
  * `status` and `message`, a provider failure its `status` and the `headers` to forward, a rate limit those headers and,
  * when `has_reset_at` is 1, `reset_at`. End stream fills `error_type` and `message`. `walk` is set when the step
  * expects a report, and is the caller's to hand back and to release apart from this answer. First shape ends at
@@ -267,6 +271,7 @@ typedef struct forebay_log_line {
  */
 typedef struct forebay_step_answer {
     uint32_t size;
+    /** A forebay_step_kind. */
     uint32_t kind;
     const char *provider;
     const char *model;
@@ -473,7 +478,7 @@ typedef struct forebay_environment_argument {
     uint32_t port;
     uint32_t providers_enabled;
     const forebay_pair *environment;
-    size_t variable_count;
+    size_t environment_count;
     const char *user_home;
     const forebay_application *application;
 } forebay_environment_argument;
@@ -482,7 +487,7 @@ typedef struct forebay_environment_argument {
 typedef struct forebay_environment_answer {
     uint32_t size;
     const forebay_pair *environment;
-    size_t variable_count;
+    size_t environment_count;
     void *storage;
 } forebay_environment_answer;
 

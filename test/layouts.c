@@ -159,7 +159,7 @@ static void print_routing_layouts(void) {
     FIELD(forebay_tiers_argument, size);
     FIELD(forebay_tiers_argument, profile);
     FIELD(forebay_tiers_argument, providers);
-    FIELD(forebay_tiers_argument, count);
+    FIELD(forebay_tiers_argument, provider_count);
     SIZE(forebay_tiers_argument);
     FIELD(forebay_tiers_answer, size);
     FIELD(forebay_tiers_answer, tiers);
@@ -352,13 +352,13 @@ static void print_routing_layouts(void) {
     FIELD(forebay_environment_argument, port);
     FIELD(forebay_environment_argument, providers_enabled);
     FIELD(forebay_environment_argument, environment);
-    FIELD(forebay_environment_argument, variable_count);
+    FIELD(forebay_environment_argument, environment_count);
     FIELD(forebay_environment_argument, user_home);
     FIELD(forebay_environment_argument, application);
     SIZE(forebay_environment_argument);
     FIELD(forebay_environment_answer, size);
     FIELD(forebay_environment_answer, environment);
-    FIELD(forebay_environment_answer, variable_count);
+    FIELD(forebay_environment_answer, environment_count);
     FIELD(forebay_environment_answer, storage);
     SIZE(forebay_environment_answer);
     FIELD(forebay_routing_definition, size);
