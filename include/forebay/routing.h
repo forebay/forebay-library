@@ -140,7 +140,10 @@ typedef enum forebay_resolve_notice {
     FOREBAY_HEALED = 2
 } forebay_resolve_notice;
 
-/** The chain, best first, and the forebay_resolve_notice values it raised. First shape ends at `storage`. */
+/**
+ * The chain, best first, and the notices it raised, each FOREBAY_MODEL_SWITCHED or FOREBAY_HEALED. First shape ends
+ * at `storage`.
+ */
 typedef struct forebay_resolve_answer {
     uint32_t size;
     const forebay_assignment *chain;
@@ -258,6 +261,7 @@ typedef enum forebay_log_level {
 
 /** One line for the proxy's log. */
 typedef struct forebay_log_line {
+    /** A forebay_log_level. */
     uint32_t level;
     const char *message;
 } forebay_log_line;
@@ -275,6 +279,7 @@ typedef struct forebay_step_answer {
     uint32_t kind;
     const char *provider;
     const char *model;
+    /** A forebay_reply_kind. */
     uint32_t reply_kind;
     uint32_t status;
     const char *message;
@@ -372,10 +377,12 @@ typedef enum forebay_arrival_kind {
  */
 typedef struct forebay_arrival_answer {
     uint32_t size;
+    /** A forebay_arrival_kind. */
     uint32_t kind;
     uint32_t status;
     const char *content_type;
     const char *body;
+    /** A forebay_reply_kind. */
     uint32_t reply_kind;
     const char *message;
     void *storage;
@@ -416,12 +423,10 @@ typedef enum forebay_failure_reason {
     FOREBAY_REQUEST_FAILED = 2
 } forebay_failure_reason;
 
-/**
- * A forebay_failure_reason, the `upstream` an unreachable one names, and the `detail`. First shape ends at
- * `detail`.
- */
+/** Why it failed, the `upstream` an unreachable one names, and the `detail`. First shape ends at `detail`. */
 typedef struct forebay_failure_argument {
     uint32_t size;
+    /** A forebay_failure_reason. */
     uint32_t reason;
     const char *upstream;
     const char *detail;
@@ -430,6 +435,7 @@ typedef struct forebay_failure_argument {
 /** The reply to answer with and the lines to log. First shape ends at `storage`. */
 typedef struct forebay_failure_answer {
     uint32_t size;
+    /** A forebay_reply_kind. */
     uint32_t reply_kind;
     uint32_t status;
     const char *message;

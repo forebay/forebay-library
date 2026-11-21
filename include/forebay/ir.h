@@ -196,6 +196,7 @@ typedef struct forebay_ir_event {
     const char *role;
     const forebay_ir_usage *usage;
     uint64_t index;
+    /** A forebay_ir_block_kind. */
     uint32_t block_kind;
     const char *tool_use_id;
     const char *tool_name;

@@ -106,6 +106,7 @@ typedef enum forebay_accounts_acquire_kind {
  */
 typedef struct forebay_accounts_acquire_answer {
     uint32_t size;
+    /** A forebay_accounts_acquire_kind. */
     uint32_t kind;
     const char *id;
     uint32_t available;
