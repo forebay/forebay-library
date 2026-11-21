@@ -17,7 +17,7 @@
 #include "routing_resolve.h"
 #include "routing_tiers.h"
 
-#define TIERS_SHAPE SPISOR_SHAPE_THROUGH(forebay_tiers_argument, count)
+#define TIERS_SHAPE SPISOR_SHAPE_THROUGH(forebay_tiers_argument, provider_count)
 #define TIERS_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_tiers_answer, storage)
 #define MODEL_MAP_SHAPE SPISOR_SHAPE_THROUGH(forebay_model_map_argument, provider_count)
 #define MODEL_MAP_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_model_map_answer, storage)
@@ -87,12 +87,13 @@ static spisor_status tiers(void *context, const forebay_tiers_argument *argument
         !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, TIERS_ANSWER_SHAPE, answer->count)) {
         return spisor_refuse_shape(refusal, "routing's tiers");
     }
-    if (!routing_is_profile(argument->profile, 1) || !routing_is_catalog(argument->providers, argument->count)) {
+    if (!routing_is_profile(argument->profile, 1) ||
+        !routing_is_catalog(argument->providers, argument->provider_count)) {
         return forebay_refuse_member(refusal, "the profile or the catalog", "complete, with every text set");
     }
     static const char *const names[] = {"profile", "models"};
     cJSON *items[] = {routing_profile_json(argument->profile),
-                      routing_catalog_json(argument->providers, argument->count)};
+                      routing_catalog_json(argument->providers, argument->provider_count)};
     return routing_decide(routing_tiers_call, object_of(2, names, items), fill_tiers, answer, &answer->storage,
                           TIERS_ANSWER_SHAPE, refusal);
 }
@@ -371,7 +372,7 @@ static spisor_status failure(void *context, const forebay_failure_argument *argu
 static int fill_environment(const cJSON *result, void *filled) {
     forebay_environment_answer *answer = filled;
     return routing_read_pairs(&answer->storage, cJSON_GetObjectItemCaseSensitive(result, "environment"),
-                              &answer->environment, &answer->variable_count);
+                              &answer->environment, &answer->environment_count);
 }
 
 static int is_application(const forebay_application *application) {
@@ -443,11 +444,11 @@ static spisor_status environment(void *context, const forebay_environment_argume
                                  forebay_environment_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ENVIRONMENT_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ENVIRONMENT_ANSWER_SHAPE, answer->variable_count)) {
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ENVIRONMENT_ANSWER_SHAPE, answer->environment_count)) {
         return spisor_refuse_shape(refusal, "routing's environment");
     }
     if (!routing_are_slots(argument->slots, argument->slot_count) || argument->user_home == NULL ||
-        !routing_are_pairs(argument->environment, argument->variable_count) ||
+        !routing_are_pairs(argument->environment, argument->environment_count) ||
         !is_application(argument->application)) {
         return forebay_refuse_member(refusal, "the slots, the environment, user_home or the application",
                                      "complete, with every text the application needs set");
@@ -458,7 +459,7 @@ static spisor_status environment(void *context, const forebay_environment_argume
     static const char *const names[] = {"map", "port", "providersEnabled", "environment", "userHome", "application"};
     cJSON *items[] = {routing_slots_json(argument->slots, argument->slot_count), cJSON_CreateNumber(argument->port),
                       cJSON_CreateBool(argument->providers_enabled != 0),
-                      routing_pairs_json(argument->environment, argument->variable_count),
+                      routing_pairs_json(argument->environment, argument->environment_count),
                       cJSON_CreateString(argument->user_home), application_json(argument->application)};
     return routing_decide(routing_environment_call, object_of(6, names, items), fill_environment, answer,
                           &answer->storage, ENVIRONMENT_ANSWER_SHAPE, refusal);

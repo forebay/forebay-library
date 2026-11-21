@@ -80,13 +80,14 @@ typedef enum forebay_ir_block_kind {
 } forebay_ir_block_kind;
 
 /**
- * One block of content, a forebay_ir_block_kind, carrying the members of every kind; those of other kinds are NULL or
- * zero. Every kind has `cache_control` and `extensions`. Text has `text`, required. Image has `media_type`, required,
- * and `data` or `url`. Tool use has `id`, `name` and `input`, all required. Tool result has `tool_use_id`, required,
- * its `content` blocks, and `is_error` when `has_is_error` is 1. Thinking has `text`, required, and `signature`.
- * Unknown has `raw`, a record and required: the vendor's block as it arrived.
+ * One block of content, carrying the members of every kind; those of other kinds are NULL or zero. Every kind has
+ * `cache_control` and `extensions`. Text has `text`, required. Image has `media_type`, required, and `data` or `url`.
+ * Tool use has `id`, `name` and `input`, all required. Tool result has `tool_use_id`, required, its `content` blocks,
+ * and `is_error` when `has_is_error` is 1. Thinking has `text`, required, and `signature`. Unknown has `raw`, a record
+ * and required: the vendor's block as it arrived.
  */
 typedef struct forebay_ir_block {
+    /** A forebay_ir_block_kind. */
     uint32_t kind;
     const char *cache_control;
     const spisor_value *extensions;
@@ -179,14 +180,15 @@ typedef enum forebay_ir_event_kind {
 } forebay_ir_event_kind;
 
 /**
- * One stream event, a forebay_ir_event_kind, carrying the members of every kind; those of other kinds are NULL or
- * zero. Every kind has `extensions`. Message start has `id`, `model`, `role` and `usage`. Content block start, the
- * deltas, the signature and content block stop have `index`, required. Content block start has `block_kind`, required
- * and one of text, tool use or thinking, and `tool_use_id` and `tool_name`. Text and thinking deltas have `text`, the
- * signature `signature`, and the tool input delta `partial_json`. Message delta has `stop_reason`, text, and `usage`.
- * Error has `error_type` and `message`. Every text and `usage` is NULL for none.
+ * One stream event, carrying the members of every kind; those of other kinds are NULL or zero. Every kind has
+ * `extensions`. Message start has `id`, `model`, `role` and `usage`. Content block start, the deltas, the signature and
+ * content block stop have `index`, required. Content block start has `block_kind`, required and one of text, tool use
+ * or thinking, and `tool_use_id` and `tool_name`. Text and thinking deltas have `text`, the signature `signature`, and
+ * the tool input delta `partial_json`. Message delta has `stop_reason`, text, and `usage`. Error has `error_type` and
+ * `message`. Every text and `usage` is NULL for none.
  */
 typedef struct forebay_ir_event {
+    /** A forebay_ir_event_kind. */
     uint32_t kind;
     const spisor_value *extensions;
     const char *id;

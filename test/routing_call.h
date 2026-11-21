@@ -161,7 +161,7 @@ static inline int routing_read_environment(const cJSON *argument, routing_call *
     routing_read_application(routing_member(argument, "application"), call);
     environment->application = routing_member(argument, "application") == NULL ? NULL : &call->application;
     return routing_pairs_of(routing_member(argument, "environment"), &environment->environment,
-                            &environment->variable_count);
+                            &environment->environment_count);
 }
 
 static inline int routing_read_pass_through(const cJSON *argument, forebay_pass_through_argument *pass) {
@@ -244,7 +244,7 @@ static inline int routing_read_call(const char *function, const cJSON *argument,
     switch (call->operation) {
     case ROUTING_TIERS:
         call->tiers.profile = routing_profile_of(routing_member(argument, "profile"));
-        routing_read_catalog(argument, &call->tiers.providers, &call->tiers.count);
+        routing_read_catalog(argument, &call->tiers.providers, &call->tiers.provider_count);
         return 1;
     case ROUTING_MODEL_MAP:
         return routing_read_model_map(argument, call);
@@ -416,7 +416,7 @@ static inline cJSON *routing_answer_json_of(const routing_call *call, const rout
         return result;
     case ROUTING_ENVIRONMENT:
         return routing_wrap("environment", routing_pairs_json_of(answers->environment.environment,
-                                                                 answers->environment.variable_count));
+                                                                 answers->environment.environment_count));
     case ROUTING_LIMITS:
         return routing_limits_json_of(&answers->limits);
     case ROUTING_PASS_THROUGH:

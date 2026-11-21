@@ -114,9 +114,9 @@ static void refuses_malformed_tiers(void) {
     argument.profile = &no_regex;
     expect_malformed(routing->tiers(NULL, &argument, &answer, &refusal), &refusal, "tiers without tier_regex");
     argument.profile = &tier_profile;
-    argument.count = 2;
+    argument.provider_count = 2;
     expect_malformed(routing->tiers(NULL, &argument, &answer, &refusal), &refusal, "tiers, a count at no catalog");
-    argument.count = 0;
+    argument.provider_count = 0;
     answer.count = 3;
     expect_malformed(routing->tiers(NULL, &argument, &answer, &refusal), &refusal,
                      "tiers into an answer whose count is not zero beside no storage");
