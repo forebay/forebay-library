@@ -42,7 +42,7 @@ spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_er
                                        forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ERROR_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE)) {
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
         return spisor_refuse_shape(refusal, "anthropic's error_envelope");
     }
     if (!forebay_is_text(argument->error_type)) {
@@ -143,7 +143,7 @@ spisor_status anthropic_model_listing(void *context, const forebay_anthropic_mod
                                       forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, LISTING_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE)) {
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
         return spisor_refuse_shape(refusal, "anthropic's model_listing");
     }
     listing_view view = LISTING_VIEW_OF(argument);
@@ -204,7 +204,7 @@ spisor_status anthropic_model_lookup(void *context, const forebay_anthropic_mode
                                      forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, LOOKUP_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, LOOKUP_ANSWER_SHAPE)) {
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, LOOKUP_ANSWER_SHAPE, answer->length)) {
         return spisor_refuse_shape(refusal, "anthropic's model_lookup");
     }
     listing_view view = LISTING_VIEW_OF(argument);
