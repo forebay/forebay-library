@@ -4,6 +4,7 @@
 
 #include <weivel/c/host.h>
 #include <weivel/c/host/library.h>
+#include <weivel/c/standard.h>
 #include <weivel/library.h>
 
 #include "check.h"
@@ -14,8 +15,9 @@
 /**
  * @file
  * Loads the built forebay-library as a weivel host loads a C library: reads `library.json` with the standard, hands it
- * to `weivel/c`'s host on the pinned core, resolves `routing` as that host's own context gets a service, and calls
- * `arrival` through the very definition the host registered, and `anthropic` the same way, writing an error body.
+ * to `weivel/c`'s host on the pinned core, which runs the standard's check on every description the declaration names
+ * before it registers anything, resolves `routing` as that host's own context gets a service, and calls `arrival`
+ * through the very definition the host registered, and `anthropic` the same way, writing an error body.
  */
 
 static int read_library(weivel_standard_library *library) {
@@ -37,6 +39,7 @@ static weivel_c_host *create_host(void) {
     weivel_c_core_load_failure failure = WEIVEL_INIT(weivel_c_core_load_failure);
     weivel_c_host *host = NULL;
     options.core_path = WEIVEL_CORE_PATH;
+    options.description_check.check = weivel_c_standard_check_description;
     CHECK(weivel_c_host_create(&options, &host, &failure) == WEIVEL_C_STATUS_OK && host != NULL);
     return host;
 }
@@ -47,10 +50,11 @@ static int load_forebay(weivel_c_host *host, const weivel_standard_library *decl
     weivel_c_status status = weivel_c_host_load_library(host, FOREBAY_LIBRARY_PATH, declaration, &library, &failure,
                                                         NULL);
     if (status != WEIVEL_C_STATUS_OK) {
-        fprintf(stderr, "the host did not load %s: status %d, missing %s, wrong kind %s, refused %s\n",
+        fprintf(stderr, "the host did not load %s: status %d, missing %s, wrong kind %s, refused %s, description %s\n",
                 FOREBAY_LIBRARY_PATH, (int)status, failure.missing_symbol == NULL ? "-" : failure.missing_symbol,
                 failure.wrong_kind == NULL ? "-" : failure.wrong_kind,
-                failure.refused_definition == NULL ? "-" : failure.refused_definition);
+                failure.refused_definition == NULL ? "-" : failure.refused_definition,
+                failure.refused_description == NULL ? "-" : failure.refused_description);
         check_failures++;
     }
     return status == WEIVEL_C_STATUS_OK;

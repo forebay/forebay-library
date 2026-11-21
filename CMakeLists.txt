@@ -82,11 +82,29 @@ spisor_strict_warnings(forebay_objects)
 
 add_library(forebay_library SHARED src/library_load.c)
 target_link_libraries(forebay_library PRIVATE forebay_objects spisor_allocator)
+target_compile_definitions(forebay_library PRIVATE FOREBAY_LIBRARY_BUILDING)
 set_target_properties(forebay_library PROPERTIES C_VISIBILITY_PRESET hidden)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_link_options(forebay_library PRIVATE -Wl,--exclude-libs,ALL)
 endif()
 spisor_strict_warnings(forebay_library)
+
+# Each symbol is its definition's name with `_description`, the name weivel_describe's DESCRIBED_ELSEWHERE expects, so
+# a library nesting one of forebay's definitions finds its description without being told the symbol.
+file(GLOB forebay_described_headers CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/forebay/*.h)
+list(SORT forebay_described_headers)
+weivel_describe(forebay_library
+    HEADERS ${spisor_library_SOURCE_DIR}/include/spisor/status.h ${forebay_described_headers}
+    PREFIX forebay_described_
+    EXPORT FOREBAY_DEFINITION_API
+    STATUS spisor_status
+    REFUSAL spisor_refusal
+    VALUE spisor_value
+    TREE spisor_value_tree
+    SERVICE forebay_routing_definition SYMBOL forebay_routing_definition_description
+    SERVICE forebay_accounts_definition SYMBOL forebay_accounts_definition_description
+    SERVICE forebay_anthropic_definition SYMBOL forebay_anthropic_definition_description)
+target_link_libraries(forebay_library PRIVATE weivel_standard)
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     enable_testing()

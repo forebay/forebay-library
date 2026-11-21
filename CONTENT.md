@@ -2,8 +2,8 @@
 
 The forebay ecosystem's C library, `forebay-library`. `library.json` declares it in the weivel standard's
 format, `forebay-library` 0.2.0, with three services, `routing`, `accounts` and `anthropic`, each one function of kind
-`definition`: its exported symbol (`forebay_routing_definition_of`, `forebay_accounts_definition_of`,
-`forebay_anthropic_definition_of`)
+`definition` and its `description`, `forebay_<service>_definition_description`: the function's exported symbol
+(`forebay_routing_definition_of`, `forebay_accounts_definition_of`, `forebay_anthropic_definition_of`)
 answers a static C struct that begins with its `size`, then the provider's `context`, then one function pointer
 per operation and one release per kind of answer, living until the library is unloaded. The structs are declared
 in `include/forebay/routing.h`, `include/forebay/accounts.h` and `include/forebay/anthropic.h`, which document every operation, what it takes
@@ -159,7 +159,18 @@ The shared C conventions come from `spisor/library`, built from the checkout und
 at the commit `repo.json` declares (CI checks it out; locally a link to the checkout does), and so do
 weivel's `core`, `standard` and `c` under `siblings/`. The tests call the definitions through the built shared
 library, one CTest executable per concern; `declaration_test` reads `library.json` with the weivel standard and
-`weivel_host_load_test` loads the library through `weivel/c`'s host. The `layouts` program prints every public
+`weivel_host_load_test` loads the library through `weivel/c`'s host, which checks every description with the
+standard's check. Each description is generated at build time by the weivel standard's `weivel_describe` from
+`spisor/status.h` and every `include/forebay` header, so a language that cannot read a C header binds the definition
+from it, and `description_test` loads each one from the built library and runs the standard's own check on it. The
+symbol is the definition's name with `_description`, which is the name another library nesting a forebay definition
+looks for. `forebay_library` links `weivel_standard` statically, and no other weivel library, and exports its
+definitions and their descriptions and nothing else, which `forebay_exports_only_definitions_test` holds.
+`forebay_library_short_shape_test` and `forebay_library_empty_answer_test`, added by `spisor/library`'s
+`spisor_add_described_checks`, walk those descriptions through the built library: every operation with each
+argument and answer one byte short of its first shape, and every operation whose answer counts an array, text or
+bytes with that count nonzero beside NULL storage, each refused MALFORMED with every answer untouched. The `layouts`
+program prints every public
 struct's fields with offset, size and `sizeof`, held to the headers by `spisor/library`'s
 `cmake/layouts_check.cmake`, and a translation of a header in another language is checked against it. The shared
 library links `spisor_allocator`, the tests may take `spisor_allocator_counting`, and every out-of-memory test
