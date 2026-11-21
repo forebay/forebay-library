@@ -512,7 +512,7 @@ typedef struct forebay_routing_definition {
     /** The next thing to do for one request; REFUSED for a pattern the matcher cannot run. */
     spisor_status (*step)(void *context, const forebay_step_argument *argument, forebay_step_answer *answer,
                           spisor_refusal *refusal);
-    /** The limits, which read nothing, so the operation takes no argument. */
+    /** The fixed limits; they read nothing. */
     spisor_status (*limits)(void *context, forebay_limits_answer *answer, spisor_refusal *refusal);
     /** REFUSED for an upstream or URL the request cannot be sent to. */
     spisor_status (*pass_through)(void *context, const forebay_pass_through_argument *argument,

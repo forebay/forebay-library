@@ -9,8 +9,9 @@ per operation and one release per kind of answer, living until the library is un
 in `include/forebay/routing.h`, `include/forebay/accounts.h` and `include/forebay/anthropic.h`, which document every operation, what it takes
 and answers, and every refusal; this file says what they decide. No JSON crosses the boundary.
 
-An operation takes the `context` and a size-prefixed argument struct, fills the caller's empty answer or, when it
-refuses, the caller's `spisor_refusal`, and answers a `spisor_status`, both from `spisor/library`'s
+An operation takes the `context` and, when it reads anything, a size-prefixed argument struct; it fills the
+caller's empty answer, or the consumer's empty handle for an operation opening one, or, when it refuses, the
+caller's `spisor_refusal`, and answers a `spisor_status`, both from `spisor/library`'s
 `spisor/status.h`. A size-prefixed struct is read only up to its `size` and only grows at its end; an array
 element has no size and never grows. Text handed in is NUL-terminated UTF-8 borrowed for the call, and what an
 answer points at is the provider's until the release for its kind. Data whose shape belongs to someone else (a
@@ -168,7 +169,7 @@ looks for. `forebay_library` links `weivel_standard` statically, and no other we
 definitions and their descriptions and nothing else, which `forebay_exports_only_definitions_test` holds.
 `forebay_library_short_shape_test` and `forebay_library_empty_answer_test`, added by `spisor/library`'s
 `spisor_add_described_checks`, walk those descriptions through the built library: every operation with each
-argument and answer one byte short of its first shape, and every operation whose answer counts an array, text or
+size-prefixed argument and answer one byte short of its first shape, and every operation whose answer counts an array, text or
 bytes with that count nonzero beside NULL storage, each refused MALFORMED with every answer untouched. The `layouts`
 program prints every public
 struct's fields with offset, size and `sizeof`, held to the headers by `spisor/library`'s
