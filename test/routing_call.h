@@ -40,7 +40,6 @@ typedef struct routing_call {
     forebay_environment_argument environment;
     forebay_application application;
     forebay_state_file state_file;
-    forebay_limits_argument limits;
     forebay_pass_through_argument pass_through;
     forebay_reply_headers_argument reply_headers;
     forebay_arrival_argument arrival;
@@ -93,7 +92,6 @@ static inline void routing_empty_call(routing_call *call) {
     ROUTING_INIT_INTO(call->environment, forebay_environment_argument);
     ROUTING_INIT_INTO(call->application, forebay_application);
     ROUTING_INIT_INTO(call->state_file, forebay_state_file);
-    ROUTING_INIT_INTO(call->limits, forebay_limits_argument);
     ROUTING_INIT_INTO(call->pass_through, forebay_pass_through_argument);
     ROUTING_INIT_INTO(call->reply_headers, forebay_reply_headers_argument);
     ROUTING_INIT_INTO(call->arrival, forebay_arrival_argument);
@@ -300,7 +298,7 @@ static inline void routing_make_call(const routing_call *call, routing_answers *
         answers->status = routing->environment(context, &call->environment, &answers->environment, refusal);
         break;
     case ROUTING_LIMITS:
-        answers->status = routing->limits(context, &call->limits, &answers->limits, refusal);
+        answers->status = routing->limits(context, &answers->limits, refusal);
         break;
     case ROUTING_PASS_THROUGH:
         answers->status = routing->pass_through(context, &call->pass_through, &answers->pass_through, refusal);

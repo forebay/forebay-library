@@ -25,7 +25,6 @@
 #define RESOLVE_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_resolve_answer, storage)
 #define OUTCOME_SHAPE SPISOR_SHAPE_THROUGH(forebay_outcome_argument, retry_after_milliseconds)
 #define OUTCOME_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_outcome_answer, reset_at)
-#define LIMITS_SHAPE SPISOR_SHAPE_THROUGH(forebay_limits_argument, size)
 #define LIMITS_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_limits_answer, refresh_every_milliseconds)
 #define PASS_THROUGH_SHAPE SPISOR_SHAPE_THROUGH(forebay_pass_through_argument, placeholder_authorization)
 #define PASS_THROUGH_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_pass_through_answer, storage)
@@ -213,11 +212,9 @@ static spisor_status outcome(void *context, const forebay_outcome_argument *argu
                           fill_outcome, answer, &storage, OUTCOME_ANSWER_SHAPE, refusal);
 }
 
-static spisor_status limits(void *context, const forebay_limits_argument *argument, forebay_limits_answer *answer,
-                            spisor_refusal *refusal) {
+static spisor_status limits(void *context, forebay_limits_answer *answer, spisor_refusal *refusal) {
     (void)context;
-    if (argument == NULL || !spisor_has_shape(argument->size, LIMITS_SHAPE) || answer == NULL ||
-        !spisor_has_shape(answer->size, LIMITS_ANSWER_SHAPE)) {
+    if (answer == NULL || !spisor_has_shape(answer->size, LIMITS_ANSWER_SHAPE)) {
         return spisor_refuse_shape(refusal, "routing's limits");
     }
     routing_read_limits(answer);

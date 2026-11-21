@@ -254,8 +254,6 @@ static void print_routing_layouts(void) {
     FIELD(forebay_step_answer, walk);
     FIELD(forebay_step_answer, storage);
     SIZE(forebay_step_answer);
-    FIELD(forebay_limits_argument, size);
-    SIZE(forebay_limits_argument);
     FIELD(forebay_limits_answer, size);
     FIELD(forebay_limits_answer, max_request_bytes);
     FIELD(forebay_limits_answer, too_large_status);

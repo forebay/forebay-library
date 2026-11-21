@@ -295,16 +295,8 @@ typedef struct forebay_step_answer {
 } forebay_step_answer;
 
 /**
- * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply. First
- * shape ends at `size`.
- */
-typedef struct forebay_limits_argument {
-    uint32_t size;
-} forebay_limits_argument;
-
-/**
- * The limits; `too_large_message` is static text. It owns nothing. First shape ends at
- * `refresh_every_milliseconds`.
+ * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, and
+ * `too_large_message` is static text. It owns nothing. First shape ends at `refresh_every_milliseconds`.
  */
 typedef struct forebay_limits_answer {
     uint32_t size;
@@ -520,8 +512,8 @@ typedef struct forebay_routing_definition {
     /** The next thing to do for one request; REFUSED for a pattern the matcher cannot run. */
     spisor_status (*step)(void *context, const forebay_step_argument *argument, forebay_step_answer *answer,
                           spisor_refusal *refusal);
-    spisor_status (*limits)(void *context, const forebay_limits_argument *argument, forebay_limits_answer *answer,
-                            spisor_refusal *refusal);
+    /** The limits, which read nothing, so the operation takes no argument. */
+    spisor_status (*limits)(void *context, forebay_limits_answer *answer, spisor_refusal *refusal);
     /** REFUSED for an upstream or URL the request cannot be sent to. */
     spisor_status (*pass_through)(void *context, const forebay_pass_through_argument *argument,
                                   forebay_pass_through_answer *answer, spisor_refusal *refusal);
