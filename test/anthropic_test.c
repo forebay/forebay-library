@@ -17,7 +17,7 @@
 #define REQUEST_VECTOR_COUNT 18
 #define RESPONSE_VECTOR_COUNT 16
 #define RATE_LIMIT_VECTOR_COUNT 18
-#define DECODE_VECTOR_COUNT 38
+#define DECODE_VECTOR_COUNT 41
 #define ROUTE_VECTOR_COUNT 20
 
 static cJSON *parse(const char *text) {
@@ -266,12 +266,22 @@ static void expect_not_json_refusal(const char *body, spisor_status status, cons
     }
 }
 
-static void bytes_that_are_no_json_are_malformed(void) {
+static void expect_unreadable_reply(const char *body, spisor_status status, const forebay_anthropic_request_answer *answer) {
+    if (status != SPISOR_OK || answer->request != NULL || answer->storage != NULL ||
+        answer->reply_kind != FOREBAY_REPLY_INVALID_REQUEST || answer->status != 400 || answer->message == NULL ||
+        strstr(answer->message, "not JSON") == NULL) {
+        support_failf("a request body that is no JSON", "\"%s\" answered %d, not the invalid-request reply", body,
+                      (int)status);
+    }
+}
+
+static void bytes_that_are_no_json_are_malformed_to_a_response_and_invalid_to_a_request(void) {
     for (size_t index = 0; index < sizeof NON_JSON_BODIES / sizeof NON_JSON_BODIES[0]; index++) {
         forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
         spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
         spisor_status status = anthropic_decode_text(NON_JSON_BODIES[index], &answer, &refusal);
-        expect_not_json_refusal(NON_JSON_BODIES[index], status, &refusal, answer.storage);
+        expect_unreadable_reply(NON_JSON_BODIES[index], status, &answer);
+        anthropic_definition()->release_request(NULL, &answer);
         anthropic_definition()->release_refusal(NULL, &refusal);
         forebay_anthropic_response_answer response_answer = SPISOR_INIT(forebay_anthropic_response_answer);
         status = anthropic_decode_response_text(NON_JSON_BODIES[index], &response_answer, &refusal);
@@ -281,12 +291,16 @@ static void bytes_that_are_no_json_are_malformed(void) {
 }
 
 static void a_string_holding_nul_is_refused_as_unreadable_json(void) {
+    static const char body[] = "{\"a\":\"\\u0000\"}";
     forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
+    forebay_anthropic_response_answer response_answer = SPISOR_INIT(forebay_anthropic_response_answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
-    spisor_status status = anthropic_decode_text("{\"a\":\"\\u0000\"}", &answer, &refusal);
+    expect_unreadable_reply(body, anthropic_decode_text(body, &answer, &refusal), &answer);
+    spisor_status status = anthropic_decode_response_text(body, &response_answer, &refusal);
     if (status != SPISOR_MALFORMED || refusal.detail == NULL || strstr(refusal.detail, "NUL") == NULL) {
         support_failf("a string holding NUL", "answered %d without saying NUL", (int)status);
     }
+    anthropic_definition()->release_request(NULL, &answer);
     anthropic_definition()->release_refusal(NULL, &refusal);
 }
 
@@ -302,9 +316,8 @@ static void bytes_may_be_null_only_beside_a_length_of_zero(void) {
     anthropic_definition()->release_refusal(NULL, &refusal);
     argument.length = 0;
     status = anthropic_definition()->decode_request(NULL, &argument, &answer, &refusal);
-    if (status != SPISOR_MALFORMED) {
-        support_failf("NULL bytes and no length", "answered %d, though no body is no JSON", (int)status);
-    }
+    expect_unreadable_reply("NULL bytes and no length", status, &answer);
+    anthropic_definition()->release_request(NULL, &answer);
     anthropic_definition()->release_refusal(NULL, &refusal);
 }
 
@@ -1053,7 +1066,7 @@ int main(void) {
     a_decode_that_breaks_its_header_is_malformed();
     a_route_call_that_breaks_its_header_is_malformed();
     a_number_that_is_not_finite_is_written_as_null();
-    bytes_that_are_no_json_are_malformed();
+    bytes_that_are_no_json_are_malformed_to_a_response_and_invalid_to_a_request();
     a_string_holding_nul_is_refused_as_unreadable_json();
     bytes_may_be_null_only_beside_a_length_of_zero();
     run_encode_cases();
