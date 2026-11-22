@@ -759,14 +759,12 @@ static void the_shapes_have_the_bytes_the_proxy_writes(void) {
     expect_body_bytes("the bytes of an error body", status, &answer, expected_error);
     anthropic_definition()->release_body(NULL, &answer);
 
-    static const forebay_anthropic_listed_model models[] = {
-        {.id = "a", .name = "A", .has_context = 1, .context = 9, .has_output = 1, .output = 8}, {.id = "b"}};
-    const forebay_anthropic_listed_provider provider = {.models = models, .model_count = 2};
+    static const forebay_catalog_model models[] = {
+        {.id = "a", .name = "A", .has_context = 1, .context = 9, .has_output = 1, .output = 8},
+        {.id = "b", .name = "b", .has_context = 1, .context = 5, .has_output = 1, .output = 6}};
     forebay_anthropic_model_listing_argument listing = SPISOR_INIT(forebay_anthropic_model_listing_argument);
-    listing.default_context = 5;
-    listing.default_output = 6;
-    listing.providers = &provider;
-    listing.provider_count = 1;
+    listing.models = models;
+    listing.model_count = 2;
     answer = (forebay_anthropic_body_answer)SPISOR_INIT(forebay_anthropic_body_answer);
     status = anthropic_definition()->model_listing(NULL, &listing, &answer, &refusal);
     expect_body_bytes("the bytes of a listing body", status, &answer,
@@ -835,36 +833,31 @@ static void expect_listing_malformed(const char *label, const forebay_anthropic_
 }
 
 static void a_listing_that_breaks_its_header_is_malformed(void) {
-    static const forebay_anthropic_listed_model nameless = {.name = "n"};
-    static const forebay_anthropic_listed_model fine = {.id = "a"};
-    const forebay_anthropic_listed_provider no_models = {.models = NULL, .model_count = 1};
-    const forebay_anthropic_listed_provider with_nameless = {.models = &nameless, .model_count = 1};
-    const forebay_anthropic_listed_provider good = {.models = &fine, .model_count = 1};
-    const forebay_anthropic_listed_provider providers[2] = {good, with_nameless};
+    static const forebay_catalog_model without_id[] = {{.id = "a", .name = "A"}, {.name = "n"}};
+    static const forebay_catalog_model without_name[] = {{.id = "a"}};
     forebay_anthropic_model_listing_argument listing = SPISOR_INIT(forebay_anthropic_model_listing_argument);
     expect_listing_malformed("a NULL listing argument", NULL, NULL);
     listing.size = (uint32_t)sizeof listing.size;
     expect_listing_malformed("a listing argument short of its first shape", &listing, NULL);
     listing = (forebay_anthropic_model_listing_argument)SPISOR_INIT(forebay_anthropic_model_listing_argument);
-    listing.provider_count = 1;
-    expect_listing_malformed("providers NULL beside a count", &listing, "providers");
-    listing.providers = &no_models;
-    expect_listing_malformed("models NULL beside a count", &listing, "providers[0].models");
-    listing.providers = providers;
-    listing.provider_count = 2;
-    expect_listing_malformed("a model without an id", &listing, "providers[1].models[0].id");
+    listing.model_count = 1;
+    expect_listing_malformed("models NULL beside a count", &listing, "models");
+    listing.models = without_id;
+    listing.model_count = 2;
+    expect_listing_malformed("an entry without an id", &listing, "models[1].id");
+    listing.models = without_name;
+    listing.model_count = 1;
+    expect_listing_malformed("an entry without a name", &listing, "models[0].name");
 }
 
 static void expect_lookup(const char *label, const char *id, uint32_t found, const char *expected_bytes) {
-    static const forebay_anthropic_listed_model models[] = {
-        {.id = "a", .name = "A"}, {.id = "b", .has_context = 2, .context = 7, .has_output = 3, .output = 8}};
-    static const forebay_anthropic_listed_model later[] = {{.id = "a", .name = "A later"}};
-    const forebay_anthropic_listed_provider providers[2] = {{models, 2}, {later, 1}};
+    static const forebay_catalog_model models[] = {
+        {.id = "a", .name = "A", .has_context = 1, .context = 5, .has_output = 1, .output = 6},
+        {.id = "b", .name = "b", .has_context = 2, .context = 7, .has_output = 3, .output = 8},
+        {.id = "a", .name = "A later", .has_context = 1, .context = 1, .has_output = 1, .output = 1}};
     forebay_anthropic_model_lookup_argument argument = SPISOR_INIT(forebay_anthropic_model_lookup_argument);
-    argument.default_context = 5;
-    argument.default_output = 6;
-    argument.providers = providers;
-    argument.provider_count = 2;
+    argument.models = models;
+    argument.model_count = 3;
     argument.id = id;
     forebay_anthropic_model_lookup_answer answer = SPISOR_INIT(forebay_anthropic_model_lookup_answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
@@ -909,8 +902,8 @@ static void a_lookup_that_breaks_its_header_is_malformed(void) {
     expect_lookup_malformed("a NULL lookup argument", NULL, NULL);
     expect_lookup_malformed("a lookup without an id", &argument, "id");
     argument.id = "a";
-    argument.provider_count = 1;
-    expect_lookup_malformed("providers NULL beside a count", &argument, "providers");
+    argument.model_count = 1;
+    expect_lookup_malformed("models NULL beside a count", &argument, "models");
     argument.size = (uint32_t)sizeof argument.size;
     expect_lookup_malformed("a lookup argument short of its first shape", &argument, NULL);
     anthropic_definition()->release_model_lookup(NULL, NULL);

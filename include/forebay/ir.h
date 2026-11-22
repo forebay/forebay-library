@@ -7,9 +7,9 @@
  * events of a stream, member for member as `contracts/ir.schema.json` defines them. An IR value an operation answers
  * is the provider's, held by that operation's answer until the release for its kind; an IR value the caller builds
  * and hands in is borrowed for the call. A size-prefixed struct is read only up to its `size`; every other struct
- * here is an element or a member of one, carries no size and never grows. Text is NUL-terminated UTF-8; text the
- * caller builds that is not valid UTF-8 is written as it is, so the body it reaches is not valid JSON. An array is
- * `count` elements at its pointer, which may be NULL only when `count` is 0.
+ * here is an element or a member of one, carries no size, and changes only with the declaration's version. Text is
+ * NUL-terminated UTF-8; text the caller builds that is not valid UTF-8 is written as it is, so the body it reaches is
+ * not valid JSON. An array is `count` elements at its pointer, which may be NULL only when `count` is 0.
  *
  * The schema's shared definitions map the same way everywhere. A nullable text (NullableString) is NULL when it is
  * null or absent. A nullable count (NullableCount) and any other nullable number has a `has_` flag beside it, 1 when

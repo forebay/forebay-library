@@ -14,7 +14,7 @@ and answers, and every refusal; this file says what they decide. No JSON crosses
 `forebay.provider`, whose description is `forebay_provider_definition_description`, generated from
 `include/forebay/provider.h`. A provider plugin implements it: `models` answers its catalog entry (its models with
 their limits, its ranking and its default model), `handle` serves an IR request as a whole response, an upstream
-failure or a stream, and `next` reads that stream event by event to its end or to the message of its failure; `models`,
+failure, a stream or the message of a call that got no upstream response (which a proxy reports to `step` as thrown), and `next` reads that stream event by event to its end or to the message of its failure; `models`,
 `handle` and `next` may block. Every header that includes `definition.h` declares a definition: with a
 `forebay_<id>_definition_of` getter it is a service, and without one it is the contract `forebay.<id>`.
 
@@ -22,7 +22,7 @@ An operation takes the `context` and, when it reads anything, a size-prefixed ar
 caller's empty answer, or the consumer's empty handle for an operation opening one, or, when it refuses, the
 caller's `spisor_refusal`, and answers a `spisor_status`, both from `spisor/library`'s
 `spisor/status.h`. A size-prefixed struct is read only up to its `size` and only grows at its end; an array
-element has no size and never grows. Text handed in is NUL-terminated UTF-8 borrowed for the call, and what an
+element has no size, and changes only with the declaration's version. Text handed in is NUL-terminated UTF-8 borrowed for the call, and what an
 answer points at is the provider's until the release for its kind. Data whose shape belongs to someone else (a
 user's settings record, an account, a quota reading) crosses as a `spisor_value`. The operations read nothing of
 the process they run in: time, randomness and every path arrive as arguments. Names are the operations' own,
@@ -150,8 +150,8 @@ Four operations write the proxy's own replies; the first three answer a `forebay
 | operation | does |
 | --- | --- |
 | `error_envelope` | a reply kind and a message to `{"type":"error","error":{"type":...,"message":...}}`, the message escaped as JSON text and the type the kind's: `loader_proxy_error` for a proxy error, `api_error` for an API error and a provider failure, `invalid_request_error` for an invalid request, `rate_limit_error` for a rate limit |
-| `model_listing` | providers' models, in order, and the profile's default context and output limits to the `/v1/models` body: each id once as the first provider offers it, `display_name` its name or its id, `created_at` fixed, `max_input_tokens` and `max_tokens` the model's or the defaults, in `data` with `first_id`, `last_id` and `has_more` |
-| `model_lookup`, `release_model_lookup` | the same providers and defaults and a URL-decoded id to the one listed model (`found` 1, answer 200) or the `not_found_error` body (`found` 0, answer 404) |
+| `model_listing` | the entries `routing.model_entries` answered, in order, to the `/v1/models` body: each entry as it is, `display_name` its name, `created_at` fixed, `max_input_tokens` and `max_tokens` its limits when it has them, in `data` with `first_id`, `last_id` and `has_more`; which models are listed, under which names and with which limits is routing's decision, never this one's |
+| `model_lookup`, `release_model_lookup` | the same entries and a URL-decoded id to the first entry the id names (`found` 1, answer 200) or the `not_found_error` body (`found` 0, answer 404) |
 | `rate_limit_reply`, `release_reply` | an upstream's own 429 (its headers, the latest reset, the clock's `now`, and the caller's zone name and its `offset_minutes` at the reset, since C does no zone lookup) to a `forebay_anthropic_reply_answer`: status 429, the upstream headers less `content-encoding`, `content-length` and the two `x-hub-` ones, the reset the latest of `reset_at` and the two `anthropic-ratelimit-unified-` reset headers, `content-type`, `retry-after` (seconds to the reset, else 60), and `anthropic-ratelimit-unified-status` and `-reset` when the upstream sent none, with the `rate_limit_error` body naming `h:mm AM` and the zone, or `try again later` for a reset not after `now` |
 | `route_request`, `release_route` | a method and a path to what the proxy does with the request: `messages` for a POST to `/v1/messages`, `modelList` for a GET to `/v1/models` or `/v1/models/`, `modelLookup` with the id for a GET to `/v1/models/<id>`, else `passThrough`; the method is compared ignoring case and a query is cut off. It lives here and not in `routing` because the paths are Anthropic wire names |
 

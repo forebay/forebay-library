@@ -5,7 +5,7 @@
  * @file
  * forebay-library's `anthropic` service: the Anthropic Messages wire format to and from the IR of forebay/ir.h. It
  * keeps no state but a stream's, held by the handle the caller opens and releases. A size-prefixed struct is read only
- * up to its `size`; an array element has no size and never grows.
+ * up to its `size`; an array element has no size, and changes only with the declaration's version.
  * Bytes the caller hands in are borrowed for the call; what an answer or a refusal points at is the provider's until
  * the release for its kind. An answer the caller never filled, zeroed, is a release that does nothing.
  *
@@ -23,6 +23,7 @@
 #include "forebay/ir.h"
 #include "forebay/pair.h"
 #include "forebay/reply.h"
+#include "forebay/routing.h"
 #include "spisor/status.h"
 
 #ifdef __cplusplus
@@ -144,49 +145,24 @@ typedef struct forebay_anthropic_error_argument {
 } forebay_anthropic_error_argument;
 
 /**
- * One model a provider serves, an array element with no size. `id` is required; `name` NULL or empty lists the model
- * under its id; `context` and `output` are the model's token limits when `has_context` and `has_output` are 1, and
- * the profile's defaults otherwise.
- */
-typedef struct forebay_anthropic_listed_model {
-    const char *id;
-    const char *name;
-    uint32_t has_context;
-    uint64_t context;
-    uint32_t has_output;
-    uint64_t output;
-} forebay_anthropic_listed_model;
-
-/** One provider's models in its catalog order, an array element with no size. `models` may be NULL beside a 0 count. */
-typedef struct forebay_anthropic_listed_provider {
-    const forebay_anthropic_listed_model *models;
-    size_t model_count;
-} forebay_anthropic_listed_provider;
-
-/**
- * What a `/v1/models` body lists: every provider's models, in argument order, and the profile's default limits for a
- * model that gives none. `providers` may be NULL beside a 0 count. Borrowed for the call. First shape ends at
- * `provider_count`.
+ * What a `/v1/models` body lists: the entries routing's `model_entries` answered, in order, each written as it is, so
+ * which models are listed, under which name and with which limits is routing's decision and none of this service's.
+ * `models` may be NULL beside a 0 count. Borrowed for the call. First shape ends at `model_count`.
  */
 typedef struct forebay_anthropic_model_listing_argument {
     uint32_t size;
-    uint64_t default_context;
-    uint64_t default_output;
-    const forebay_anthropic_listed_provider *providers;
-    size_t provider_count;
+    const forebay_catalog_model *models;
+    size_t model_count;
 } forebay_anthropic_model_listing_argument;
 
 /**
- * One model to look up in what a `/v1/models/<id>` request is answered from: the same providers and defaults as the
- * listing, and `id`, required, the model id already URL-decoded by the caller. Borrowed for the call. First shape ends
- * at `id`.
+ * One model to look up among the entries a listing writes, and `id`, required, the model id already URL-decoded by the
+ * caller. Borrowed for the call. First shape ends at `id`.
  */
 typedef struct forebay_anthropic_model_lookup_argument {
     uint32_t size;
-    uint64_t default_context;
-    uint64_t default_output;
-    const forebay_anthropic_listed_provider *providers;
-    size_t provider_count;
+    const forebay_catalog_model *models;
+    size_t model_count;
     const char *id;
 } forebay_anthropic_model_lookup_argument;
 
@@ -353,20 +329,19 @@ typedef struct forebay_anthropic_definition {
     spisor_status (*error_envelope)(void *context, const forebay_anthropic_error_argument *argument,
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
-     * The `/v1/models` body, as the proxy's `model-listing.ts` writes it: every model id once, as the first provider
-     * in argument order offers it, each as `type`, `id`, `display_name` (its name, or its id when the name is NULL or
-     * empty), `created_at` the fixed 2025-01-01T00:00:00Z, `max_input_tokens` and `max_tokens` (the model's limits, or
-     * the defaults), inside `data`, `first_id` and `last_id` (null for no model) and `has_more` false. MALFORMED,
-     * naming the member, for a NULL `providers` beside a count, a NULL `models` beside a count and a NULL `id`.
+     * The `/v1/models` body, as the proxy's `model-listing.ts` writes it: every entry in order, each as `type`, `id`,
+     * `display_name` (its name), `created_at` the fixed 2025-01-01T00:00:00Z, and `max_input_tokens` and `max_tokens`
+     * when it has those limits, inside `data`, `first_id` and `last_id` (null for no entry) and `has_more` false.
+     * MALFORMED, naming the member, for a NULL `models` beside a count and an entry whose `id` or `name` is NULL.
      */
     spisor_status (*model_listing)(void *context, const forebay_anthropic_model_listing_argument *argument,
                                    forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
-     * One model of `/v1/models/<id>`: the model `id` names, built as the listing builds it (first provider wins), with
-     * `found` 1, or `{"type":"error","error":{"type":"not_found_error","message":"model not found: <id>"}}` with
-     * `found` 0, so the caller answers 200 or 404. MALFORMED, naming the member, as `model_listing` for the providers
-     * and for a NULL `id`. An empty `id` is not a lookup: `/v1/models/` belongs to `model_listing`, as the TypeScript
-     * routes it, and `model_lookup` answers not found for it.
+     * One model of `/v1/models/<id>`: the first entry `id` names, written as the listing writes it, with `found` 1, or
+     * `{"type":"error","error":{"type":"not_found_error","message":"model not found: <id>"}}` with `found` 0, so the
+     * caller answers 200 or 404. MALFORMED, naming the member, as `model_listing` for the entries and for a NULL `id`.
+     * An empty `id` is not a lookup: `/v1/models/` belongs to `model_listing`, as the TypeScript routes it, and
+     * `model_lookup` answers not found for it.
      */
     spisor_status (*model_lookup)(void *context, const forebay_anthropic_model_lookup_argument *argument,
                                   forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal);

@@ -6,11 +6,11 @@
  * forebay-library's `routing` service: the proxy's decisions, from whether a request is admitted, through which
  * provider and model serve it and what to do when one fails, to the environment an application starts with. It keeps
  * no state; every decision reads only its argument, apart from `environment`'s state file. A size-prefixed struct is
- * read only up to its `size`; an array element has no size and never grows. Text the caller hands in is
- * NUL-terminated UTF-8 borrowed for the call; what an answer or a refusal points at is the provider's until the
- * release for its kind. An array is `count` elements at its pointer, which may be NULL only when `count` is 0. In a
- * list of `forebay_pair`, headers or environment variables, a later pair with a name already given replaces the
- * earlier one.
+ * read only up to its `size`; an array element has no size, and changes only with the declaration's version. Text the
+ * caller hands in is NUL-terminated UTF-8 borrowed for the call; what an answer or a refusal points at is the
+ * provider's until the release for its kind. An array is `count` elements at its pointer, which may be NULL only
+ * when `count` is 0. In a list of `forebay_pair`, headers or environment variables, a later pair with a name already
+ * given replaces the earlier one.
  */
 
 #include <stddef.h>
@@ -177,22 +177,13 @@ typedef struct forebay_model_entries_argument {
 } forebay_model_entries_argument;
 
 /**
- * One listed model: `name` the catalog's, or the id when the catalog names none, and each limit the model's, else
- * the profile's default, present when its `has_` flag is 1.
+ * Every model id the catalog serves, once, in catalog order, each with `name` the catalog's, or the id when the catalog
+ * names none, and each limit the model's, else the profile's default, present when its `has_` flag is 1. First shape
+ * ends at `storage`.
  */
-typedef struct forebay_model_entry {
-    const char *id;
-    const char *name;
-    uint32_t has_context;
-    uint64_t context;
-    uint32_t has_output;
-    uint64_t output;
-} forebay_model_entry;
-
-/** Every model id the catalog serves, once, in catalog order. First shape ends at `storage`. */
 typedef struct forebay_model_entries_answer {
     uint32_t size;
-    const forebay_model_entry *entries;
+    const forebay_catalog_model *entries;
     size_t entry_count;
     void *storage;
 } forebay_model_entries_answer;
@@ -581,7 +572,7 @@ typedef struct forebay_routing_definition {
     void (*release_refusal)(void *context, spisor_refusal *refusal);
     /**
      * Every model id the catalog serves, once as the first provider offers it, each with its name and limits filled
-     * as forebay_model_entry says; a profile short of `default_output` gives no defaults.
+     * as forebay_model_entries_answer says; a profile short of `default_output` gives no defaults.
      */
     spisor_status (*model_entries)(void *context, const forebay_model_entries_argument *argument,
                                    forebay_model_entries_answer *answer, spisor_refusal *refusal);

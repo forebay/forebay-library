@@ -404,7 +404,7 @@ static inline cJSON *routing_limits_json_of(const forebay_limits_answer *answer)
 static inline cJSON *routing_entries_json_of(const forebay_model_entries_answer *answer) {
     cJSON *entries = cJSON_CreateArray();
     for (size_t index = 0; index < answer->entry_count; index++) {
-        const forebay_model_entry *entry = &answer->entries[index];
+        const forebay_catalog_model *entry = &answer->entries[index];
         cJSON *json = cJSON_CreateObject();
         cJSON_AddStringToObject(json, "id", entry->id);
         cJSON_AddStringToObject(json, "name", entry->name);

@@ -18,27 +18,27 @@ typedef struct anthropic_shape_case {
 } anthropic_shape_case;
 
 static const anthropic_shape_case ANTHROPIC_SHAPE_CASES[] = {
-    {"two providers sharing an id list it once as the first offers it", "modelListing",
-     "{\"defaultContext\":200000,\"defaultOutput\":8192,\"providers\":["
-     "[{\"id\":\"a\",\"name\":\"A first\",\"context\":100,\"output\":10},{\"id\":\"b\",\"name\":\"B\"}],"
-     "[{\"id\":\"a\",\"name\":\"A second\",\"context\":1,\"output\":1},{\"id\":\"b\",\"name\":\"B second\"},"
-     "{\"id\":\"c\",\"name\":\"C\"}]]}",
+    {"entries are written in order, each with its own name and limits", "modelListing",
+     "{\"models\":[{\"id\":\"a\",\"name\":\"A first\",\"context\":100,\"output\":10},{\"id\":\"b\","
+     "\"name\":\"B\",\"context\":200000,\"output\":8192},{\"id\":\"c\",\"name\":\"C\",\"context\":200000,"
+     "\"output\":8192}]}",
      "{\"data\":[{\"type\":\"model\",\"id\":\"a\",\"display_name\":\"A first\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":100,\"max_tokens\":10},"
      "{\"type\":\"model\",\"id\":\"b\",\"display_name\":\"B\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":200000,\"max_tokens\":8192},"
      "{\"type\":\"model\",\"id\":\"c\",\"display_name\":\"C\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":200000,\"max_tokens\":8192}],\"first_id\":\"a\",\"last_id\":\"c\",\"has_more\":false}"},
-    {"an empty name and an absent name list the model under its id", "modelListing",
-     "{\"defaultContext\":5,\"defaultOutput\":6,"
-     "\"providers\":[[{\"id\":\"empty\",\"name\":\"\"},{\"id\":\"absent\"}]]}",
+    {"an entry's name is its display name", "modelListing",
+     "{\"models\":[{\"id\":\"empty\",\"name\":\"empty\",\"context\":5,\"output\":6},{\"id\":\"absent\","
+     "\"name\":\"absent\",\"context\":5,\"output\":6}]}",
      "{\"data\":[{\"type\":\"model\",\"id\":\"empty\",\"display_name\":\"empty\","
      "\"created_at\":\"2025-01-01T00:00:00Z\",\"max_input_tokens\":5,\"max_tokens\":6},"
      "{\"type\":\"model\",\"id\":\"absent\",\"display_name\":\"absent\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":5,\"max_tokens\":6}],\"first_id\":\"empty\",\"last_id\":\"absent\",\"has_more\":false}"},
-    {"a context alone and an output alone each default the other, and a zero is a limit", "modelListing",
-     "{\"defaultContext\":7,\"defaultOutput\":8,\"providers\":[[{\"id\":\"c\",\"context\":3},{\"id\":\"o\","
-     "\"output\":4},{\"id\":\"z\",\"context\":0,\"output\":0},{\"id\":\"n\",\"context\":null,\"output\":null}]]}",
+    {"a zero limit is written as a limit", "modelListing",
+     "{\"models\":[{\"id\":\"c\",\"name\":\"c\",\"context\":3,\"output\":8},{\"id\":\"o\",\"name\":\"o\","
+     "\"context\":7,\"output\":4},{\"id\":\"z\",\"name\":\"z\",\"context\":0,\"output\":0},{\"id\":\"n\","
+     "\"name\":\"n\",\"context\":7,\"output\":8}]}",
      "{\"data\":[{\"type\":\"model\",\"id\":\"c\",\"display_name\":\"c\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":3,\"max_tokens\":8},"
      "{\"type\":\"model\",\"id\":\"o\",\"display_name\":\"o\",\"created_at\":\"2025-01-01T00:00:00Z\","
@@ -47,30 +47,38 @@ static const anthropic_shape_case ANTHROPIC_SHAPE_CASES[] = {
      "\"max_input_tokens\":0,\"max_tokens\":0},"
      "{\"type\":\"model\",\"id\":\"n\",\"display_name\":\"n\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":7,\"max_tokens\":8}],\"first_id\":\"c\",\"last_id\":\"n\",\"has_more\":false}"},
-    {"no providers list no model", "modelListing", "{\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[]}",
+    {"no entries list no model", "modelListing", "{\"models\":[]}",
      "{\"data\":[],\"first_id\":null,\"last_id\":null,\"has_more\":false}"},
-    {"providers that serve nothing list no model", "modelListing",
-     "{\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[[],[]]}",
-     "{\"data\":[],\"first_id\":null,\"last_id\":null,\"has_more\":false}"},
-    {"one model is both the first and the last", "modelListing",
-     "{\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[[{\"id\":\"only\",\"name\":\"Only\"}]]}",
+    {"one entry is both the first and the last", "modelListing",
+     "{\"models\":[{\"id\":\"only\",\"name\":\"Only\",\"context\":1,\"output\":2}]}",
      "{\"data\":[{\"type\":\"model\",\"id\":\"only\",\"display_name\":\"Only\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":1,\"max_tokens\":2}],\"first_id\":\"only\",\"last_id\":\"only\",\"has_more\":false}"},
-    {"a lookup finds the model as the first provider offers it", "modelLookup",
-     "{\"id\":\"a\",\"defaultContext\":200000,\"defaultOutput\":8192,\"providers\":["
-     "[{\"id\":\"b\"},{\"id\":\"a\",\"name\":\"A first\",\"context\":100}],[{\"id\":\"a\",\"name\":\"A second\"}]]}",
+    {"a lookup writes the first entry the id names", "modelLookup",
+     "{\"id\":\"a\",\"models\":[{\"id\":\"b\",\"name\":\"b\",\"context\":200000,\"output\":8192},"
+     "{\"id\":\"a\",\"name\":\"A first\",\"context\":100,\"output\":8192}]}",
      "{\"type\":\"model\",\"id\":\"a\",\"display_name\":\"A first\",\"created_at\":\"2025-01-01T00:00:00Z\","
      "\"max_input_tokens\":100,\"max_tokens\":8192}"},
-    {"a lookup of an id no provider offers is the 404 body", "modelLookup",
-     "{\"id\":\"missing\",\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[[{\"id\":\"a\"}]]}",
+    {"a lookup of an id no entry names is the 404 body", "modelLookup",
+     "{\"id\":\"missing\",\"models\":[{\"id\":\"a\",\"name\":\"a\",\"context\":1,\"output\":2}]}",
      "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: missing\"}}"},
     {"a lookup of an id that needs JSON escapes", "modelLookup",
-     "{\"id\":\"q\\\"\\\\\\u0001 caf\\u00e9\",\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[]}",
+     "{\"id\":\"q\\\"\\\\\\u0001 caf\\u00e9\",\"models\":[]}",
      "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: q\\\"\\\\\\u0001 "
      "caf\\u00e9\"}}"},
     {"a lookup of the empty id finds nothing", "modelLookup",
-     "{\"id\":\"\",\"defaultContext\":1,\"defaultOutput\":2,\"providers\":[[{\"id\":\"a\"}]]}",
+     "{\"id\":\"\",\"models\":[{\"id\":\"a\",\"name\":\"a\",\"context\":1,\"output\":2}]}",
      "{\"type\":\"error\",\"error\":{\"type\":\"not_found_error\",\"message\":\"model not found: \"}}"},
+    {"entries sharing an id are each written, since which are listed is routing's decision", "modelListing",
+     "{\"models\":[{\"id\":\"x\",\"name\":\"X one\",\"context\":1,\"output\":2},{\"id\":\"x\","
+     "\"name\":\"X two\",\"context\":3,\"output\":4}]}",
+     "{\"data\":[{\"type\":\"model\",\"id\":\"x\",\"display_name\":\"X one\","
+     "\"created_at\":\"2025-01-01T00:00:00Z\",\"max_input_tokens\":1,\"max_tokens\":2},"
+     "{\"type\":\"model\",\"id\":\"x\",\"display_name\":\"X two\",\"created_at\":\"2025-01-01T00:00:00Z\","
+     "\"max_input_tokens\":3,\"max_tokens\":4}],\"first_id\":\"x\",\"last_id\":\"x\",\"has_more\":false}"},
+    {"an entry without limits is written without them", "modelListing",
+     "{\"models\":[{\"id\":\"m\",\"name\":\"M\"}]}",
+     "{\"data\":[{\"type\":\"model\",\"id\":\"m\",\"display_name\":\"M\","
+     "\"created_at\":\"2025-01-01T00:00:00Z\"}],\"first_id\":\"m\",\"last_id\":\"m\",\"has_more\":false}"},
 };
 
 #define ANTHROPIC_SHAPE_CASE_COUNT (sizeof ANTHROPIC_SHAPE_CASES / sizeof ANTHROPIC_SHAPE_CASES[0])

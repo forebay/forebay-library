@@ -37,7 +37,7 @@ static size_t catalog_model_total(const forebay_catalog_provider *catalog, size_
     return total;
 }
 
-static int is_entered(const forebay_model_entry *entries, size_t count, const char *id) {
+static int is_entered(const forebay_catalog_model *entries, size_t count, const char *id) {
     for (size_t index = 0; index < count; index++) {
         if (strcmp(entries[index].id, id) == 0) {
             return 1;
@@ -46,7 +46,7 @@ static int is_entered(const forebay_model_entry *entries, size_t count, const ch
     return 0;
 }
 
-static int fill_entry(void **storage, forebay_model_entry *entry, const forebay_catalog_model *model,
+static int fill_entry(void **storage, forebay_catalog_model *entry, const forebay_catalog_model *model,
                       const forebay_routing_profile *profile) {
     int has_defaults = spisor_has_shape(profile->size, PROFILE_DEFAULTS_SHAPE);
     entry_limit context = limit_of(model->has_context, model->context, has_defaults,
@@ -64,7 +64,7 @@ static int fill_entry(void **storage, forebay_model_entry *entry, const forebay_
 /** Fills the entries into the answer's storage; 0, with the storage released, when memory runs out. */
 static int fill_entries(const forebay_model_entries_argument *argument, forebay_model_entries_answer *answer) {
     size_t total = catalog_model_total(argument->catalog, argument->catalog_count);
-    forebay_model_entry *entries = forebay_storage_array(&answer->storage, total, sizeof *entries);
+    forebay_catalog_model *entries = forebay_storage_array(&answer->storage, total, sizeof *entries);
     size_t count = 0;
     if (total > 0 && entries == NULL) {
         return 0;
