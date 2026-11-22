@@ -18,7 +18,7 @@
  * `defaultContext`, `defaultOutput` and `providers`, a list of lists of models with `id`, `name`, `context`, `output`.
  * A rate-limit vector's `input` is `upstreamHeaders`, `resetAt`, `now`, `offsetMinutes` and `zone`, and its `output` the
  * `status`, the `headers` in order and the `body` text of the reply. A `decodeRequestWithHeaders` vector's `input` is
- * the wire `body` as JSON and the client's `headers`, and its `output` the `forwardedHeaders` in order and either the
+ * the wire `body` as JSON, or the text `rawBody` as it is, and the client's `headers`, and its `output` the `forwardedHeaders` in order and either the
  * `model` of the request read or the `reply` (`kind`, `status`, `message`) of a body that is no object. A
  * `routeRequest` vector's `input` is the `method` and `path`, and its `output` the `kind` (`messages`, `modelList`,
  * `modelLookup` or `passThrough`) and the `modelId` of a lookup.
@@ -700,7 +700,13 @@ static inline int anthropic_read_pairs(const cJSON *object, anthropic_input *inp
 /** A decode vector with headers: the body printed to bytes and the client's headers. */
 static inline int anthropic_read_headed_body(const cJSON *json, anthropic_input *input) {
     *input = (anthropic_input){0};
-    input->printed = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(json, "body"));
+    const char *raw = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "rawBody"));
+    size_t raw_length = raw == NULL ? 0 : strlen(raw);
+    input->printed = raw != NULL ? cJSON_malloc(raw_length + 1)
+                                 : cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(json, "body"));
+    if (raw != NULL && input->printed != NULL) {
+        memcpy(input->printed, raw, raw_length + 1);
+    }
     input->text = input->printed;
     if (input->printed == NULL || !anthropic_read_pairs(cJSON_GetObjectItemCaseSensitive(json, "headers"), input)) {
         anthropic_input_release(input);

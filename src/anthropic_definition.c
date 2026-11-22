@@ -33,7 +33,7 @@ static const void *read_response(anthropic_reader *reader, const cJSON *root) {
     return anthropic_decode_response(reader, root);
 }
 
-/** The JSON a body holds, in `*root`; NULL unless OK. */
+/** The JSON a body holds, in `*root`; NULL unless OK. SPISOR_NONE, with no refusal, for bytes that are not JSON. */
 static spisor_status parse_body(const forebay_anthropic_body_argument *argument, cJSON **root, spisor_refusal *refusal) {
     if (argument->bytes == NULL && argument->length > 0) {
         return anthropic_refuse_bytes(refusal);
@@ -43,7 +43,7 @@ static spisor_status parse_body(const forebay_anthropic_body_argument *argument,
     *root = spisor_parse_json_reporting(argument->bytes == NULL ? no_bytes : argument->bytes, argument->length,
                                         &out_of_memory);
     if (*root == NULL) {
-        return out_of_memory ? SPISOR_OUT_OF_MEMORY : refuse_not_json(refusal);
+        return out_of_memory ? SPISOR_OUT_OF_MEMORY : SPISOR_NONE;
     }
     return SPISOR_OK;
 }
@@ -73,7 +73,7 @@ static spisor_status decode_body(const forebay_anthropic_body_argument *argument
         status = read_parsed(root, read, result, storage);
     }
     cJSON_Delete(root);
-    return status;
+    return status == SPISOR_NONE ? refuse_not_json(refusal) : status;
 }
 
 static spisor_status read_request_body(const forebay_anthropic_body_argument *argument, const cJSON *root,
@@ -101,9 +101,11 @@ static spisor_status decode_request(void *context, const forebay_anthropic_body_
     spisor_status headers_checked = anthropic_check_forwarded_headers(argument, refusal);
     cJSON *root = NULL;
     spisor_status status = headers_checked == SPISOR_OK ? parse_body(argument, &root, refusal) : headers_checked;
-    if (status == SPISOR_OK) {
+    if (status == SPISOR_NONE) {
+        status = anthropic_answer_invalid_request(answer, ANTHROPIC_UNREADABLE_BODY, refusal);
+    } else if (status == SPISOR_OK) {
         status = cJSON_IsObject(root) ? read_request_body(argument, root, answer)
-                                      : anthropic_answer_invalid_request(answer, refusal);
+                                      : anthropic_answer_invalid_request(answer, ANTHROPIC_NO_OBJECT_BODY, refusal);
     }
     cJSON_Delete(root);
     return status;

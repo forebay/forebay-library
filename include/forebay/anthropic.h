@@ -43,7 +43,7 @@ typedef struct forebay_anthropic_body_argument {
 
 /**
  * The request a body held, the provider's until release_request, and the client's `forwarded_headers`, each name
- * lower cased and once. A body that is no JSON object holds no `request`: `reply_kind` is
+ * lower cased and once. A body that is no JSON object, or no JSON this library can read, holds no `request`: `reply_kind` is
  * FOREBAY_REPLY_INVALID_REQUEST, and `status` and `message` are the reply to answer with, static text. First shape
  * ends at `storage`.
  */
@@ -278,8 +278,9 @@ typedef struct forebay_anthropic_definition {
     void *context;
     /**
      * A body to an IR request, as `anthropic-translator`'s decodeRequest does. A string `content` or `system` becomes
-     * one text block with `$contentIsString` or `$systemIsString` set. A JSON root that is not an object is answered
-     * with the invalid-request reply of the answer; an answer short of the one that holds it is MALFORMED. The
+     * one text block with `$contentIsString` or `$systemIsString` set. A body that is not JSON, holds a NUL in a string,
+     * or whose root is not an object is answered OK with the invalid-request reply of the answer, not MALFORMED, which
+     * stays for a misused argument or answer, among them an answer short of the one that holds the reply. The
      * argument's headers are answered as the client's `forwarded_headers`, without `authorization`, `x-api-key`,
      * `host`, `content-length`, `accept-encoding`, `connection`, `keep-alive`, `proxy-authenticate`,
      * `proxy-authorization`, `proxy-connection`, `te`, `trailer`, `transfer-encoding` and `upgrade`.

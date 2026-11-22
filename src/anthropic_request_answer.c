@@ -12,8 +12,10 @@
 
 #define INVALID_REQUEST_STATUS 400u
 
-static const char INVALID_REQUEST_MESSAGE[] =
+static const char NO_OBJECT_MESSAGE[] =
     "the request body is not a valid Messages API request: the request body must be a JSON object";
+static const char UNREADABLE_MESSAGE[] =
+    "the request body is not a valid Messages API request: the request body is not JSON this library can read";
 
 static int reaches_the_reply(const forebay_anthropic_request_answer *answer) {
     return spisor_has_shape(answer->size, FULL_ANSWER_SHAPE);
@@ -64,14 +66,15 @@ spisor_status anthropic_answer_forwarded_headers(const forebay_anthropic_body_ar
                : SPISOR_OUT_OF_MEMORY;
 }
 
-spisor_status anthropic_answer_invalid_request(forebay_anthropic_request_answer *answer, spisor_refusal *refusal) {
+spisor_status anthropic_answer_invalid_request(forebay_anthropic_request_answer *answer, anthropic_invalid_body why,
+                                               spisor_refusal *refusal) {
     if (!reaches_the_reply(answer)) {
-        return spisor_refuse_as(refusal, SPISOR_MALFORMED, "the body is not a JSON object",
+        return spisor_refuse_as(refusal, SPISOR_MALFORMED, "the body is not a JSON object this library can read",
                                 "send a JSON object, and an answer that reaches reply_kind, status and message");
     }
     answer->reply_kind = FOREBAY_REPLY_INVALID_REQUEST;
     answer->status = INVALID_REQUEST_STATUS;
-    answer->message = INVALID_REQUEST_MESSAGE;
+    answer->message = why == ANTHROPIC_UNREADABLE_BODY ? UNREADABLE_MESSAGE : NO_OBJECT_MESSAGE;
     return SPISOR_OK;
 }
 

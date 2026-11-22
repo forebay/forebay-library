@@ -19,8 +19,15 @@ spisor_status anthropic_check_forwarded_headers(const forebay_anthropic_body_arg
 spisor_status anthropic_answer_forwarded_headers(const forebay_anthropic_body_argument *argument,
                                                  forebay_anthropic_request_answer *answer);
 
-/** Answers a body that is no JSON object: the invalid-request reply, or MALFORMED to an answer too short to hold it. */
-spisor_status anthropic_answer_invalid_request(forebay_anthropic_request_answer *answer, spisor_refusal *refusal);
+/** Why a request body is invalid, as the reply's message says. */
+typedef enum anthropic_invalid_body {
+    ANTHROPIC_UNREADABLE_BODY,
+    ANTHROPIC_NO_OBJECT_BODY
+} anthropic_invalid_body;
+
+/** Answers an invalid body with the invalid-request reply, or MALFORMED to an answer too short to hold it. */
+spisor_status anthropic_answer_invalid_request(forebay_anthropic_request_answer *answer, anthropic_invalid_body why,
+                                               spisor_refusal *refusal);
 
 void anthropic_release_request(void *context, forebay_anthropic_request_answer *answer);
 
