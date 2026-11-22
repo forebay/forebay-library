@@ -72,6 +72,9 @@ static void run_schema_document(const char *path) {
 }
 
 static void run_anthropic_vector(const char *path) {
+    if (is_wire_only_vector(path)) {
+        return;
+    }
     cJSON *vector = spisor_vector_read(path);
     const direction_side *side =
         anthropic_side(cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(vector, "direction")));
@@ -94,7 +97,7 @@ static int run_every_vector(const char *list_path, void (*run)(const char *path)
     for (char *line = strtok(list, "\r\n"); line != NULL; line = strtok(NULL, "\r\n")) {
         if (line[0] != '\0') {
             run(line);
-            count++;
+            count += is_wire_only_vector(line) ? 0 : 1;
         }
     }
     free(list);

@@ -92,7 +92,7 @@ static int run_vectors(void) {
         return 0;
     }
     for (char *line = strtok(list, "\r\n"); line != NULL; line = strtok(NULL, "\r\n")) {
-        if (strstr(line, "stream-") != NULL) {
+        if (strstr(line, "/stream-") != NULL) {
             run_vector(line);
             count++;
         }

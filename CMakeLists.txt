@@ -44,6 +44,7 @@ add_library(forebay_objects OBJECT
     src/anthropic_encode_response.c
     src/anthropic_encode_stream.c
     src/anthropic_frames.c
+    src/anthropic_rate_limit_reply.c
     src/anthropic_reader.c
     src/anthropic_refusal.c
     src/anthropic_stop_reason.c

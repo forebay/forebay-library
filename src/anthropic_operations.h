@@ -21,6 +21,9 @@
         }                                                              \
     }
 
+/** The wire object of an Anthropic error, NULL once the writer has failed. */
+cJSON *anthropic_error_object(anthropic_writer *writer, const char *error_type, const char *message);
+
 /** The MALFORMED refusal of the first rule an IR value breaks. */
 spisor_status anthropic_refuse_problem(spisor_refusal *refusal, const anthropic_problem *problem);
 

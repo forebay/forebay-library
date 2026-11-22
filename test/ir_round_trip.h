@@ -94,6 +94,11 @@ static inline round_trip_function schema_round_trip(const char *definition) {
     return NULL;
 }
 
+/** Whether a vector of the anthropic list holds no IR, which the codec's tests leave to the service's. */
+static inline int is_wire_only_vector(const char *path) {
+    return strstr(path, "rate-limit-") != NULL;
+}
+
 static inline const direction_side *anthropic_side(const char *direction) {
     for (size_t index = 0; direction != NULL && index < sizeof ANTHROPIC_DIRECTIONS / sizeof ANTHROPIC_DIRECTIONS[0];
          index++) {
