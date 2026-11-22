@@ -15,6 +15,8 @@
  * A decode vector's `input` is the wire body, printed to bytes; an encode vector's `input` is the IR, read by the
  * test-only IR codec. A wire-shape vector's `input` is the operation's argument as JSON: `errorType` and `message`, or
  * `defaultContext`, `defaultOutput` and `providers`, a list of lists of models with `id`, `name`, `context`, `output`.
+ * A rate-limit vector's `input` is `upstreamHeaders`, `resetAt`, `now`, `offsetMinutes` and `zone`, and its `output` the
+ * `status`, the `headers` in order and the `body` text of the reply.
  */
 
 static inline const forebay_anthropic_definition *anthropic_definition(void) {
@@ -144,6 +146,8 @@ typedef struct anthropic_input {
     forebay_anthropic_listed_provider *providers;
     forebay_anthropic_listed_model *models;
     const char *lookup_id;
+    forebay_anthropic_rate_limit_argument rate_limit;
+    forebay_pair *pairs;
 } anthropic_input;
 
 /** Every answer a whole stream through one handle gave, each feed's and the finish's, held until released. */
@@ -161,6 +165,7 @@ typedef union anthropic_answer {
     forebay_anthropic_response_answer response;
     forebay_anthropic_body_answer body;
     forebay_anthropic_model_lookup_answer lookup;
+    forebay_anthropic_reply_answer reply;
     anthropic_stream_answer stream;
 } anthropic_answer;
 
@@ -190,6 +195,7 @@ static inline void anthropic_input_release(anthropic_input *input) {
     free(input->pieces);
     free(input->providers);
     free(input->models);
+    free(input->pairs);
     ir_json_arena_release(&input->arena);
     *input = (anthropic_input){0};
 }
@@ -602,6 +608,70 @@ static inline spisor_status anthropic_call_model_listing(const anthropic_input *
     return anthropic_definition()->model_listing(NULL, &input->listing, &answer->body, refusal);
 }
 
+/** A rate-limit vector's input: the upstream headers in order, `resetAt` when present, `now`, the offset and the zone. */
+static inline int anthropic_read_rate_limit_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    const cJSON *headers = cJSON_GetObjectItemCaseSensitive(json, "upstreamHeaders");
+    const cJSON *reset_at = cJSON_GetObjectItemCaseSensitive(json, "resetAt");
+    size_t count = (size_t)cJSON_GetArraySize(headers);
+    input->pairs = calloc(count + 1, sizeof *input->pairs);
+    if (!cJSON_IsObject(headers) || input->pairs == NULL) {
+        support_fail("a rate-limit input", "the test could not read or allocate its headers");
+        anthropic_input_release(input);
+        return 0;
+    }
+    size_t index = 0;
+    const cJSON *header = NULL;
+    cJSON_ArrayForEach(header, headers) {
+        input->pairs[index].name = header->string;
+        input->pairs[index++].value = cJSON_GetStringValue(header);
+    }
+    input->rate_limit = (forebay_anthropic_rate_limit_argument)SPISOR_INIT(forebay_anthropic_rate_limit_argument);
+    input->rate_limit.upstream_headers = input->pairs;
+    input->rate_limit.upstream_header_count = count;
+    input->rate_limit.has_reset_at = cJSON_IsNumber(reset_at) ? 1 : 0;
+    input->rate_limit.reset_at = cJSON_IsNumber(reset_at) ? reset_at->valuedouble : 0;
+    input->rate_limit.now = cJSON_GetObjectItemCaseSensitive(json, "now")->valuedouble;
+    input->rate_limit.offset_minutes = (int64_t)cJSON_GetObjectItemCaseSensitive(json, "offsetMinutes")->valuedouble;
+    input->rate_limit.zone = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zone"));
+    return 1;
+}
+
+static inline spisor_status anthropic_call_rate_limit_reply(const anthropic_input *input, anthropic_answer *answer,
+                                                            spisor_refusal *refusal) {
+    return anthropic_definition()->rate_limit_reply(NULL, &input->rate_limit, &answer->reply, refusal);
+}
+
+/** Whether a reply has the vector's status, its headers in order and its body bytes. */
+static inline int anthropic_reply_matches(const anthropic_answer *answer, const cJSON *expected) {
+    const forebay_anthropic_reply_answer *reply = &answer->reply;
+    const cJSON *headers = cJSON_GetObjectItemCaseSensitive(expected, "headers");
+    const char *body = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "body"));
+    int same = reply->status == (uint32_t)cJSON_GetObjectItemCaseSensitive(expected, "status")->valuedouble &&
+               reply->header_count == (size_t)cJSON_GetArraySize(headers) && reply->body != NULL && body != NULL &&
+               strcmp(reply->body, body) == 0;
+    size_t index = 0;
+    const cJSON *header = NULL;
+    cJSON_ArrayForEach(header, headers) {
+        same = same && index < reply->header_count && strcmp(reply->headers[index].name, header->string) == 0 &&
+               strcmp(reply->headers[index].value, cJSON_GetStringValue(header)) == 0;
+        index++;
+    }
+    if (!same) {
+        fprintf(stderr, "  expected %zu headers and body %s\n  actual   status %u, %zu headers and body %s\n",
+                (size_t)cJSON_GetArraySize(headers), body, (unsigned)reply->status, reply->header_count,
+                reply->body);
+        for (size_t shown = 0; shown < reply->header_count; shown++) {
+            fprintf(stderr, "    %s: %s\n", reply->headers[shown].name, reply->headers[shown].value);
+        }
+    }
+    return same;
+}
+
+static inline void anthropic_release_reply(anthropic_answer *answer) {
+    anthropic_definition()->release_reply(NULL, &answer->reply);
+}
+
 /** The direction a vector's `direction` member names, NULL for one this service does not have. */
 static inline const anthropic_direction *anthropic_direction_named(const char *name) {
     static const anthropic_direction directions[] = {
@@ -623,6 +693,8 @@ static inline const anthropic_direction *anthropic_direction_named(const char *n
          anthropic_call_model_listing, anthropic_body_matches, anthropic_release_body},
         {"modelLookup", (uint32_t)sizeof(forebay_anthropic_model_lookup_answer), anthropic_read_lookup_input,
          anthropic_call_model_lookup, anthropic_lookup_matches, anthropic_release_lookup},
+        {"rateLimitReply", (uint32_t)sizeof(forebay_anthropic_reply_answer), anthropic_read_rate_limit_input,
+         anthropic_call_rate_limit_reply, anthropic_reply_matches, anthropic_release_reply},
     };
     for (size_t index = 0; name != NULL && index < sizeof directions / sizeof directions[0]; index++) {
         if (strcmp(directions[index].name, name) == 0) {

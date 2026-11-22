@@ -83,6 +83,9 @@ static void every_failure_of_schema_document(const char *path, allocation_failur
 }
 
 static void every_failure_of_anthropic_vector(const char *path, allocation_failure_mode mode) {
+    if (is_wire_only_vector(path)) {
+        return;
+    }
     cJSON *file = spisor_vector_read(path);
     const direction_side *side =
         anthropic_side(cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(file, "direction")));

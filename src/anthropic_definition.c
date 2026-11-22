@@ -3,6 +3,7 @@
 #include "anthropic_decode.h"
 #include "anthropic_encode.h"
 #include "anthropic_operations.h"
+#include "anthropic_rate_limit_reply.h"
 #include "forebay/anthropic.h"
 #include "spisor/allocation.h"
 #include "spisor/definition.h"
@@ -146,6 +147,7 @@ static const forebay_anthropic_definition definition = {
     anthropic_error_envelope,
     anthropic_model_listing,
     anthropic_model_lookup,
+    anthropic_rate_limit_reply,
     release_request,
     anthropic_release_body,
     release_response,
@@ -153,6 +155,7 @@ static const forebay_anthropic_definition definition = {
     anthropic_release_stream_decoder,
     anthropic_release_stream_encoder,
     anthropic_release_model_lookup,
+    anthropic_release_reply,
     spisor_release_refusal,
 };
 

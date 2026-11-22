@@ -21,6 +21,7 @@
 
 #include "forebay/definition.h"
 #include "forebay/ir.h"
+#include "forebay/pair.h"
 #include "spisor/status.h"
 
 #ifdef __cplusplus
@@ -187,6 +188,38 @@ typedef struct forebay_anthropic_model_lookup_answer {
 } forebay_anthropic_model_lookup_answer;
 
 /**
+ * An upstream's own 429 to answer the client: its response `upstream_headers`, a later pair with a name already given
+ * replacing the earlier one, names compared ignoring case; `reset_at`, epoch milliseconds, when `has_reset_at` is 1;
+ * `now`, epoch milliseconds, which both numbers must hold exactly (at most 2^53 in size); and the zone the caller
+ * names the reset in: `zone` the short name it read, such as `CEST` or `UTC`, required and not empty, and
+ * `offset_minutes` the zone's offset from UTC at the reset instant, within 1440 either way, which the caller reads
+ * because C does no zone lookup. Borrowed for the call. First shape ends at `zone`.
+ */
+typedef struct forebay_anthropic_rate_limit_argument {
+    uint32_t size;
+    const forebay_pair *upstream_headers;
+    size_t upstream_header_count;
+    uint32_t has_reset_at;
+    double reset_at;
+    double now;
+    int64_t offset_minutes;
+    const char *zone;
+} forebay_anthropic_rate_limit_argument;
+
+/**
+ * A reply to send as it is: the HTTP `status`, its `headers` each name once, and the `body` as UTF-8 JSON text. The
+ * provider's until release_reply. First shape ends at `storage`.
+ */
+typedef struct forebay_anthropic_reply_answer {
+    uint32_t size;
+    uint32_t status;
+    const forebay_pair *headers;
+    size_t header_count;
+    const char *body;
+    void *storage;
+} forebay_anthropic_reply_answer;
+
+/**
  * The anthropic service. Every operation answers MALFORMED, before it allocates, for an argument or an answer absent
  * or short of its first shape, an answer that is not empty and `bytes` NULL beside a nonzero `length`; MALFORMED,
  * with the refusal saying what to repair, for a body that is not JSON and for an IR that breaks the rule its header
@@ -290,6 +323,24 @@ typedef struct forebay_anthropic_definition {
      */
     spisor_status (*model_lookup)(void *context, const forebay_anthropic_model_lookup_argument *argument,
                                   forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal);
+    /**
+     * The reply to an upstream's own 429, as the proxy's `rateLimitReply` answers it: status 429; the upstream headers
+     * without `content-encoding`, `content-length`, `x-hub-rate-limited` and `x-hub-retry-after-ms`; the reset the
+     * latest of `reset_at` (0 when absent or negative) and the `anthropic-ratelimit-unified-5h-reset` and
+     * `anthropic-ratelimit-unified-reset` headers, each read in whole seconds as `[+-]digits` after trimming ASCII
+     * whitespace and times 1000, and ignored otherwise or beyond 2^53 milliseconds; `content-type` set to
+     * `application/json` and `retry-after` to the seconds from `now` to the reset, rounded, or 60 when the reset is
+     * not after `now`; `anthropic-ratelimit-unified-status` set to `rejected` and `anthropic-ratelimit-unified-reset`
+     * to the reset in whole seconds (`now` when there is none) only when the upstream sent none. A header set again
+     * keeps its position and one added follows the others. The body is `{"type":"error","error":{"type":
+     * "rate_limit_error","message":...}}`, the message "You've hit your usage limit", a middle dot (U+00B7), then
+     * " resets at <h:mm AM> <zone>", the time the reset plus `offset_minutes` read as a clock, or " try again later"
+     * when the reset is not after `now`. MALFORMED, naming the member, for a NULL `upstream_headers` beside a count, a
+     * pair with no name or no value, a `reset_at` or `now` that is not an exact number, an `offset_minutes` out of
+     * range and a NULL or empty `zone`.
+     */
+    spisor_status (*rate_limit_reply)(void *context, const forebay_anthropic_rate_limit_argument *argument,
+                                      forebay_anthropic_reply_answer *answer, spisor_refusal *refusal);
     void (*release_request)(void *context, forebay_anthropic_request_answer *answer);
     void (*release_body)(void *context, forebay_anthropic_body_answer *answer);
     void (*release_response)(void *context, forebay_anthropic_response_answer *answer);
@@ -300,6 +351,8 @@ typedef struct forebay_anthropic_definition {
     void (*release_stream_encoder)(void *context, forebay_anthropic_stream_encoder *encoder);
     /** Frees a lookup answer, NULL or one never filled doing nothing. */
     void (*release_model_lookup)(void *context, forebay_anthropic_model_lookup_answer *answer);
+    /** Frees a rate-limit reply, NULL or one never filled doing nothing. */
+    void (*release_reply)(void *context, forebay_anthropic_reply_answer *answer);
     void (*release_refusal)(void *context, spisor_refusal *refusal);
 } forebay_anthropic_definition;
 

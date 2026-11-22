@@ -27,8 +27,7 @@ typedef struct listing_view {
 
 static const char LISTED_CREATED_AT[] = "2025-01-01T00:00:00Z";
 
-/** The wire object of an Anthropic error, NULL once the writer has failed. */
-static cJSON *error_object(anthropic_writer *writer, const char *error_type, const char *message) {
+cJSON *anthropic_error_object(anthropic_writer *writer, const char *error_type, const char *message) {
     cJSON *wire = anthropic_new_object(writer);
     cJSON *error = anthropic_new_object(writer);
     anthropic_set_text(writer, wire, "type", "error");
@@ -52,7 +51,7 @@ spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_er
         return forebay_refuse_member(refusal, "message", "a text");
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
-    cJSON *wire = error_object(&writer, argument->error_type, argument->message);
+    cJSON *wire = anthropic_error_object(&writer, argument->error_type, argument->message);
     return anthropic_finish_body(&writer, wire, answer, refusal);
 }
 
@@ -186,7 +185,7 @@ static cJSON *not_found_object(anthropic_writer *writer, const char *id) {
     }
     memcpy(message, prefix, prefix_length);
     memcpy(message + prefix_length, id, id_length + 1);
-    cJSON *wire = error_object(writer, "not_found_error", message);
+    cJSON *wire = anthropic_error_object(writer, "not_found_error", message);
     spisor_memory_release(message);
     return wire;
 }

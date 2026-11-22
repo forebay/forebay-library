@@ -1,0 +1,23 @@
+{
+  "direction": "rateLimitReply",
+  "input": {
+    "upstreamHeaders": {
+      "retry-after": "7",
+      "x-request-id": "abc"
+    },
+    "now": 1000000000000,
+    "offsetMinutes": 0,
+    "zone": "UTC"
+  },
+  "output": {
+    "status": 429,
+    "headers": {
+      "retry-after": "60",
+      "x-request-id": "abc",
+      "content-type": "application/json",
+      "anthropic-ratelimit-unified-status": "rejected",
+      "anthropic-ratelimit-unified-reset": "1000000000"
+    },
+    "body": "{\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"You've hit your usage limit · try again later\"}}"
+  }
+}

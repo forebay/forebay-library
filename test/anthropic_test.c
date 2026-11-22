@@ -1,18 +1,21 @@
 #include "anthropic_call.h"
 #include "anthropic_shape_cases.h"
 
+#include <math.h>
+
 #include "spisor/json_allocation.h"
 
 /**
  * @file
  * The anthropic service's translation through its definition: every `request-*` and `response-*` vector in both
  * directions (a decode vector's `input` as bytes against its `output`, an encode vector's `input` against its
- * `output`), then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
+ * `output`) and every `rate-limit-*` one, then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
  * not an object, an IR that breaks its header, and the byte form of a body.
  */
 
 #define REQUEST_VECTOR_COUNT 18
 #define RESPONSE_VECTOR_COUNT 16
+#define RATE_LIMIT_VECTOR_COUNT 18
 
 static cJSON *parse(const char *text) {
     int out_of_memory = 0;
@@ -802,6 +805,109 @@ static void a_lookup_that_breaks_its_header_is_malformed(void) {
     anthropic_definition()->release_model_lookup(NULL, NULL);
 }
 
+static const char *const REQUIRED_RATE_LIMIT_VECTORS[] = {
+    "rate-limit-upstream-429-reconciles-reset-and-strips-headers.json",
+    "rate-limit-no-upstream-falls-back-to-sixty-seconds.json",
+    "rate-limit-reset-header-5h-only.json",
+    "rate-limit-reset-header-unified-only.json",
+    "rate-limit-reset-header-none.json",
+};
+
+/** The vectors of the reply's two reference cases and each reset header stay in the list. */
+static void the_rate_limit_vectors_cover_the_required_cases(void) {
+    char *list = support_read_text(ANTHROPIC_VECTOR_LIST);
+    if (list == NULL) {
+        support_fail("vector list", ANTHROPIC_VECTOR_LIST);
+        return;
+    }
+    for (size_t index = 0; index < sizeof REQUIRED_RATE_LIMIT_VECTORS / sizeof REQUIRED_RATE_LIMIT_VECTORS[0]; index++) {
+        if (strstr(list, REQUIRED_RATE_LIMIT_VECTORS[index]) == NULL) {
+            support_fail(REQUIRED_RATE_LIMIT_VECTORS[index], "a rate-limit vector the reply must keep is missing");
+        }
+    }
+    free(list);
+}
+
+static forebay_anthropic_rate_limit_argument valid_rate_limit(void) {
+    forebay_anthropic_rate_limit_argument argument = SPISOR_INIT(forebay_anthropic_rate_limit_argument);
+    argument.now = 1000;
+    argument.zone = "UTC";
+    return argument;
+}
+
+static void expect_rate_limit_malformed(const char *label, const forebay_anthropic_rate_limit_argument *argument,
+                                        uint32_t answer_size) {
+    forebay_anthropic_reply_answer answer = SPISOR_INIT(forebay_anthropic_reply_answer);
+    answer.size = answer_size;
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_definition()->rate_limit_reply(NULL, argument, &answer, &refusal);
+    if (status != SPISOR_MALFORMED || answer.headers != NULL || answer.body != NULL || answer.storage != NULL) {
+        support_failf(label, "answered %d, not an empty MALFORMED", (int)status);
+    }
+    anthropic_definition()->release_reply(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void a_rate_limit_call_that_breaks_its_header_is_malformed(void) {
+    const uint32_t answer_size = (uint32_t)sizeof(forebay_anthropic_reply_answer);
+    forebay_anthropic_rate_limit_argument argument = valid_rate_limit();
+    expect_rate_limit_malformed("a NULL argument", NULL, answer_size);
+    expect_rate_limit_malformed("an answer short of its first shape", &argument, (uint32_t)sizeof(uint32_t));
+    argument.size = (uint32_t)sizeof argument.size;
+    expect_rate_limit_malformed("an argument short of its first shape", &argument, answer_size);
+    argument = valid_rate_limit();
+    argument.zone = NULL;
+    expect_rate_limit_malformed("a NULL zone", &argument, answer_size);
+    argument.zone = "";
+    expect_rate_limit_malformed("an empty zone", &argument, answer_size);
+    argument = valid_rate_limit();
+    argument.upstream_header_count = 1;
+    expect_rate_limit_malformed("a header count beside NULL headers", &argument, answer_size);
+    static const forebay_pair nameless[] = {{NULL, "v"}};
+    argument.upstream_headers = nameless;
+    expect_rate_limit_malformed("a header without a name", &argument, answer_size);
+    argument = valid_rate_limit();
+    argument.has_reset_at = 1;
+    argument.reset_at = INFINITY;
+    expect_rate_limit_malformed("a reset that is not finite", &argument, answer_size);
+    argument = valid_rate_limit();
+    argument.now = NAN;
+    expect_rate_limit_malformed("a now that is not a number", &argument, answer_size);
+    argument = valid_rate_limit();
+    argument.offset_minutes = 1441;
+    expect_rate_limit_malformed("an offset of more than a day", &argument, answer_size);
+}
+
+/** The clock reads the reset plus the offset, past midnight in either direction and on the half hour. */
+static void a_rate_limit_clock_follows_the_offset(void) {
+    static const struct {
+        double reset_at;
+        int64_t offset_minutes;
+        const char *time;
+    } cases[] = {{86400000.0 * 3 + 600000, -660, "1:10 PM"},
+                 {86400000.0 * 3 + 600000, 345, "5:55 AM"},
+                 {43200000.0, 0, "12:00 PM"},
+                 {60000.0, -2, "11:59 PM"}};
+    for (size_t index = 0; index < sizeof cases / sizeof cases[0]; index++) {
+        forebay_anthropic_rate_limit_argument argument = valid_rate_limit();
+        argument.has_reset_at = 1;
+        argument.reset_at = cases[index].reset_at;
+        argument.offset_minutes = cases[index].offset_minutes;
+        argument.now = 0;
+        forebay_anthropic_reply_answer answer = SPISOR_INIT(forebay_anthropic_reply_answer);
+        spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+        spisor_status status = anthropic_definition()->rate_limit_reply(NULL, &argument, &answer, &refusal);
+        char wanted[64];
+        snprintf(wanted, sizeof wanted, "resets at %s UTC", cases[index].time);
+        if (status != SPISOR_OK || strstr(answer.body, wanted) == NULL) {
+            support_failf("a rate-limit clock", "%s, answered %d: %s", wanted, (int)status,
+                          answer.body == NULL ? "no body" : answer.body);
+        }
+        anthropic_definition()->release_reply(NULL, &answer);
+        anthropic_definition()->release_refusal(NULL, &refusal);
+    }
+}
+
 static void releasing_an_answer_never_filled_does_nothing(void) {
     forebay_anthropic_request_answer request_answer = {0};
     forebay_anthropic_response_answer response_answer = {0};
@@ -814,6 +920,7 @@ static void releasing_an_answer_never_filled_does_nothing(void) {
     anthropic_definition()->release_response(NULL, NULL);
     anthropic_definition()->release_request(NULL, NULL);
     anthropic_definition()->release_body(NULL, NULL);
+    anthropic_definition()->release_reply(NULL, NULL);
 }
 
 int main(void) {
@@ -826,6 +933,13 @@ int main(void) {
     if (response_vectors != RESPONSE_VECTOR_COUNT) {
         support_failf("response vectors", "%d files, expected %d", response_vectors, RESPONSE_VECTOR_COUNT);
     }
+    int rate_limit_vectors = run_vectors("rate-limit-");
+    if (rate_limit_vectors != RATE_LIMIT_VECTOR_COUNT) {
+        support_failf("rate-limit vectors", "%d files, expected %d", rate_limit_vectors, RATE_LIMIT_VECTOR_COUNT);
+    }
+    the_rate_limit_vectors_cover_the_required_cases();
+    a_rate_limit_call_that_breaks_its_header_is_malformed();
+    a_rate_limit_clock_follows_the_offset();
     run_decode_cases();
     a_root_that_is_no_object_decodes_to_the_empty_request();
     a_number_that_is_not_finite_is_written_as_null();
