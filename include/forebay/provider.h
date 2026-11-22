@@ -37,16 +37,20 @@ typedef struct forebay_provider_handle_argument {
     size_t header_count;
 } forebay_provider_handle_argument;
 
-/** How a provider served a request. Append-only: a published value keeps its number. */
+/**
+ * How a provider served a request. THROWN is a call that got no upstream response at all, which a proxy reports to
+ * routing's `step` as FOREBAY_REPORT_THROWN with its message. Append-only: a published value keeps its number.
+ */
 typedef enum forebay_provider_handle_kind {
     FOREBAY_PROVIDER_HANDLE_RESPONSE = 1,
     FOREBAY_PROVIDER_HANDLE_FAILURE = 2,
-    FOREBAY_PROVIDER_HANDLE_STREAM = 3
+    FOREBAY_PROVIDER_HANDLE_STREAM = 3,
+    FOREBAY_PROVIDER_HANDLE_THROWN = 4
 } forebay_provider_handle_kind;
 
 /**
- * A whole `response`, the upstream's `failure`, or a `stream` to read with `next`, as `kind` says; the members of
- * the other kinds are NULL. First shape ends at `stream`.
+ * A whole `response`, the upstream's `failure`, a `stream` to read with `next`, or the `message` of a thrown call, as
+ * `kind` says; the members of the other kinds are NULL. First shape ends at `stream`.
  */
 typedef struct forebay_provider_handle_answer {
     uint32_t size;
@@ -55,6 +59,7 @@ typedef struct forebay_provider_handle_answer {
     const forebay_ir_response *response;
     const forebay_ir_failure *failure;
     forebay_provider_stream *stream;
+    const char *message;
 } forebay_provider_handle_answer;
 
 /** What a stream gave next. Append-only: a published value keeps its number. */
@@ -77,6 +82,16 @@ typedef struct forebay_provider_next_answer {
 } forebay_provider_next_answer;
 
 /**
+ * The provider's catalog entry: its name, its models with their limits, its ranking and its default model. First
+ * shape ends at `storage`.
+ */
+typedef struct forebay_provider_models_answer {
+    uint32_t size;
+    forebay_catalog_provider provider;
+    void *storage;
+} forebay_provider_models_answer;
+
+/**
  * The provider contract. Every operation answers OK with its answer filled, MALFORMED for an argument or an answer
  * absent or short of its first shape, REFUSED with the refusal saying what to repair, or OUT_OF_MEMORY with the
  * answer empty; `next` takes no refusal, since a stream that broke is an answer of its own. First shape ends at
@@ -85,19 +100,16 @@ typedef struct forebay_provider_next_answer {
 typedef struct forebay_provider_definition {
     uint32_t size;
     void *context;
-    /**
-     * The provider's models, its name, its ranking when it has one and the default model it names. @blocking it may
-     * ask its upstream.
-     */
-    spisor_status (*models)(void *context, forebay_catalog_provider *answer, spisor_refusal *refusal);
-    /** One request served. @blocking it waits for its upstream. */
+    /** The provider's catalog entry. @blocking it may ask its upstream. */
+    spisor_status (*models)(void *context, forebay_provider_models_answer *answer, spisor_refusal *refusal);
+    /** One request served; REFUSED only for a call the caller must repair. @blocking it waits for its upstream. */
     spisor_status (*handle)(void *context, const forebay_provider_handle_argument *argument,
                             forebay_provider_handle_answer *answer, spisor_refusal *refusal);
     /** The next of a stream a handle answered. @blocking it waits for its upstream. */
     spisor_status (*next)(void *context, forebay_provider_stream *stream, forebay_provider_next_answer *answer);
     /** Frees a stream, NULL doing nothing, ending it upstream when it has not ended. */
     void (*release_stream)(void *context, forebay_provider_stream *stream);
-    void (*release_models_answer)(void *context, forebay_catalog_provider *answer);
+    void (*release_models_answer)(void *context, forebay_provider_models_answer *answer);
     void (*release_handle_answer)(void *context, forebay_provider_handle_answer *answer);
     void (*release_refusal)(void *context, spisor_refusal *refusal);
 } forebay_provider_definition;

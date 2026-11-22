@@ -14,8 +14,9 @@
  * The anthropic service called through its definition, as a consumer calls it, with the IR and the wire JSON of the
  * vectors turned into the structs and bytes it takes and compared after the same schema form `ir_codec_test` applies.
  * A decode vector's `input` is the wire body, printed to bytes; an encode vector's `input` is the IR, read by the
- * test-only IR codec. A wire-shape vector's `input` is the operation's argument as JSON: `errorType` and `message`, or
- * `defaultContext`, `defaultOutput` and `providers`, a list of lists of models with `id`, `name`, `context`, `output`.
+ * test-only IR codec. A wire-shape vector's `input` is the operation's argument as JSON: `replyKind` (a
+ * forebay_reply_kind by its vector name, such as `proxyError`) and `message`, or `models`, a list of the entries
+ * routing's `model_entries` answers, each with `id`, `name`, `context` and `output`, and for a lookup the `id`.
  * A rate-limit vector's `input` is `upstreamHeaders`, `resetAt`, `now`, `offsetMinutes` and `zone`, and its `output` the
  * `status`, the `headers` in order and the `body` text of the reply. A `decodeRequestWithHeaders` vector's `input` is
  * the wire `body` as JSON, or the text `rawBody` as it is, and the client's `headers`, and its `output` the `forwardedHeaders` in order and either the
@@ -148,8 +149,7 @@ typedef struct anthropic_input {
     size_t event_count;
     forebay_anthropic_error_argument error;
     forebay_anthropic_model_listing_argument listing;
-    forebay_anthropic_listed_provider *providers;
-    forebay_anthropic_listed_model *models;
+    forebay_catalog_model *models;
     const char *lookup_id;
     forebay_anthropic_rate_limit_argument rate_limit;
     forebay_pair *pairs;
@@ -201,7 +201,6 @@ static inline void anthropic_input_release(anthropic_input *input) {
     cJSON_free(input->printed);
     free(input->joined);
     free(input->pieces);
-    free(input->providers);
     free(input->models);
     free(input->pairs);
     ir_json_arena_release(&input->arena);
@@ -519,7 +518,6 @@ static inline uint64_t anthropic_count_member(const cJSON *json, const char *mem
     return cJSON_IsNumber(item) ? (uint64_t)item->valuedouble : 0;
 }
 
-/** A wire-shape error vector's input: the error type and the message, borrowed from the JSON. */
 /** The forebay_reply_kind a vector names, 0 for a name reply.h does not give. */
 static inline uint32_t anthropic_reply_kind_named(const char *name) {
     static const char *const names[] = {"proxyError", "apiError", "providerFailure", "rateLimited", "invalidRequest"};
@@ -531,6 +529,7 @@ static inline uint32_t anthropic_reply_kind_named(const char *name) {
     return 0;
 }
 
+/** A wire-shape error vector's input: the reply kind and the message, borrowed from the JSON. */
 static inline int anthropic_read_error_input(const cJSON *json, anthropic_input *input) {
     *input = (anthropic_input){0};
     input->error = (forebay_anthropic_error_argument)SPISOR_INIT(forebay_anthropic_error_argument);
@@ -540,16 +539,7 @@ static inline int anthropic_read_error_input(const cJSON *json, anthropic_input 
     return cJSON_IsObject(json);
 }
 
-static inline size_t anthropic_listed_model_total(const cJSON *providers) {
-    size_t total = 0;
-    const cJSON *provider = NULL;
-    cJSON_ArrayForEach(provider, providers) {
-        total += (size_t)cJSON_GetArraySize(provider);
-    }
-    return total;
-}
-
-static inline void anthropic_read_listed_model(const cJSON *json, forebay_anthropic_listed_model *model) {
+static inline void anthropic_read_listed_model(const cJSON *json, forebay_catalog_model *model) {
     const cJSON *context = cJSON_GetObjectItemCaseSensitive(json, "context");
     const cJSON *output = cJSON_GetObjectItemCaseSensitive(json, "output");
     model->id = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "id"));
@@ -560,34 +550,25 @@ static inline void anthropic_read_listed_model(const cJSON *json, forebay_anthro
     model->output = anthropic_count_member(json, "output");
 }
 
-/** A wire-shape listing vector's input: the defaults and the providers, the strings borrowed from the JSON. */
+/** A wire-shape listing vector's input: the entries, the strings borrowed from the JSON. */
 static inline int anthropic_read_listing_input(const cJSON *json, anthropic_input *input) {
     *input = (anthropic_input){0};
-    const cJSON *providers = cJSON_GetObjectItemCaseSensitive(json, "providers");
-    size_t provider_count = (size_t)cJSON_GetArraySize(providers);
-    input->providers = calloc(provider_count + 1, sizeof *input->providers);
-    input->models = calloc(anthropic_listed_model_total(providers) + 1, sizeof *input->models);
-    if (!cJSON_IsArray(providers) || input->providers == NULL || input->models == NULL) {
-        support_fail("a listing input", "the test could not read or allocate its providers");
+    const cJSON *models = cJSON_GetObjectItemCaseSensitive(json, "models");
+    size_t model_count = (size_t)cJSON_GetArraySize(models);
+    input->models = calloc(model_count + 1, sizeof *input->models);
+    if (!cJSON_IsArray(models) || input->models == NULL) {
+        support_fail("a listing input", "the test could not read or allocate its entries");
         anthropic_input_release(input);
         return 0;
     }
-    size_t filled = 0;
     size_t index = 0;
-    const cJSON *provider = NULL;
-    cJSON_ArrayForEach(provider, providers) {
-        input->providers[index].models = &input->models[filled];
-        input->providers[index++].model_count = (size_t)cJSON_GetArraySize(provider);
-        const cJSON *model = NULL;
-        cJSON_ArrayForEach(model, provider) {
-            anthropic_read_listed_model(model, &input->models[filled++]);
-        }
+    const cJSON *model = NULL;
+    cJSON_ArrayForEach(model, models) {
+        anthropic_read_listed_model(model, &input->models[index++]);
     }
     input->listing = (forebay_anthropic_model_listing_argument)SPISOR_INIT(forebay_anthropic_model_listing_argument);
-    input->listing.default_context = anthropic_count_member(json, "defaultContext");
-    input->listing.default_output = anthropic_count_member(json, "defaultOutput");
-    input->listing.providers = input->providers;
-    input->listing.provider_count = provider_count;
+    input->listing.models = input->models;
+    input->listing.model_count = model_count;
     return 1;
 }
 
@@ -601,10 +582,8 @@ static inline int anthropic_read_lookup_input(const cJSON *json, anthropic_input
 static inline spisor_status anthropic_call_model_lookup(const anthropic_input *input, anthropic_answer *answer,
                                                         spisor_refusal *refusal) {
     forebay_anthropic_model_lookup_argument argument = SPISOR_INIT(forebay_anthropic_model_lookup_argument);
-    argument.default_context = input->listing.default_context;
-    argument.default_output = input->listing.default_output;
-    argument.providers = input->listing.providers;
-    argument.provider_count = input->listing.provider_count;
+    argument.models = input->listing.models;
+    argument.model_count = input->listing.model_count;
     argument.id = input->lookup_id;
     return anthropic_definition()->model_lookup(NULL, &argument, &answer->lookup, refusal);
 }

@@ -1,0 +1,25 @@
+{
+  "source": "OpencodeProxyPlugin.profile: no tiers, defaultContext 200000 and defaultOutput 64000: two providers whose catalogs are empty",
+  "function": "modelEntries",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "tierSourceProvider": "opencode",
+      "tierOrder": [],
+      "tierFallback": [],
+      "tierRegex": "(?!)"
+    },
+    "models": {
+      "first": {
+        "models": {}
+      },
+      "second": {
+        "models": {}
+      }
+    }
+  },
+  "result": {
+    "entries": []
+  }
+}
