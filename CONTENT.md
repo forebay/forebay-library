@@ -178,6 +178,29 @@ library links `spisor_allocator`, the tests may take `spisor_allocator_counting`
 requires an empty answer. CI runs six jobs: Debug under ASan and UBSan on Linux and macOS, Release on all three,
 and Debug on Windows.
 
+### Bound from TypeScript and Java
+
+`test/bindings/` proves that a language which cannot read a C header binds forebay-library from its descriptions
+alone, through weivel's generic binding and no file naming a forebay type. `bindings_typescript` and `bindings_java`
+load the built `forebay_library` from `library.json` through weivel/typescript's and weivel/java's hosts, given the
+standard's check: `routing`'s `step` answers a request for a slot's model as a call of the chain's first entry with
+the `forebay_walk` handle its report hands back, and a second `step` taking that walk and a report that the entry
+threw answers a call of the next entry with a warning logged, every answer read as plain values; a copy of
+`routing`'s description with `forebay_step_answer.walk` moved by 8 bytes is refused by each binding naming the member,
+and the same copy unmoved binds. `bindings_typescript_cost` and `bindings_java_cost` print a
+`spisor-bindings-measurement` line, the median time of a `routing.arrival` beside the binding's own echo benchmark,
+which nothing judges.
+
+weivel/typescript and weivel/java come from `siblings/typescript` and `siblings/java` at the commits `repo.json`
+pins, or from `SPISOR_WEIVEL_TYPESCRIPT_DIR` and `SPISOR_WEIVEL_JAVA_DIR`, and are built into the build tree, never
+into the checkout: the package's dependencies installed with `npm ci` and its sources compiled beside them, and the
+jar built by the checkout's own Gradle wrapper into `test/bindings/weivel-java`. The TypeScript tests need the node
+weivel/typescript's `engines` names and npm on the `PATH`, and the Java tests a JDK of release 22 or later at
+`SPISOR_BINDINGS_JAVA_HOME`, which defaults to `JAVA_HOME`. Without them, without a checkout, on a sanitized build
+or on a 32-bit platform each test is registered as skipped, saying why. Nothing under `test/bindings/` is linked
+into, staged beside or installed with any shipped artifact: the core's `echo` the cost tests measure against is built
+into `test/bindings/echo`, apart from the shipped library.
+
 `contracts/` keeps the plugin contract schemas, with their vectors in `test/vectors/ir/`, as files; nothing here tests
 them.
 
