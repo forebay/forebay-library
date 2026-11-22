@@ -172,3 +172,5 @@ add_test(NAME forebay_exports_only_definitions_test
     COMMAND ${CMAKE_COMMAND} -DLIBRARY=$<TARGET_FILE:forebay_library> -DLISTER=${forebay_export_lister}
         -DFORMAT=${forebay_export_format} -DEXPECTED=${forebay_expected_exports}
         -P ${spisor_library_SOURCE_DIR}/cmake/exports_check.cmake)
+
+add_subdirectory(bindings)
