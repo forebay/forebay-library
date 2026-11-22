@@ -1,0 +1,11 @@
+{
+  "direction": "routeRequest",
+  "input": {
+    "method": "GET",
+    "path": "/v1/models/a/b"
+  },
+  "output": {
+    "kind": "modelLookup",
+    "modelId": "a/b"
+  }
+}

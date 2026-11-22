@@ -8,10 +8,7 @@
 #include "cJSON.h"
 #include "forebay/ir.h"
 
-/**
- * A wire request as an IR request in the reader's storage; NULL once memory has run out. A root that is not an
- * object is the empty request.
- */
+/** A wire request, which is a JSON object, as an IR request in the reader's storage; NULL once memory has run out. */
 const forebay_ir_request *anthropic_decode_request(anthropic_reader *reader, const cJSON *root);
 
 /**

@@ -1,0 +1,10 @@
+{
+  "direction": "routeRequest",
+  "input": {
+    "method": "GET",
+    "path": "/v1/models/"
+  },
+  "output": {
+    "kind": "modelList"
+  }
+}

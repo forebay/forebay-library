@@ -161,9 +161,6 @@ const forebay_ir_request *anthropic_decode_request(anthropic_reader *reader, con
         return NULL;
     }
     request->size = (uint32_t)sizeof *request;
-    request->model = "";
-    if (anthropic_wire_map(root) != NULL) {
-        decode_members(reader, root, request);
-    }
+    decode_members(reader, root, request);
     return reader->out_of_memory ? NULL : request;
 }

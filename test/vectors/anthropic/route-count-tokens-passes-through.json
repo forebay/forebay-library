@@ -1,0 +1,10 @@
+{
+  "direction": "routeRequest",
+  "input": {
+    "method": "POST",
+    "path": "/v1/messages/count_tokens"
+  },
+  "output": {
+    "kind": "passThrough"
+  }
+}

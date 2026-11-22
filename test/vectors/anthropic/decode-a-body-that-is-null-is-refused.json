@@ -1,0 +1,16 @@
+{
+  "direction": "decodeRequestWithHeaders",
+  "input": {
+    "body": null,
+    "headers": {
+      "Anthropic-Beta": "b"
+    }
+  },
+  "output": {
+    "reply": {
+      "kind": "invalidRequest",
+      "status": 400,
+      "message": "the request body is not a valid Messages API request: the request body must be a JSON object"
+    }
+  }
+}

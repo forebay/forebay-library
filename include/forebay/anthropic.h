@@ -28,18 +28,35 @@
 extern "C" {
 #endif
 
-/** A body to read: `bytes` of `length`, which may be NULL only when `length` is 0. First shape ends at `length`. */
+/**
+ * A body to read: `bytes` of `length`, which may be NULL only when `length` is 0. `headers` are the client's headers
+ * `decode_request` forwards, a later pair with a name already given replacing the earlier one, names compared ignoring
+ * case; `decode_response` ignores them. First shape ends at `length`.
+ */
 typedef struct forebay_anthropic_body_argument {
     uint32_t size;
     const uint8_t *bytes;
     size_t length;
+    const forebay_pair *headers;
+    size_t header_count;
 } forebay_anthropic_body_argument;
 
-/** The request a body held, the provider's until release_request. First shape ends at `storage`. */
+/**
+ * The request a body held, the provider's until release_request, and the client's `forwarded_headers`, each name
+ * lower cased and once. A body that is no JSON object holds no `request`: `reply_kind` is
+ * FOREBAY_REPLY_INVALID_REQUEST, and `status` and `message` are the reply to answer with, static text. First shape
+ * ends at `storage`.
+ */
 typedef struct forebay_anthropic_request_answer {
     uint32_t size;
     const forebay_ir_request *request;
     void *storage;
+    const forebay_pair *forwarded_headers;
+    size_t forwarded_header_count;
+    /** A forebay_reply_kind of routing.h, 0 when the body was read. */
+    uint32_t reply_kind;
+    uint32_t status;
+    const char *message;
 } forebay_anthropic_request_answer;
 
 /** A request to write as a body, borrowed for the call. First shape ends at `request`. */
@@ -219,6 +236,33 @@ typedef struct forebay_anthropic_reply_answer {
     void *storage;
 } forebay_anthropic_reply_answer;
 
+/** What a request is to the proxy. Append-only: a published value keeps its number. */
+typedef enum forebay_anthropic_route_kind {
+    FOREBAY_ANTHROPIC_ROUTE_MESSAGES = 1,
+    FOREBAY_ANTHROPIC_ROUTE_MODEL_LIST = 2,
+    FOREBAY_ANTHROPIC_ROUTE_MODEL_LOOKUP = 3,
+    FOREBAY_ANTHROPIC_ROUTE_PASS_THROUGH = 4
+} forebay_anthropic_route_kind;
+
+/** A request's HTTP `method` and `path`, which may hold a query. Borrowed for the call. First shape ends at `path`. */
+typedef struct forebay_anthropic_route_argument {
+    uint32_t size;
+    const char *method;
+    const char *path;
+} forebay_anthropic_route_argument;
+
+/**
+ * What the request is; for a lookup `model_id` is the text after `/v1/models/`, not URL-decoded, the provider's until
+ * release_route. First shape ends at `storage`.
+ */
+typedef struct forebay_anthropic_route_answer {
+    uint32_t size;
+    /** A forebay_anthropic_route_kind. */
+    uint32_t kind;
+    const char *model_id;
+    void *storage;
+} forebay_anthropic_route_answer;
+
 /**
  * The anthropic service. Every operation answers MALFORMED, before it allocates, for an argument or an answer absent
  * or short of its first shape, an answer that is not empty and `bytes` NULL beside a nonzero `length`; MALFORMED,
@@ -234,8 +278,11 @@ typedef struct forebay_anthropic_definition {
     void *context;
     /**
      * A body to an IR request, as `anthropic-translator`'s decodeRequest does. A string `content` or `system` becomes
-     * one text block with `$contentIsString` or `$systemIsString` set. A JSON root that is not an object reads as a
-     * request with model "", no messages and `stream` 0.
+     * one text block with `$contentIsString` or `$systemIsString` set. A JSON root that is not an object is answered
+     * with the invalid-request reply of the answer; an answer short of the one that holds it is MALFORMED. The
+     * argument's headers are answered as the client's `forwarded_headers`, without `authorization`, `x-api-key`,
+     * `host`, `content-length`, `accept-encoding`, `connection`, `keep-alive`, `proxy-authenticate`,
+     * `proxy-authorization`, `proxy-connection`, `te`, `trailer`, `transfer-encoding` and `upgrade`.
      */
     spisor_status (*decode_request)(void *context, const forebay_anthropic_body_argument *argument,
                                     forebay_anthropic_request_answer *answer, spisor_refusal *refusal);
@@ -354,6 +401,16 @@ typedef struct forebay_anthropic_definition {
     /** Frees a rate-limit reply, NULL or one never filled doing nothing. */
     void (*release_reply)(void *context, forebay_anthropic_reply_answer *answer);
     void (*release_refusal)(void *context, spisor_refusal *refusal);
+    /**
+     * What a request is, as the proxy routes it: a POST (the method compared ignoring case) to `/v1/messages` is
+     * MESSAGES; a GET to `/v1/models` or `/v1/models/` is MODEL_LIST; a GET to `/v1/models/<id>` is MODEL_LOOKUP with
+     * the id; anything else, a path with its query cut off compared exactly, is PASS_THROUGH. MALFORMED, naming the
+     * member, for a NULL or empty `method` and a NULL `path`.
+     */
+    spisor_status (*route_request)(void *context, const forebay_anthropic_route_argument *argument,
+                                   forebay_anthropic_route_answer *answer, spisor_refusal *refusal);
+    /** Frees a route answer, NULL or one never filled doing nothing. */
+    void (*release_route)(void *context, forebay_anthropic_route_answer *answer);
 } forebay_anthropic_definition;
 
 /** The static forebay_anthropic_definition, living until the library is unloaded. */

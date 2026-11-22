@@ -1,0 +1,26 @@
+{
+  "direction": "decodeRequestWithHeaders",
+  "input": {
+    "body": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 10,
+      "stream": true,
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi"
+        }
+      ]
+    },
+    "headers": {
+      "Keep-Alive": "v",
+      "Anthropic-Beta": "kept"
+    }
+  },
+  "output": {
+    "model": "claude-sonnet-4-5",
+    "forwardedHeaders": {
+      "anthropic-beta": "kept"
+    }
+  }
+}

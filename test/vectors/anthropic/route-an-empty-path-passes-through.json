@@ -1,0 +1,10 @@
+{
+  "direction": "routeRequest",
+  "input": {
+    "method": "GET",
+    "path": ""
+  },
+  "output": {
+    "kind": "passThrough"
+  }
+}

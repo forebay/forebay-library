@@ -1,0 +1,36 @@
+{
+  "direction": "decodeRequestWithHeaders",
+  "input": {
+    "body": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 10,
+      "stream": true,
+      "messages": [
+        {
+          "role": "user",
+          "content": "hi"
+        }
+      ]
+    },
+    "headers": {
+      "Authorization": "Bearer client",
+      "X-Api-Key": "k",
+      "Host": "h",
+      "Content-Length": "3",
+      "Accept-Encoding": "gzip",
+      "Connection": "keep-alive",
+      "Transfer-Encoding": "chunked",
+      "Anthropic-Beta": "client-beta",
+      "Anthropic-Version": "2020-01-01",
+      "User-Agent": "claude-cli"
+    }
+  },
+  "output": {
+    "model": "claude-sonnet-4-5",
+    "forwardedHeaders": {
+      "anthropic-beta": "client-beta",
+      "anthropic-version": "2020-01-01",
+      "user-agent": "claude-cli"
+    }
+  }
+}

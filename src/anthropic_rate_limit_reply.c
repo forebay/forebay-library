@@ -1,11 +1,11 @@
 #include "anthropic_rate_limit_reply.h"
 
-#include <ctype.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "anthropic_header_names.h"
 #include "anthropic_operations.h"
 #include "definition_support.h"
 #include "spisor/allocation.h"
@@ -38,18 +38,9 @@ typedef struct header_set {
     size_t count;
 } header_set;
 
-static int names_match(const char *left, const char *right) {
-    for (; *left != '\0' && *right != '\0'; left++, right++) {
-        if (tolower((unsigned char)*left) != tolower((unsigned char)*right)) {
-            return 0;
-        }
-    }
-    return *left == *right;
-}
-
 static int is_one_of(const char *name, const char *const *names, size_t count) {
     for (size_t index = 0; index < count; index++) {
-        if (names_match(name, names[index])) {
+        if (anthropic_names_match(name, names[index])) {
             return 1;
         }
     }
@@ -58,7 +49,7 @@ static int is_one_of(const char *name, const char *const *names, size_t count) {
 
 static forebay_pair *find_header(const header_set *set, const char *name) {
     for (size_t index = 0; index < set->count; index++) {
-        if (names_match(set->pairs[index].name, name)) {
+        if (anthropic_names_match(set->pairs[index].name, name)) {
             return &set->pairs[index];
         }
     }

@@ -43,10 +43,13 @@ add_library(forebay_objects OBJECT
     src/anthropic_encode_request.c
     src/anthropic_encode_response.c
     src/anthropic_encode_stream.c
+    src/anthropic_forwarded_headers.c
     src/anthropic_frames.c
     src/anthropic_rate_limit_reply.c
     src/anthropic_reader.c
     src/anthropic_refusal.c
+    src/anthropic_request_answer.c
+    src/anthropic_route.c
     src/anthropic_stop_reason.c
     src/anthropic_stream_decoder.c
     src/anthropic_stream_encoder.c

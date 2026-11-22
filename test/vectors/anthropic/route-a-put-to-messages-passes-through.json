@@ -1,0 +1,10 @@
+{
+  "direction": "routeRequest",
+  "input": {
+    "method": "PUT",
+    "path": "/v1/messages"
+  },
+  "output": {
+    "kind": "passThrough"
+  }
+}
