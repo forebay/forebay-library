@@ -144,12 +144,14 @@ static const spisor_value token_account = {SPISOR_VALUE_RECORD, 0, 0, NULL, 0, N
  * An account carrying a token is refused with memory running out from the first allocation after its well-formedness
  * check, which only a refusal read before any conversion can answer: a conversion would copy the token first.
  *
- * @implNote With no refusal to fill, since filling one is itself an allocation.
+ * @implNote With no refusal to fill, since filling one is itself an allocation. The check's allocations are counted
+ * after a failure point that never fails, since only the thread that set one has its allocations counted.
  */
 static void a_token_is_refused_before_it_is_copied(void) {
     const forebay_accounts_definition *accounts = accounts_definition();
     forebay_accounts_upsert_argument argument = SPISOR_INIT(forebay_accounts_upsert_argument);
     forebay_accounts_upsert_answer answer = SPISOR_INIT(forebay_accounts_upsert_answer);
+    spisor_memory_fail_at(0);
     uint64_t before = spisor_memory_attempts();
     spisor_status checked = spisor_value_check(&token_account);
     uint64_t check_attempts = spisor_memory_attempts() - before;
