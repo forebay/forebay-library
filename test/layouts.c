@@ -392,10 +392,17 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_body_argument, size);
     FIELD(forebay_anthropic_body_argument, bytes);
     FIELD(forebay_anthropic_body_argument, length);
+    FIELD(forebay_anthropic_body_argument, headers);
+    FIELD(forebay_anthropic_body_argument, header_count);
     SIZE(forebay_anthropic_body_argument);
     FIELD(forebay_anthropic_request_answer, size);
     FIELD(forebay_anthropic_request_answer, request);
     FIELD(forebay_anthropic_request_answer, storage);
+    FIELD(forebay_anthropic_request_answer, forwarded_headers);
+    FIELD(forebay_anthropic_request_answer, forwarded_header_count);
+    FIELD(forebay_anthropic_request_answer, reply_kind);
+    FIELD(forebay_anthropic_request_answer, status);
+    FIELD(forebay_anthropic_request_answer, message);
     SIZE(forebay_anthropic_request_answer);
     FIELD(forebay_anthropic_encode_request_argument, size);
     FIELD(forebay_anthropic_encode_request_argument, request);
@@ -476,6 +483,15 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_reply_answer, body);
     FIELD(forebay_anthropic_reply_answer, storage);
     SIZE(forebay_anthropic_reply_answer);
+    FIELD(forebay_anthropic_route_argument, size);
+    FIELD(forebay_anthropic_route_argument, method);
+    FIELD(forebay_anthropic_route_argument, path);
+    SIZE(forebay_anthropic_route_argument);
+    FIELD(forebay_anthropic_route_answer, size);
+    FIELD(forebay_anthropic_route_answer, kind);
+    FIELD(forebay_anthropic_route_answer, model_id);
+    FIELD(forebay_anthropic_route_answer, storage);
+    SIZE(forebay_anthropic_route_answer);
     FIELD(forebay_anthropic_definition, size);
     FIELD(forebay_anthropic_definition, context);
     FIELD(forebay_anthropic_definition, decode_request);
@@ -501,6 +517,8 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_definition, release_model_lookup);
     FIELD(forebay_anthropic_definition, release_reply);
     FIELD(forebay_anthropic_definition, release_refusal);
+    FIELD(forebay_anthropic_definition, route_request);
+    FIELD(forebay_anthropic_definition, release_route);
     SIZE(forebay_anthropic_definition);
 }
 

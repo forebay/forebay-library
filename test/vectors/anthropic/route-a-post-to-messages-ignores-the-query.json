@@ -1,0 +1,10 @@
+{
+  "direction": "routeRequest",
+  "input": {
+    "method": "POST",
+    "path": "/v1/messages?beta=true"
+  },
+  "output": {
+    "kind": "messages"
+  }
+}

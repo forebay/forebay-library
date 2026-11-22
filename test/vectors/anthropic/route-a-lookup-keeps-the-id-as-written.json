@@ -1,0 +1,11 @@
+{
+  "direction": "routeRequest",
+  "input": {
+    "method": "GET",
+    "path": "/v1/models/claude%2Dx"
+  },
+  "output": {
+    "kind": "modelLookup",
+    "modelId": "claude%2Dx"
+  }
+}

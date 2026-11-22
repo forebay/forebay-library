@@ -73,7 +73,7 @@ static void every_failure_of_vector(const char *path, allocation_failure_mode mo
     const anthropic_direction *direction = anthropic_direction_of(vector);
     if (input == NULL || output == NULL || direction == NULL) {
         support_fail(path, "not a vector with an input, an output and a direction this service has");
-    } else {
+    } else if (anthropic_vector_allocates(vector)) {
         every_failure_of(direction, path, input, output, mode);
     }
     cJSON_Delete(vector);

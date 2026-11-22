@@ -3,19 +3,22 @@
 
 #include <math.h>
 
+#include "spisor/definition.h"
 #include "spisor/json_allocation.h"
 
 /**
  * @file
  * The anthropic service's translation through its definition: every `request-*` and `response-*` vector in both
  * directions (a decode vector's `input` as bytes against its `output`, an encode vector's `input` against its
- * `output`) and every `rate-limit-*` one, then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
+ * `output`) and every `rate-limit-*`, `decode-*` and `route-*` one, then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
  * not an object, an IR that breaks its header, and the byte form of a body.
  */
 
 #define REQUEST_VECTOR_COUNT 18
 #define RESPONSE_VECTOR_COUNT 16
 #define RATE_LIMIT_VECTOR_COUNT 18
+#define DECODE_VECTOR_COUNT 38
+#define ROUTE_VECTOR_COUNT 20
 
 static cJSON *parse(const char *text) {
     int out_of_memory = 0;
@@ -149,13 +152,107 @@ static void a_number_that_is_not_finite_is_written_as_null(void) {
     cJSON_Delete(expected);
 }
 
-static void a_root_that_is_no_object_decodes_to_the_empty_request(void) {
-    static const char *const roots[] = {"[]", "5", "\"x\"", "null", "true", "[{\"model\":\"m\"}]"};
-    cJSON *empty = parse("{\"model\":\"\",\"messages\":[],\"stream\":false}");
-    for (size_t index = 0; index < sizeof roots / sizeof roots[0]; index++) {
-        check_text("decodeRequest", roots[index], roots[index], empty);
+static const char *const NON_OBJECT_ROOTS[] = {"[]", "5", "\"x\"", "null", "true", "[{\"model\":\"m\"}]"};
+
+static void a_root_that_is_no_object_is_answered_as_an_invalid_request(void) {
+    for (size_t index = 0; index < sizeof NON_OBJECT_ROOTS / sizeof NON_OBJECT_ROOTS[0]; index++) {
+        forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
+        spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+        spisor_status status = anthropic_decode_text(NON_OBJECT_ROOTS[index], &answer, &refusal);
+        if (status != SPISOR_OK || answer.request != NULL || answer.storage != NULL || answer.forwarded_header_count != 0 ||
+            answer.reply_kind != FOREBAY_REPLY_INVALID_REQUEST || answer.status != 400 || answer.message == NULL) {
+            support_failf("a root that is no object", "%s answered %d with reply kind %u", NON_OBJECT_ROOTS[index],
+                          (int)status, (unsigned)answer.reply_kind);
+        }
+        anthropic_definition()->release_request(NULL, &answer);
+        anthropic_definition()->release_refusal(NULL, &refusal);
     }
-    cJSON_Delete(empty);
+}
+
+static void an_answer_that_cannot_hold_the_reply_is_refused_a_root_that_is_no_object(void) {
+    forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
+    answer.size = (uint32_t)SPISOR_SHAPE_THROUGH(forebay_anthropic_request_answer, storage);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_decode_text("[]", &answer, &refusal);
+    if (status != SPISOR_MALFORMED || refusal.detail == NULL || answer.request != NULL || answer.storage != NULL) {
+        support_failf("a first-shape answer", "answered %d for a root that is no object", (int)status);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void an_answer_of_the_first_shape_gets_the_request_and_no_forwarded_headers(void) {
+    static const forebay_pair headers[] = {{"Anthropic-Beta", "b"}};
+    static const char body[] = "{\"model\":\"m\"}";
+    forebay_anthropic_body_argument argument = SPISOR_INIT(forebay_anthropic_body_argument);
+    argument.bytes = (const uint8_t *)body;
+    argument.length = sizeof body - 1;
+    argument.headers = headers;
+    argument.header_count = 1;
+    forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
+    answer.size = (uint32_t)SPISOR_SHAPE_THROUGH(forebay_anthropic_request_answer, storage);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_definition()->decode_request(NULL, &argument, &answer, &refusal);
+    if (status != SPISOR_OK || answer.request == NULL || answer.forwarded_headers != NULL ||
+        answer.forwarded_header_count != 0) {
+        support_failf("a first-shape answer", "answered %d, with forwarded headers beyond its size", (int)status);
+    }
+    anthropic_definition()->release_request(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void expect_decode_malformed(const char *label, const forebay_anthropic_body_argument *argument,
+                                    forebay_anthropic_request_answer *answer) {
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    spisor_status status = anthropic_definition()->decode_request(NULL, argument, answer, &refusal);
+    if (status != SPISOR_MALFORMED || answer->request != NULL || answer->storage != NULL) {
+        support_failf(label, "answered %d, not an empty MALFORMED", (int)status);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
+static void a_decode_that_breaks_its_header_is_malformed(void) {
+    static const char body[] = "{\"model\":\"m\"}";
+    static const forebay_pair nameless[] = {{NULL, "v"}};
+    static const forebay_pair valueless[] = {{"n", NULL}};
+    forebay_anthropic_body_argument argument = SPISOR_INIT(forebay_anthropic_body_argument);
+    argument.bytes = (const uint8_t *)body;
+    argument.length = sizeof body - 1;
+    forebay_anthropic_request_answer answer = SPISOR_INIT(forebay_anthropic_request_answer);
+    argument.header_count = 1;
+    expect_decode_malformed("a header count beside NULL headers", &argument, &answer);
+    argument.headers = nameless;
+    expect_decode_malformed("a header without a name", &argument, &answer);
+    argument.headers = valueless;
+    expect_decode_malformed("a header without a value", &argument, &answer);
+    argument.header_count = 0;
+    argument.headers = NULL;
+    answer.forwarded_header_count = 1;
+    expect_decode_malformed("forwarded headers counted beside no storage", &argument, &answer);
+}
+
+static void a_route_call_that_breaks_its_header_is_malformed(void) {
+    const forebay_anthropic_route_argument valid = {(uint32_t)sizeof(forebay_anthropic_route_argument), "GET", "/"};
+    const struct {
+        const char *label;
+        forebay_anthropic_route_argument argument;
+        uint32_t answer_size;
+    } cases[] = {{"a NULL method", {valid.size, NULL, "/"}, valid.size},
+                 {"an empty method", {valid.size, "", "/"}, valid.size},
+                 {"a NULL path", {valid.size, "GET", NULL}, valid.size},
+                 {"an argument short of its first shape", {(uint32_t)sizeof(uint32_t), "GET", "/"}, valid.size},
+                 {"an answer short of its first shape", valid, (uint32_t)sizeof(uint32_t)}};
+    for (size_t index = 0; index < sizeof cases / sizeof cases[0]; index++) {
+        forebay_anthropic_route_answer answer = SPISOR_INIT(forebay_anthropic_route_answer);
+        answer.size = cases[index].answer_size;
+        spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+        spisor_status status = anthropic_definition()->route_request(NULL, &cases[index].argument, &answer, &refusal);
+        if (status != SPISOR_MALFORMED || answer.kind != 0 || answer.model_id != NULL || answer.storage != NULL) {
+            support_failf(cases[index].label, "answered %d, not an empty MALFORMED", (int)status);
+        }
+        anthropic_definition()->release_route(NULL, &answer);
+        anthropic_definition()->release_refusal(NULL, &refusal);
+    }
+    anthropic_definition()->release_route(NULL, NULL);
 }
 
 static const char *const NON_JSON_BODIES[] = {"not json", "", "{", "[1,2", "{\"a\":1} x", "\xff\xfe",
@@ -921,6 +1018,7 @@ static void releasing_an_answer_never_filled_does_nothing(void) {
     anthropic_definition()->release_request(NULL, NULL);
     anthropic_definition()->release_body(NULL, NULL);
     anthropic_definition()->release_reply(NULL, NULL);
+    anthropic_definition()->release_route(NULL, NULL);
 }
 
 int main(void) {
@@ -937,11 +1035,23 @@ int main(void) {
     if (rate_limit_vectors != RATE_LIMIT_VECTOR_COUNT) {
         support_failf("rate-limit vectors", "%d files, expected %d", rate_limit_vectors, RATE_LIMIT_VECTOR_COUNT);
     }
+    int decode_vectors = run_vectors("decode-");
+    if (decode_vectors != DECODE_VECTOR_COUNT) {
+        support_failf("decode vectors", "%d files, expected %d", decode_vectors, DECODE_VECTOR_COUNT);
+    }
+    int route_vectors = run_vectors("route-");
+    if (route_vectors != ROUTE_VECTOR_COUNT) {
+        support_failf("route vectors", "%d files, expected %d", route_vectors, ROUTE_VECTOR_COUNT);
+    }
     the_rate_limit_vectors_cover_the_required_cases();
     a_rate_limit_call_that_breaks_its_header_is_malformed();
     a_rate_limit_clock_follows_the_offset();
     run_decode_cases();
-    a_root_that_is_no_object_decodes_to_the_empty_request();
+    a_root_that_is_no_object_is_answered_as_an_invalid_request();
+    an_answer_that_cannot_hold_the_reply_is_refused_a_root_that_is_no_object();
+    an_answer_of_the_first_shape_gets_the_request_and_no_forwarded_headers();
+    a_decode_that_breaks_its_header_is_malformed();
+    a_route_call_that_breaks_its_header_is_malformed();
     a_number_that_is_not_finite_is_written_as_null();
     bytes_that_are_no_json_are_malformed();
     a_string_holding_nul_is_refused_as_unreadable_json();

@@ -4,6 +4,7 @@
 #include "support.h"
 
 #include "forebay/anthropic.h"
+#include "forebay/routing.h"
 #include "ir_json.h"
 #include "spisor/json_kind.h"
 #include "vector_reader.h"
@@ -16,7 +17,11 @@
  * test-only IR codec. A wire-shape vector's `input` is the operation's argument as JSON: `errorType` and `message`, or
  * `defaultContext`, `defaultOutput` and `providers`, a list of lists of models with `id`, `name`, `context`, `output`.
  * A rate-limit vector's `input` is `upstreamHeaders`, `resetAt`, `now`, `offsetMinutes` and `zone`, and its `output` the
- * `status`, the `headers` in order and the `body` text of the reply.
+ * `status`, the `headers` in order and the `body` text of the reply. A `decodeRequestWithHeaders` vector's `input` is
+ * the wire `body` as JSON and the client's `headers`, and its `output` the `forwardedHeaders` in order and either the
+ * `model` of the request read or the `reply` (`kind`, `status`, `message`) of a body that is no object. A
+ * `routeRequest` vector's `input` is the `method` and `path`, and its `output` the `kind` (`messages`, `modelList`,
+ * `modelLookup` or `passThrough`) and the `modelId` of a lookup.
  */
 
 static inline const forebay_anthropic_definition *anthropic_definition(void) {
@@ -148,6 +153,8 @@ typedef struct anthropic_input {
     const char *lookup_id;
     forebay_anthropic_rate_limit_argument rate_limit;
     forebay_pair *pairs;
+    size_t pair_count;
+    forebay_anthropic_route_argument route;
 } anthropic_input;
 
 /** Every answer a whole stream through one handle gave, each feed's and the finish's, held until released. */
@@ -166,6 +173,7 @@ typedef union anthropic_answer {
     forebay_anthropic_body_answer body;
     forebay_anthropic_model_lookup_answer lookup;
     forebay_anthropic_reply_answer reply;
+    forebay_anthropic_route_answer route;
     anthropic_stream_answer stream;
 } anthropic_answer;
 
@@ -672,6 +680,109 @@ static inline void anthropic_release_reply(anthropic_answer *answer) {
     anthropic_definition()->release_reply(NULL, &answer->reply);
 }
 
+/** The members of a JSON object as the input's pairs, in order, borrowing their names and values; 1 when read. */
+static inline int anthropic_read_pairs(const cJSON *object, anthropic_input *input) {
+    input->pair_count = (size_t)cJSON_GetArraySize(object);
+    input->pairs = calloc(input->pair_count + 1, sizeof *input->pairs);
+    if (!cJSON_IsObject(object) || input->pairs == NULL) {
+        support_fail("a header list", "the test could not read or allocate its headers");
+        return 0;
+    }
+    size_t index = 0;
+    const cJSON *member = NULL;
+    cJSON_ArrayForEach(member, object) {
+        input->pairs[index].name = member->string;
+        input->pairs[index++].value = cJSON_GetStringValue(member);
+    }
+    return 1;
+}
+
+/** A decode vector with headers: the body printed to bytes and the client's headers. */
+static inline int anthropic_read_headed_body(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    input->printed = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(json, "body"));
+    input->text = input->printed;
+    if (input->printed == NULL || !anthropic_read_pairs(cJSON_GetObjectItemCaseSensitive(json, "headers"), input)) {
+        anthropic_input_release(input);
+        return 0;
+    }
+    return 1;
+}
+
+static inline spisor_status anthropic_call_decode_headed_request(const anthropic_input *input,
+                                                                 anthropic_answer *answer,
+                                                                 spisor_refusal *refusal) {
+    forebay_anthropic_body_argument argument = SPISOR_INIT(forebay_anthropic_body_argument);
+    argument.bytes = (const uint8_t *)input->text;
+    argument.length = strlen(input->text);
+    argument.headers = input->pairs;
+    argument.header_count = input->pair_count;
+    return anthropic_definition()->decode_request(NULL, &argument, &answer->request, refusal);
+}
+
+/** Whether a refused answer holds no request and the invalid-request reply of the vector. */
+static inline int anthropic_invalid_request_matches(const forebay_anthropic_request_answer *request,
+                                                    const cJSON *reply) {
+    const char *message = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(reply, "message"));
+    return request->request == NULL && request->forwarded_header_count == 0 &&
+           request->reply_kind == FOREBAY_REPLY_INVALID_REQUEST &&
+           request->status == (uint32_t)cJSON_GetObjectItemCaseSensitive(reply, "status")->valuedouble &&
+           request->message != NULL && message != NULL && strcmp(request->message, message) == 0;
+}
+
+/** Whether a read answer holds the model of the vector, no reply, and the forwarded headers in order. */
+static inline int anthropic_forwarding_matches(const forebay_anthropic_request_answer *request,
+                                               const cJSON *expected) {
+    const cJSON *forwarded = cJSON_GetObjectItemCaseSensitive(expected, "forwardedHeaders");
+    const char *model = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "model"));
+    int same = request->request != NULL && request->reply_kind == 0 && request->message == NULL && model != NULL &&
+               strcmp(request->request->model, model) == 0 &&
+               request->forwarded_header_count == (size_t)cJSON_GetArraySize(forwarded);
+    size_t index = 0;
+    const cJSON *header = NULL;
+    cJSON_ArrayForEach(header, forwarded) {
+        same = same && index < request->forwarded_header_count &&
+               strcmp(request->forwarded_headers[index].name, header->string) == 0 &&
+               strcmp(request->forwarded_headers[index].value, cJSON_GetStringValue(header)) == 0;
+        index++;
+    }
+    return same;
+}
+
+static inline int anthropic_headed_request_matches(const anthropic_answer *answer, const cJSON *expected) {
+    const cJSON *reply = cJSON_GetObjectItemCaseSensitive(expected, "reply");
+    return reply != NULL ? anthropic_invalid_request_matches(&answer->request, reply)
+                         : anthropic_forwarding_matches(&answer->request, expected);
+}
+
+/** A route vector's input: the method and the path, borrowed from the vector. */
+static inline int anthropic_read_route_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    input->route = (forebay_anthropic_route_argument)SPISOR_INIT(forebay_anthropic_route_argument);
+    input->route.method = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "method"));
+    input->route.path = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "path"));
+    return input->route.method != NULL && input->route.path != NULL;
+}
+
+static inline spisor_status anthropic_call_route_request(const anthropic_input *input, anthropic_answer *answer,
+                                                         spisor_refusal *refusal) {
+    return anthropic_definition()->route_request(NULL, &input->route, &answer->route, refusal);
+}
+
+static inline int anthropic_route_matches(const anthropic_answer *answer, const cJSON *expected) {
+    static const char *const kinds[] = {"messages", "modelList", "modelLookup", "passThrough"};
+    const char *kind = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "kind"));
+    const char *model_id = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "modelId"));
+    int same = kind != NULL && answer->route.kind >= 1 && answer->route.kind <= 4 &&
+               strcmp(kinds[answer->route.kind - 1], kind) == 0;
+    return same && (model_id == NULL ? answer->route.model_id == NULL
+                                     : answer->route.model_id != NULL && strcmp(answer->route.model_id, model_id) == 0);
+}
+
+static inline void anthropic_release_route_answer(anthropic_answer *answer) {
+    anthropic_definition()->release_route(NULL, &answer->route);
+}
+
 /** The direction a vector's `direction` member names, NULL for one this service does not have. */
 static inline const anthropic_direction *anthropic_direction_named(const char *name) {
     static const anthropic_direction directions[] = {
@@ -695,6 +806,10 @@ static inline const anthropic_direction *anthropic_direction_named(const char *n
          anthropic_call_model_lookup, anthropic_lookup_matches, anthropic_release_lookup},
         {"rateLimitReply", (uint32_t)sizeof(forebay_anthropic_reply_answer), anthropic_read_rate_limit_input,
          anthropic_call_rate_limit_reply, anthropic_reply_matches, anthropic_release_reply},
+        {"decodeRequestWithHeaders", (uint32_t)sizeof(forebay_anthropic_request_answer), anthropic_read_headed_body,
+         anthropic_call_decode_headed_request, anthropic_headed_request_matches, anthropic_release_request},
+        {"routeRequest", (uint32_t)sizeof(forebay_anthropic_route_answer), anthropic_read_route_input,
+         anthropic_call_route_request, anthropic_route_matches, anthropic_release_route_answer},
     };
     for (size_t index = 0; name != NULL && index < sizeof directions / sizeof directions[0]; index++) {
         if (strcmp(directions[index].name, name) == 0) {
@@ -708,6 +823,14 @@ static inline const anthropic_direction *anthropic_direction_named(const char *n
 static inline const anthropic_direction *anthropic_direction_of(const cJSON *vector) {
     return anthropic_direction_named(
         cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(vector, "direction")));
+}
+
+/** Whether the vector's call allocates, which a route to anything but a model lookup never does. */
+static inline int anthropic_vector_allocates(const cJSON *vector) {
+    const char *name = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(vector, "direction"));
+    const cJSON *output = cJSON_GetObjectItemCaseSensitive(vector, "output");
+    return name == NULL || strcmp(name, "routeRequest") != 0 ||
+           cJSON_GetObjectItemCaseSensitive(output, "modelId") != NULL;
 }
 
 /** Calls the direction on the input and requires OK with an answer that matches `expected`. */
