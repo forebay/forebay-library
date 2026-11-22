@@ -93,7 +93,7 @@ static void write_error_through(const forebay_anthropic_definition *anthropic) {
     forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
     CHECK(anthropic->size >= sizeof(forebay_anthropic_definition));
-    argument.error_type = "api_error";
+    argument.reply_kind = FOREBAY_REPLY_API_ERROR;
     argument.message = "upstream failed";
     CHECK(anthropic->error_envelope(anthropic->context, &argument, &answer, &refusal) == SPISOR_OK);
     CHECK(answer.length == sizeof expected - 1 && answer.bytes != NULL &&

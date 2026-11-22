@@ -14,7 +14,7 @@
  * OUT_OF_MEMORY is fed again, since the header says it leaves its handle as it was, so a single failure must still give
  * the whole stream.
  *
- * The wire shapes, `error_envelope` and `model_listing`, are failed over their cases the same way.
+ * The cases of `model_listing` and `model_lookup`, which no vector writes, are failed the same way.
  *
  * @implNote The cases a vector does not write are not repeated here; the vectors, among them the golden request and
  * response and the ones holding every block kind, reach every allocation site of both directions.

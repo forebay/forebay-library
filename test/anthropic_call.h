@@ -520,10 +520,22 @@ static inline uint64_t anthropic_count_member(const cJSON *json, const char *mem
 }
 
 /** A wire-shape error vector's input: the error type and the message, borrowed from the JSON. */
+/** The forebay_reply_kind a vector names, 0 for a name reply.h does not give. */
+static inline uint32_t anthropic_reply_kind_named(const char *name) {
+    static const char *const names[] = {"proxyError", "apiError", "providerFailure", "rateLimited", "invalidRequest"};
+    for (uint32_t index = 0; name != NULL && index < sizeof names / sizeof names[0]; index++) {
+        if (strcmp(names[index], name) == 0) {
+            return index + 1;
+        }
+    }
+    return 0;
+}
+
 static inline int anthropic_read_error_input(const cJSON *json, anthropic_input *input) {
     *input = (anthropic_input){0};
     input->error = (forebay_anthropic_error_argument)SPISOR_INIT(forebay_anthropic_error_argument);
-    input->error.error_type = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "errorType"));
+    input->error.reply_kind =
+        anthropic_reply_kind_named(cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "replyKind")));
     input->error.message = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "message"));
     return cJSON_IsObject(json);
 }

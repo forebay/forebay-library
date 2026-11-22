@@ -3,6 +3,7 @@
 #include "forebay/accounts.h"
 #include "forebay/anthropic.h"
 #include "forebay/ir.h"
+#include "forebay/provider.h"
 #include "forebay/routing.h"
 
 /**
@@ -138,6 +139,10 @@ static void print_routing_layouts(void) {
     SIZE(forebay_slot);
     FIELD(forebay_catalog_model, id);
     FIELD(forebay_catalog_model, name);
+    FIELD(forebay_catalog_model, has_context);
+    FIELD(forebay_catalog_model, context);
+    FIELD(forebay_catalog_model, has_output);
+    FIELD(forebay_catalog_model, output);
     SIZE(forebay_catalog_model);
     FIELD(forebay_catalog_provider, provider);
     FIELD(forebay_catalog_provider, models);
@@ -145,6 +150,7 @@ static void print_routing_layouts(void) {
     FIELD(forebay_catalog_provider, has_ranking);
     FIELD(forebay_catalog_provider, ranking);
     FIELD(forebay_catalog_provider, ranking_count);
+    FIELD(forebay_catalog_provider, default_model);
     SIZE(forebay_catalog_provider);
     FIELD(forebay_routing_profile, size);
     FIELD(forebay_routing_profile, tier_source_provider);
@@ -155,6 +161,8 @@ static void print_routing_layouts(void) {
     FIELD(forebay_routing_profile, tier_regex);
     FIELD(forebay_routing_profile, native_model_pattern);
     FIELD(forebay_routing_profile, unserved_model_pattern);
+    FIELD(forebay_routing_profile, default_context);
+    FIELD(forebay_routing_profile, default_output);
     SIZE(forebay_routing_profile);
     FIELD(forebay_tiers_argument, size);
     FIELD(forebay_tiers_argument, profile);
@@ -194,6 +202,23 @@ static void print_routing_layouts(void) {
     FIELD(forebay_resolve_answer, notice_count);
     FIELD(forebay_resolve_answer, storage);
     SIZE(forebay_resolve_answer);
+    FIELD(forebay_model_entries_argument, size);
+    FIELD(forebay_model_entries_argument, profile);
+    FIELD(forebay_model_entries_argument, catalog);
+    FIELD(forebay_model_entries_argument, catalog_count);
+    SIZE(forebay_model_entries_argument);
+    FIELD(forebay_model_entry, id);
+    FIELD(forebay_model_entry, name);
+    FIELD(forebay_model_entry, has_context);
+    FIELD(forebay_model_entry, context);
+    FIELD(forebay_model_entry, has_output);
+    FIELD(forebay_model_entry, output);
+    SIZE(forebay_model_entry);
+    FIELD(forebay_model_entries_answer, size);
+    FIELD(forebay_model_entries_answer, entries);
+    FIELD(forebay_model_entries_answer, entry_count);
+    FIELD(forebay_model_entries_answer, storage);
+    SIZE(forebay_model_entries_answer);
     FIELD(forebay_outcome_argument, size);
     FIELD(forebay_outcome_argument, status);
     FIELD(forebay_outcome_argument, headers);
@@ -385,6 +410,8 @@ static void print_routing_layouts(void) {
     FIELD(forebay_routing_definition, release_failure_answer);
     FIELD(forebay_routing_definition, release_environment_answer);
     FIELD(forebay_routing_definition, release_refusal);
+    FIELD(forebay_routing_definition, model_entries);
+    FIELD(forebay_routing_definition, release_model_entries_answer);
     SIZE(forebay_routing_definition);
 }
 
@@ -435,7 +462,7 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_stream_encode_argument, event_count);
     SIZE(forebay_anthropic_stream_encode_argument);
     FIELD(forebay_anthropic_error_argument, size);
-    FIELD(forebay_anthropic_error_argument, error_type);
+    FIELD(forebay_anthropic_error_argument, reply_kind);
     FIELD(forebay_anthropic_error_argument, message);
     SIZE(forebay_anthropic_error_argument);
     FIELD(forebay_anthropic_listed_model, id);
@@ -635,10 +662,40 @@ static void print_ir_layouts(void) {
     SIZE(forebay_ir_failure);
 }
 
+static void print_provider_layouts(void) {
+    FIELD(forebay_provider_handle_argument, size);
+    FIELD(forebay_provider_handle_argument, request);
+    FIELD(forebay_provider_handle_argument, headers);
+    FIELD(forebay_provider_handle_argument, header_count);
+    SIZE(forebay_provider_handle_argument);
+    FIELD(forebay_provider_handle_answer, size);
+    FIELD(forebay_provider_handle_answer, kind);
+    FIELD(forebay_provider_handle_answer, response);
+    FIELD(forebay_provider_handle_answer, failure);
+    FIELD(forebay_provider_handle_answer, stream);
+    SIZE(forebay_provider_handle_answer);
+    FIELD(forebay_provider_next_answer, size);
+    FIELD(forebay_provider_next_answer, kind);
+    FIELD(forebay_provider_next_answer, event);
+    FIELD(forebay_provider_next_answer, failure);
+    SIZE(forebay_provider_next_answer);
+    FIELD(forebay_provider_definition, size);
+    FIELD(forebay_provider_definition, context);
+    FIELD(forebay_provider_definition, models);
+    FIELD(forebay_provider_definition, handle);
+    FIELD(forebay_provider_definition, next);
+    FIELD(forebay_provider_definition, release_stream);
+    FIELD(forebay_provider_definition, release_models_answer);
+    FIELD(forebay_provider_definition, release_handle_answer);
+    FIELD(forebay_provider_definition, release_refusal);
+    SIZE(forebay_provider_definition);
+}
+
 int main(void) {
     print_accounts_layouts();
     print_routing_layouts();
     print_ir_layouts();
     print_anthropic_layouts();
+    print_provider_layouts();
     return 0;
 }

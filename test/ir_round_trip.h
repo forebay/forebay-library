@@ -96,7 +96,7 @@ static inline round_trip_function schema_round_trip(const char *definition) {
 
 /** Whether a vector of the anthropic list holds no IR, which the codec's tests leave to the service's. */
 static inline int is_wire_only_vector(const char *path) {
-    static const char *const prefixes[] = {"rate-limit-", "decode-", "route-"};
+    static const char *const prefixes[] = {"rate-limit-", "decode-", "route-", "envelope-"};
     const char *name = path;
     for (const char *cursor = path; *cursor != '\0'; cursor++) {
         name = *cursor == '/' || *cursor == '\\' ? cursor + 1 : name;

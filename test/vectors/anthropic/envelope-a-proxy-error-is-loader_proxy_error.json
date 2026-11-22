@@ -1,0 +1,14 @@
+{
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "proxyError",
+    "message": "no provider serves claude-x"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "loader_proxy_error",
+      "message": "no provider serves claude-x"
+    }
+  }
+}

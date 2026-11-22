@@ -1,0 +1,14 @@
+{
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "providerFailure",
+    "message": "the provider failed"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "api_error",
+      "message": "the provider failed"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "invalidRequest",
+    "message": "the request body is not a JSON object"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "invalid_request_error",
+      "message": "the request body is not a JSON object"
+    }
+  }
+}

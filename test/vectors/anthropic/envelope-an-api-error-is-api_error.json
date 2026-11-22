@@ -1,0 +1,14 @@
+{
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "apiError",
+    "message": "upstream failed"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "api_error",
+      "message": "upstream failed"
+    }
+  }
+}

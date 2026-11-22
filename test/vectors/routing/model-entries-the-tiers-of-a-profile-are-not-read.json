@@ -1,0 +1,39 @@
+{
+  "source": "model_entries reads only the profile's default limits, so a claude-code profile lists the same entries",
+  "function": "modelEntries",
+  "argument": {
+    "profile": {
+      "defaultContext": 8,
+      "defaultOutput": 9,
+      "tierSourceProvider": "claude-code",
+      "tierOrder": [
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "tierFallback": [
+        "opus"
+      ],
+      "tierRegex": "^claude-([a-z]+)-\\d"
+    },
+    "models": {
+      "claude-code": {
+        "models": {
+          "claude-sonnet-4": {
+            "name": "Claude Sonnet 4"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "entries": [
+      {
+        "id": "claude-sonnet-4",
+        "name": "Claude Sonnet 4",
+        "context": 8,
+        "output": 9
+      }
+    ]
+  }
+}

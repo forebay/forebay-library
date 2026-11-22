@@ -1,0 +1,66 @@
+{
+  "source": "OpencodeProxyPlugin.profile: no tiers, defaultContext 200000 and defaultOutput 64000: every catalog model listed, a limit the model gives none of filled from the profile",
+  "function": "modelEntries",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "tierSourceProvider": "opencode",
+      "tierOrder": [],
+      "tierFallback": [],
+      "tierRegex": "(?!)"
+    },
+    "models": {
+      "anthropic": {
+        "models": {
+          "claude-opus-4": {
+            "name": "Claude Opus 4",
+            "context": 1000000,
+            "output": 32000
+          },
+          "claude-haiku-4": {
+            "name": "Claude Haiku 4"
+          }
+        },
+        "defaultModel": "claude-opus-4"
+      },
+      "openai": {
+        "models": {
+          "gpt-5": {
+            "name": "GPT-5",
+            "output": 128000
+          },
+          "o4": {}
+        }
+      }
+    }
+  },
+  "result": {
+    "entries": [
+      {
+        "id": "claude-opus-4",
+        "name": "Claude Opus 4",
+        "context": 1000000,
+        "output": 32000
+      },
+      {
+        "id": "claude-haiku-4",
+        "name": "Claude Haiku 4",
+        "context": 200000,
+        "output": 64000
+      },
+      {
+        "id": "gpt-5",
+        "name": "GPT-5",
+        "context": 200000,
+        "output": 128000
+      },
+      {
+        "id": "o4",
+        "name": "o4",
+        "context": 200000,
+        "output": 64000
+      }
+    ]
+  }
+}

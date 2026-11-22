@@ -13,12 +13,17 @@
  * Reads `library.json` with the weivel standard's own reader and requires it to declare forebay-library 0.2.0 with no
  * release, since every service is a definition, and exactly one service per `forebay_*_definition_of` a header
  * under `include/forebay` declares: named by the symbol's middle, holding that symbol as its one function of the
- * definition kind and declaring `forebay_<id>_definition_description` as its description. The symbols come from the
- * headers at configure time, so a service added to a header and left out of the declaration fails here.
+ * definition kind and declaring `forebay_<id>_definition_description` as its description. A header including
+ * `definition.h` with no getter declares a contract instead, `forebay_<id>_definition`, which the declaration lists
+ * under `contracts` as the capability `forebay.<id>` with the description `forebay_<id>_definition_description`. The
+ * symbols come from the headers at configure time, so a service or a contract added to a header and left out of the
+ * declaration fails here, and so does a header with no getter that declares no contract.
  */
 
 static const char *const header_symbols[] = {FOREBAY_DEFINITION_SYMBOLS};
 static const size_t header_symbol_count = sizeof header_symbols / sizeof header_symbols[0];
+static const char *const contract_definitions[] = {FOREBAY_CONTRACT_DEFINITIONS NULL};
+static const size_t contract_definition_count = sizeof contract_definitions / sizeof contract_definitions[0] - 1;
 
 static const char definition_prefix[] = "forebay_";
 static const char definition_suffix[] = "_definition_of";
@@ -101,7 +106,6 @@ static int is_header_symbol(const char *symbol) {
 }
 
 static void every_header_definition_is_declared_and_nothing_else(const weivel_standard_library *library) {
-    CHECK(header_symbol_count == FOREBAY_DEFINITION_HEADER_COUNT);
     for (size_t index = 0; index < header_symbol_count; index++) {
         if (!declares_symbol(library, header_symbols[index])) {
             fprintf(stderr, "%s is declared by a header but not by library.json\n", header_symbols[index]);
@@ -121,6 +125,57 @@ static void every_header_definition_is_declared_and_nothing_else(const weivel_st
     CHECK(library->service_count == header_symbol_count);
 }
 
+/** Whether a contract names `forebay.<id>` and `<definition>_description` for `forebay_<id>_definition`. */
+static int is_contract_of(const weivel_standard_library_contract *contract, const char *definition) {
+    static const char capability_prefix[] = "forebay.";
+    static const char definition_end[] = "_definition";
+    size_t prefix_length = sizeof definition_prefix - 1;
+    size_t id_length = strlen(definition) - prefix_length - (sizeof definition_end - 1);
+    size_t definition_length = strlen(definition);
+    return strlen(contract->capability) == sizeof capability_prefix - 1 + id_length &&
+           strncmp(contract->capability, capability_prefix, sizeof capability_prefix - 1) == 0 &&
+           strncmp(contract->capability + sizeof capability_prefix - 1, definition + prefix_length, id_length) == 0 &&
+           strncmp(contract->description, definition, definition_length) == 0 &&
+           strcmp(contract->description + definition_length, "_description") == 0;
+}
+
+static int declares_contract(const weivel_standard_library *library, const char *definition) {
+    for (size_t index = 0; index < library->contract_count; index++) {
+        if (is_contract_of(&library->contracts[index], definition)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int is_header_contract(const weivel_standard_library_contract *contract) {
+    for (size_t index = 0; index < contract_definition_count; index++) {
+        if (is_contract_of(contract, contract_definitions[index])) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void every_header_contract_is_declared_and_nothing_else(const weivel_standard_library *library) {
+    CHECK(header_symbol_count + contract_definition_count == FOREBAY_DEFINITION_HEADER_COUNT);
+    for (size_t index = 0; index < contract_definition_count; index++) {
+        if (!declares_contract(library, contract_definitions[index])) {
+            fprintf(stderr, "%s has no getter and is not declared as a contract by library.json\n",
+                    contract_definitions[index]);
+            check_failures++;
+        }
+    }
+    for (size_t index = 0; index < library->contract_count; index++) {
+        if (!is_header_contract(&library->contracts[index])) {
+            fprintf(stderr, "the contract %s (%s) is declared but no header under include/forebay defines it\n",
+                    library->contracts[index].capability, library->contracts[index].description);
+            check_failures++;
+        }
+    }
+    CHECK(library->contract_count == contract_definition_count);
+}
+
 static void the_declaration_reads_in_the_standards_format(void) {
     weivel_standard_library library = WEIVEL_INIT(weivel_standard_library);
     if (!read_library(&library)) {
@@ -130,6 +185,7 @@ static void the_declaration_reads_in_the_standards_format(void) {
     check_text(library.version, "0.2.0", "version");
     CHECK(library.release == NULL);
     every_header_definition_is_declared_and_nothing_else(&library);
+    every_header_contract_is_declared_and_nothing_else(&library);
     weivel_standard_library_release(&library);
 }
 

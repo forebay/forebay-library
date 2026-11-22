@@ -1,0 +1,34 @@
+{
+  "source": "OpencodeProxyPlugin.profile: no tiers, defaultContext 200000 and defaultOutput 64000: a limit of 0 the catalog gives is kept, not replaced by the default",
+  "function": "modelEntries",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "tierSourceProvider": "opencode",
+      "tierOrder": [],
+      "tierFallback": [],
+      "tierRegex": "(?!)"
+    },
+    "models": {
+      "opencode": {
+        "models": {
+          "tiny": {
+            "context": 0,
+            "output": 0
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "entries": [
+      {
+        "id": "tiny",
+        "name": "tiny",
+        "context": 0,
+        "output": 0
+      }
+    ]
+  }
+}

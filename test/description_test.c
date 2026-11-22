@@ -17,9 +17,10 @@
 /**
  * @file
  * Loads the built forebay-library as a binding would: reads `library.json` with the standard's reader, and for every
- * service calls the `description` symbol it declares and requires the description to pass the standard's own check
- * and to name `forebay_<id>_definition`, so a description that is declared but not linked, or not generated from the
- * service's own struct, fails here.
+ * service and every contract calls the `description` symbol it declares and requires the description to pass the
+ * standard's own check and to name `forebay_<id>_definition`, `<id>` a service's id or a contract's capability after
+ * `forebay.`, so a description that is declared but not exported, or not generated from its own struct, fails here.
+ * A contract's description is checked only here: no definition of it exists in this library to call.
  */
 
 typedef const weivel_standard_description *(*describe_function)(void);
@@ -74,25 +75,32 @@ static int read_library(weivel_standard_library *library) {
     return status == WEIVEL_STATUS_OK;
 }
 
-static void check_definition_name(const char *definition, const char *service_id) {
+static void check_definition_name(const char *definition, const char *definition_id, const char *label) {
     char expected[128];
-    int written = snprintf(expected, sizeof expected, "forebay_%s_definition", service_id);
+    int written = snprintf(expected, sizeof expected, "forebay_%s_definition", definition_id);
     CHECK(written > 0 && (size_t)written < sizeof expected);
-    check_text(definition, expected, service_id);
+    check_text(definition, expected, label);
 }
 
-static void check_description(library_handle forebay, const char *symbol, const char *service_id) {
+/** The id a contract's definition is named by: its capability after `forebay.`, NULL for one in no other namespace. */
+static const char *contract_definition_id(const char *capability) {
+    static const char prefix[] = "forebay.";
+    return strncmp(capability, prefix, sizeof prefix - 1) == 0 ? capability + sizeof prefix - 1 : NULL;
+}
+
+static void check_description(library_handle forebay, const char *symbol, const char *definition_id,
+                              const char *label) {
     describe_function describer;
     const weivel_standard_description *description;
     weivel_standard_refusal refusal = WEIVEL_INIT(weivel_standard_refusal);
-    if (symbol == NULL) {
-        fprintf(stderr, "service %s declares no description\n", service_id);
+    if (symbol == NULL || definition_id == NULL) {
+        fprintf(stderr, "%s declares no description of a forebay definition\n", label);
         check_failures++;
         return;
     }
     describer = describer_of(forebay, symbol);
     if (describer == NULL) {
-        fprintf(stderr, "service %s declares %s, which forebay-library does not export\n", service_id, symbol);
+        fprintf(stderr, "%s declares %s, which forebay-library does not export\n", label, symbol);
         check_failures++;
         return;
     }
@@ -104,7 +112,7 @@ static void check_description(library_handle forebay, const char *symbol, const 
         check_failures++;
         return;
     }
-    check_definition_name(description->definition, service_id);
+    check_definition_name(description->definition, definition_id, label);
 }
 
 static void every_declared_description_is_exported_and_checks(void) {
@@ -118,7 +126,14 @@ static void every_declared_description_is_exported_and_checks(void) {
     if (read_library(&library)) {
         CHECK(library.service_count > 0);
         for (size_t index = 0; index < library.service_count; index++) {
-            check_description(forebay, library.descriptions[index], library.services[index].id);
+            check_description(forebay, library.descriptions[index], library.services[index].id,
+                              library.services[index].id);
+        }
+        CHECK(library.contract_count > 0);
+        for (size_t index = 0; index < library.contract_count; index++) {
+            const weivel_standard_library_contract *contract = &library.contracts[index];
+            check_description(forebay, contract->description, contract_definition_id(contract->capability),
+                              contract->capability);
         }
         weivel_standard_library_release(&library);
     }

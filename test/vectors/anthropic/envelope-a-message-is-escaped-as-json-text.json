@@ -1,0 +1,14 @@
+{
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "apiError",
+    "message": "say \"hi\" \\ \u0001 \n café 😀"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "api_error",
+      "message": "say \"hi\" \\ \u0001 \n café 😀"
+    }
+  }
+}

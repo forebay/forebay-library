@@ -80,7 +80,7 @@ static const forebay_assignment chain[] = {{"alpha", "alpha-large", "Alpha Large
 static const forebay_slot slots[] = {{"large", chain, 2}};
 static const char *const running[] = {"alpha", "beta"};
 static const forebay_routing_profile profile = {sizeof(forebay_routing_profile), NULL, NULL, 0, NULL, 0, NULL, NULL,
-                                                NULL};
+                                                NULL, 0, 0};
 
 static forebay_step_argument first_step(void) {
     forebay_step_argument argument = SPISOR_INIT(forebay_step_argument);

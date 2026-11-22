@@ -100,7 +100,7 @@ static void expect_malformed(spisor_status status, spisor_refusal *refusal, cons
 }
 
 static const forebay_routing_profile tier_profile = {
-    sizeof(forebay_routing_profile), "p", NULL, 0, NULL, 0, "(opus)", NULL, NULL};
+    sizeof(forebay_routing_profile), "p", NULL, 0, NULL, 0, "(opus)", NULL, NULL, 0, 0};
 
 static void refuses_malformed_tiers(void) {
     const forebay_routing_definition *routing = routing_definition();
@@ -162,6 +162,62 @@ static void refuses_malformed_steps(void) {
     expect_malformed(routing->arrival(NULL, &arrival, &arrived, &refusal), &refusal, "an arrival, an unnamed header");
 }
 
+static void refuses_malformed_model_entries(void) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_model_entries_argument argument = SPISOR_INIT(forebay_model_entries_argument);
+    forebay_model_entries_answer answer = SPISOR_INIT(forebay_model_entries_answer);
+    const forebay_catalog_model unnamed = {NULL, "x", 0, 0, 0, 0};
+    const forebay_catalog_provider provider = {"p", &unnamed, 1, 0, NULL, 0, NULL};
+    expect_malformed(routing->model_entries(NULL, NULL, &answer, &refusal), &refusal, "entries without an argument");
+    expect_malformed(routing->model_entries(NULL, &argument, &answer, &refusal), &refusal,
+                     "entries without a profile");
+    argument.profile = &tier_profile;
+    argument.catalog_count = 1;
+    expect_malformed(routing->model_entries(NULL, &argument, &answer, &refusal), &refusal,
+                     "entries, a count at no catalog");
+    argument.catalog = &provider;
+    expect_malformed(routing->model_entries(NULL, &argument, &answer, &refusal), &refusal,
+                     "entries, a model without an id");
+    argument.catalog_count = 0;
+    answer.entry_count = 2;
+    expect_malformed(routing->model_entries(NULL, &argument, &answer, &refusal), &refusal,
+                     "entries into an answer whose count is not zero beside no storage");
+    answer.entry_count = 0;
+    argument.size = 4;
+    expect_malformed(routing->model_entries(NULL, &argument, &answer, &refusal), &refusal,
+                     "entries, a short argument");
+}
+
+/** A caller compiled before the defaults were appended has a profile ending at `unserved_model_pattern`. */
+static void a_profile_short_of_its_defaults_fills_no_default(void) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_routing_profile short_profile = tier_profile;
+    const forebay_catalog_model models[] = {{"own", "Own", 1, 5, 0, 0}, {"none", NULL, 0, 0, 0, 0}};
+    const forebay_catalog_provider provider = {"p", models, 2, 0, NULL, 0, NULL};
+    forebay_model_entries_argument argument = SPISOR_INIT(forebay_model_entries_argument);
+    forebay_model_entries_answer answer = SPISOR_INIT(forebay_model_entries_answer);
+    short_profile.size = (uint32_t)(offsetof(forebay_routing_profile, unserved_model_pattern) + sizeof(const char *));
+    short_profile.default_context = 7;
+    short_profile.default_output = 8;
+    argument.profile = &short_profile;
+    argument.catalog = &provider;
+    argument.catalog_count = 1;
+    spisor_status status = routing->model_entries(NULL, &argument, &answer, &refusal);
+    if (status != SPISOR_OK || answer.entry_count != 2 || answer.entries[0].has_context != 1 ||
+        answer.entries[0].context != 5 || answer.entries[0].has_output != 0 || answer.entries[1].has_context != 0 ||
+        answer.entries[1].has_output != 0 || strcmp(answer.entries[1].name, "none") != 0) {
+        support_failf("a profile short of its defaults", "answered %d with %zu entries", (int)status,
+                      answer.entry_count);
+    }
+    routing->release_model_entries_answer(NULL, &answer);
+    routing->release_refusal(NULL, &refusal);
+    if (answer.entries != NULL || answer.entry_count != 0 || answer.storage != NULL) {
+        support_fail("a released entries answer", "is not empty");
+    }
+}
+
 int main(void) {
     spisor_json_use_library_allocator();
     int vectors = run_every_vector();
@@ -171,6 +227,8 @@ int main(void) {
     refuses_malformed_tiers();
     refuses_malformed_failures_and_ports();
     refuses_malformed_steps();
+    refuses_malformed_model_entries();
+    a_profile_short_of_its_defaults_fills_no_default();
     printf("routing_test: %d vectors\n", vectors);
     return support_summary("routing_test");
 }

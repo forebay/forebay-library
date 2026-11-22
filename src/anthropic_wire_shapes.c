@@ -37,6 +37,23 @@ cJSON *anthropic_error_object(anthropic_writer *writer, const char *error_type, 
     return wire;
 }
 
+/** The wire's `error.type` of a reply, NULL for a kind reply.h does not name. */
+static const char *error_type_of(uint32_t reply_kind) {
+    switch (reply_kind) {
+    case FOREBAY_REPLY_PROXY_ERROR:
+        return "loader_proxy_error";
+    case FOREBAY_REPLY_API_ERROR:
+    case FOREBAY_REPLY_PROVIDER_FAILURE:
+        return "api_error";
+    case FOREBAY_REPLY_RATE_LIMITED:
+        return "rate_limit_error";
+    case FOREBAY_REPLY_INVALID_REQUEST:
+        return "invalid_request_error";
+    default:
+        return NULL;
+    }
+}
+
 spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_error_argument *argument,
                                        forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
@@ -44,14 +61,15 @@ spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_er
         !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
         return spisor_refuse_shape(refusal, "anthropic's error_envelope");
     }
-    if (!forebay_is_text(argument->error_type)) {
-        return forebay_refuse_member(refusal, "error_type", "an Anthropic error type, such as api_error");
+    const char *error_type = error_type_of(argument->reply_kind);
+    if (error_type == NULL) {
+        return forebay_refuse_member(refusal, "reply_kind", "a forebay_reply_kind");
     }
     if (argument->message == NULL) {
         return forebay_refuse_member(refusal, "message", "a text");
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
-    cJSON *wire = anthropic_error_object(&writer, argument->error_type, argument->message);
+    cJSON *wire = anthropic_error_object(&writer, error_type, argument->message);
     return anthropic_finish_body(&writer, wire, answer, refusal);
 }
 

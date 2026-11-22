@@ -10,7 +10,7 @@
  * @file
  * The anthropic service's translation through its definition: every `request-*` and `response-*` vector in both
  * directions (a decode vector's `input` as bytes against its `output`, an encode vector's `input` against its
- * `output`) and every `rate-limit-*`, `decode-*` and `route-*` one, then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
+ * `output`) and every `rate-limit-*`, `decode-*`, `route-*` and `envelope-*` one, then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
  * not an object, an IR that breaks its header, and the byte form of a body.
  */
 
@@ -19,6 +19,7 @@
 #define RATE_LIMIT_VECTOR_COUNT 18
 #define DECODE_VECTOR_COUNT 41
 #define ROUTE_VECTOR_COUNT 20
+#define ERROR_ENVELOPE_VECTOR_COUNT 7
 
 static cJSON *parse(const char *text) {
     int out_of_memory = 0;
@@ -750,7 +751,7 @@ static void the_shapes_have_the_bytes_the_proxy_writes(void) {
     static const char expected_error[] =
         "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"a\\\"b\\\\c\\u0001 caf\xc3\xa9\"}}";
     forebay_anthropic_error_argument error = SPISOR_INIT(forebay_anthropic_error_argument);
-    error.error_type = "api_error";
+    error.reply_kind = FOREBAY_REPLY_API_ERROR;
     error.message = message;
     forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
@@ -786,9 +787,9 @@ static void expect_refused(const char *label, spisor_status status, const foreba
     }
 }
 
-static void expect_error_malformed(const char *label, const char *error_type, const char *message) {
+static void expect_error_malformed(const char *label, uint32_t reply_kind, const char *message) {
     forebay_anthropic_error_argument error = SPISOR_INIT(forebay_anthropic_error_argument);
-    error.error_type = error_type;
+    error.reply_kind = reply_kind;
     error.message = message;
     forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
@@ -797,11 +798,11 @@ static void expect_error_malformed(const char *label, const char *error_type, co
 }
 
 static void an_error_call_that_breaks_its_header_is_malformed(void) {
-    expect_error_malformed("a NULL error type", NULL, "m");
-    expect_error_malformed("an empty error type", "", "m");
-    expect_error_malformed("a NULL message", "api_error", NULL);
+    expect_error_malformed("no reply kind", 0, "m");
+    expect_error_malformed("a reply kind reply.h does not name", FOREBAY_REPLY_INVALID_REQUEST + 1, "m");
+    expect_error_malformed("a NULL message", FOREBAY_REPLY_API_ERROR, NULL);
     forebay_anthropic_error_argument error = SPISOR_INIT(forebay_anthropic_error_argument);
-    error.error_type = "api_error";
+    error.reply_kind = FOREBAY_REPLY_API_ERROR;
     error.message = "m";
     forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
@@ -1055,6 +1056,11 @@ int main(void) {
     int route_vectors = run_vectors("route-");
     if (route_vectors != ROUTE_VECTOR_COUNT) {
         support_failf("route vectors", "%d files, expected %d", route_vectors, ROUTE_VECTOR_COUNT);
+    }
+    int error_envelope_vectors = run_vectors("envelope-");
+    if (error_envelope_vectors != ERROR_ENVELOPE_VECTOR_COUNT) {
+        support_failf("error-envelope vectors", "%d files, expected %d", error_envelope_vectors,
+                      ERROR_ENVELOPE_VECTOR_COUNT);
     }
     the_rate_limit_vectors_cover_the_required_cases();
     a_rate_limit_call_that_breaks_its_header_is_malformed();

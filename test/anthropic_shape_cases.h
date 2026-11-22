@@ -5,10 +5,9 @@
 
 /**
  * @file
- * The cases of the wire shapes, `error_envelope` and `model_listing`, as the argument in JSON and the body the proxy's
- * TypeScript writes for it, which is `replies.ts` for the error and `model-listing.ts` for the listing. They have no
- * vector files: the expected bodies were worked out from those two sources and are compared by JSON equality, and
- * anthropic_test also pins the exact bytes of one of each.
+ * The cases of `model_listing` and `model_lookup`, as the argument in JSON and the body the proxy's TypeScript
+ * `model-listing.ts` writes for it. They have no vector files: the expected bodies were worked out from that source
+ * and are compared by JSON equality, and anthropic_test also pins the exact bytes of a listing.
  */
 
 typedef struct anthropic_shape_case {
@@ -19,19 +18,6 @@ typedef struct anthropic_shape_case {
 } anthropic_shape_case;
 
 static const anthropic_shape_case ANTHROPIC_SHAPE_CASES[] = {
-    {"the error the proxy answers for a failed upstream", "errorEnvelope",
-     "{\"errorType\":\"api_error\",\"message\":\"upstream failed\"}",
-     "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"upstream failed\"}}"},
-    {"the error the proxy writes for itself", "errorEnvelope",
-     "{\"errorType\":\"loader_proxy_error\",\"message\":\"no provider serves claude-x\"}",
-     "{\"type\":\"error\",\"error\":{\"type\":\"loader_proxy_error\",\"message\":\"no provider serves claude-x\"}}"},
-    {"an error type no one uses yet is written as given", "errorEnvelope",
-     "{\"errorType\":\"overloaded_error\",\"message\":\"\"}",
-     "{\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"\"}}"},
-    {"a message with a quote, a backslash, a control character and non-ASCII text", "errorEnvelope",
-     "{\"errorType\":\"api_error\",\"message\":\"say \\\"hi\\\" \\\\ \\u0001 \\n caf\\u00e9 \\ud83d\\ude00\"}",
-     "{\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"say \\\"hi\\\" \\\\ \\u0001 \\n caf\\u00e9 "
-     "\\ud83d\\ude00\"}}"},
     {"two providers sharing an id list it once as the first offers it", "modelListing",
      "{\"defaultContext\":200000,\"defaultOutput\":8192,\"providers\":["
      "[{\"id\":\"a\",\"name\":\"A first\",\"context\":100,\"output\":10},{\"id\":\"b\",\"name\":\"B\"}],"
