@@ -42,6 +42,12 @@ static inline const char *routing_text_of(const cJSON *object, const char *name)
     return cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(object, name));
 }
 
+/** A member that is a number as a count, 0 for any other member or none. */
+static inline uint64_t routing_count_of(const cJSON *object, const char *name) {
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(object, name);
+    return cJSON_IsNumber(member) && member->valuedouble >= 0 ? (uint64_t)member->valuedouble : 0;
+}
+
 static inline const char *const *routing_texts_of(const cJSON *array, size_t *count) {
     *count = (size_t)cJSON_GetArraySize(array);
     const char **texts = routing_blocks_take(*count * sizeof *texts);
@@ -104,14 +110,21 @@ static inline void routing_catalog_provider_of(const cJSON *entry, forebay_catal
     size_t index = 0;
     const cJSON *model = NULL;
     cJSON_ArrayForEach(model, models) {
+        const cJSON *context = cJSON_GetObjectItemCaseSensitive(model, "context");
+        const cJSON *output = cJSON_GetObjectItemCaseSensitive(model, "output");
         read[index].id = model->string;
-        read[index++].name = routing_text_of(model, "name");
+        read[index].name = routing_text_of(model, "name");
+        read[index].has_context = cJSON_IsNumber(context) ? 1u : 0u;
+        read[index].context = routing_count_of(model, "context");
+        read[index].has_output = cJSON_IsNumber(output) ? 1u : 0u;
+        read[index++].output = routing_count_of(model, "output");
     }
     provider->provider = entry->string;
     provider->models = read;
     provider->model_count = index;
     provider->has_ranking = cJSON_IsArray(ranking) ? 1u : 0u;
     provider->ranking = routing_texts_of(ranking, &provider->ranking_count);
+    provider->default_model = routing_text_of(entry, "defaultModel");
 }
 
 static inline const forebay_catalog_provider *routing_catalog_of(const cJSON *models, size_t *count) {
@@ -136,6 +149,8 @@ static inline const forebay_routing_profile *routing_profile_of(const cJSON *jso
     profile->tier_regex = routing_text_of(json, "tierRegex");
     profile->native_model_pattern = routing_text_of(json, "nativeModelPattern");
     profile->unserved_model_pattern = routing_text_of(json, "unservedModelPattern");
+    profile->default_context = routing_count_of(json, "defaultContext");
+    profile->default_output = routing_count_of(json, "defaultOutput");
     return profile;
 }
 
@@ -181,8 +196,9 @@ static inline cJSON *routing_log_json_of(const forebay_log_line *log, size_t cou
 }
 
 static inline const char *routing_reply_kind_name(uint32_t kind) {
-    static const char *const kinds[] = {"(none)", "proxyError", "apiError", "providerFailure", "rateLimited"};
-    return kind <= 4 ? kinds[kind] : "(unknown)";
+    static const char *const kinds[] = {"(none)",          "proxyError",  "apiError",
+                                        "providerFailure", "rateLimited", "invalidRequest"};
+    return kind <= 5 ? kinds[kind] : "(unknown)";
 }
 
 #endif

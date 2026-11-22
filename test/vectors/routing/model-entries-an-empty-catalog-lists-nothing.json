@@ -1,0 +1,22 @@
+{
+  "source": "OpencodeProxyPlugin.profile: no tiers, defaultContext 200000 and defaultOutput 64000: no provider serves a model",
+  "function": "modelEntries",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "tierSourceProvider": "opencode",
+      "tierOrder": [],
+      "tierFallback": [],
+      "tierRegex": "(?!)"
+    },
+    "models": {
+      "opencode": {
+        "models": {}
+      }
+    }
+  },
+  "result": {
+    "entries": []
+  }
+}

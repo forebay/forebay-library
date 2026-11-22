@@ -67,6 +67,7 @@ add_library(forebay_objects OBJECT
     src/routing_failure.c
     src/routing_headers.c
     src/routing_limits.c
+    src/routing_model_entries.c
     src/routing_model_map.c
     src/routing_outcome.c
     src/routing_pattern.c
@@ -107,7 +108,8 @@ weivel_describe(forebay_library
     TREE spisor_value_tree
     SERVICE forebay_routing_definition SYMBOL forebay_routing_definition_description
     SERVICE forebay_accounts_definition SYMBOL forebay_accounts_definition_description
-    SERVICE forebay_anthropic_definition SYMBOL forebay_anthropic_definition_description)
+    SERVICE forebay_anthropic_definition SYMBOL forebay_anthropic_definition_description
+    SERVICE forebay_provider_definition SYMBOL forebay_provider_definition_description)
 target_link_libraries(forebay_library PRIVATE weivel_standard)
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)

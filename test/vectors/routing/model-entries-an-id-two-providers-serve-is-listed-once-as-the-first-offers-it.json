@@ -1,0 +1,52 @@
+{
+  "source": "OpencodeProxyPlugin.profile: no tiers, defaultContext 200000 and defaultOutput 64000: one entry per model id, the first provider in catalog order winning",
+  "function": "modelEntries",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "tierSourceProvider": "opencode",
+      "tierOrder": [],
+      "tierFallback": [],
+      "tierRegex": "(?!)"
+    },
+    "models": {
+      "first": {
+        "models": {
+          "shared": {
+            "name": "Shared first",
+            "context": 10
+          }
+        }
+      },
+      "second": {
+        "models": {
+          "shared": {
+            "name": "Shared second",
+            "context": 20,
+            "output": 30
+          },
+          "own": {
+            "name": ""
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "entries": [
+      {
+        "id": "shared",
+        "name": "Shared first",
+        "context": 10,
+        "output": 64000
+      },
+      {
+        "id": "own",
+        "name": "own",
+        "context": 200000,
+        "output": 64000
+      }
+    ]
+  }
+}

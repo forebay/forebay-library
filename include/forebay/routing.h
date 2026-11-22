@@ -18,6 +18,7 @@
 
 #include "forebay/definition.h"
 #include "forebay/pair.h"
+#include "forebay/reply.h"
 #include "spisor/status.h"
 #include "spisor/value.h"
 
@@ -43,15 +44,22 @@ typedef struct forebay_slot {
     size_t count;
 } forebay_slot;
 
-/** One model a provider serves; `name` NULL when the catalog names none. */
+/**
+ * One model a provider serves; `name` NULL when the catalog names none, and `context` and `output` its token limits
+ * when `has_context` and `has_output` are 1.
+ */
 typedef struct forebay_catalog_model {
     const char *id;
     const char *name;
+    uint32_t has_context;
+    uint64_t context;
+    uint32_t has_output;
+    uint64_t output;
 } forebay_catalog_model;
 
 /**
  * One provider's models in catalog order, and its ranking of model ids, best first, when `has_ranking` is 1; without
- * one its catalog order ranks them.
+ * one its catalog order ranks them. `default_model` is the id the provider names its default, NULL for none.
  */
 typedef struct forebay_catalog_provider {
     const char *provider;
@@ -60,12 +68,14 @@ typedef struct forebay_catalog_provider {
     uint32_t has_ranking;
     const char *const *ranking;
     size_t ranking_count;
+    const char *default_model;
 } forebay_catalog_provider;
 
 /**
  * The profile members routing reads. The tier members say how a model id names its tier: `tier_regex`, with one
  * group, over `tier_source_provider`'s ranked ids, sorted by `tier_order`, else `tier_fallback`. A NULL pattern is
- * one the profile does not declare. First shape ends at `unserved_model_pattern`.
+ * one the profile does not declare. `default_context` and `default_output` are the token limits of a model whose
+ * catalog entry gives none. First shape ends at `unserved_model_pattern`.
  */
 typedef struct forebay_routing_profile {
     uint32_t size;
@@ -77,6 +87,8 @@ typedef struct forebay_routing_profile {
     const char *tier_regex;
     const char *native_model_pattern;
     const char *unserved_model_pattern;
+    uint64_t default_context;
+    uint64_t default_output;
 } forebay_routing_profile;
 
 /**
@@ -152,6 +164,38 @@ typedef struct forebay_resolve_answer {
     size_t notice_count;
     void *storage;
 } forebay_resolve_answer;
+
+/**
+ * The models an application lists over a catalog, with the profile's default limits for a model that gives none;
+ * the tier members of `profile` are not read. First shape ends at `catalog_count`.
+ */
+typedef struct forebay_model_entries_argument {
+    uint32_t size;
+    const forebay_routing_profile *profile;
+    const forebay_catalog_provider *catalog;
+    size_t catalog_count;
+} forebay_model_entries_argument;
+
+/**
+ * One listed model: `name` the catalog's, or the id when the catalog names none, and each limit the model's, else
+ * the profile's default, present when its `has_` flag is 1.
+ */
+typedef struct forebay_model_entry {
+    const char *id;
+    const char *name;
+    uint32_t has_context;
+    uint64_t context;
+    uint32_t has_output;
+    uint64_t output;
+} forebay_model_entry;
+
+/** Every model id the catalog serves, once, in catalog order. First shape ends at `storage`. */
+typedef struct forebay_model_entries_answer {
+    uint32_t size;
+    const forebay_model_entry *entries;
+    size_t entry_count;
+    void *storage;
+} forebay_model_entries_answer;
 
 /**
  * An upstream response's status and headers at `now`, and the retry an earlier reply named when
@@ -244,15 +288,6 @@ typedef enum forebay_step_kind {
     FOREBAY_STEP_END_STREAM = 5,
     FOREBAY_STEP_DONE = 6
 } forebay_step_kind;
-
-/** The reply a step, an arrival or a failure answers with. Append-only: a published value keeps its number. */
-typedef enum forebay_reply_kind {
-    FOREBAY_REPLY_PROXY_ERROR = 1,
-    FOREBAY_REPLY_API_ERROR = 2,
-    FOREBAY_REPLY_PROVIDER_FAILURE = 3,
-    FOREBAY_REPLY_RATE_LIMITED = 4,
-    FOREBAY_REPLY_INVALID_REQUEST = 5
-} forebay_reply_kind;
 
 /** A log line's level. Append-only: a published value keeps its number. */
 typedef enum forebay_log_level {
@@ -544,6 +579,13 @@ typedef struct forebay_routing_definition {
     void (*release_failure_answer)(void *context, forebay_failure_answer *answer);
     void (*release_environment_answer)(void *context, forebay_environment_answer *answer);
     void (*release_refusal)(void *context, spisor_refusal *refusal);
+    /**
+     * Every model id the catalog serves, once as the first provider offers it, each with its name and limits filled
+     * as forebay_model_entry says; a profile short of `default_output` gives no defaults.
+     */
+    spisor_status (*model_entries)(void *context, const forebay_model_entries_argument *argument,
+                                   forebay_model_entries_answer *answer, spisor_refusal *refusal);
+    void (*release_model_entries_answer)(void *context, forebay_model_entries_answer *answer);
 } forebay_routing_definition;
 
 /** The static forebay_routing_definition, living until the library is unloaded. */

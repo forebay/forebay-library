@@ -100,25 +100,41 @@ add_test(NAME layouts_list_every_public_struct_and_field
     COMMAND ${CMAKE_COMMAND} -DLAYOUTS=$<TARGET_FILE:layouts> -DHEADERS=${PROJECT_SOURCE_DIR}/include
         "-DPREFIX=^forebay_" -P ${spisor_library_SOURCE_DIR}/cmake/layouts_check.cmake)
 
+# A header including definition.h declares a definition: with a getter the library implements it, and without one it
+# is a contract the library only describes, which library.json declares under `contracts`.
 file(GLOB forebay_public_headers CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/include/forebay/*.h)
 set(forebay_definition_symbols "")
+set(forebay_contract_definitions "")
 set(forebay_definition_header_count 0)
 foreach(header IN LISTS forebay_public_headers)
     file(READ ${header} header_text)
-    if(header_text MATCHES "#include \"forebay/definition.h\"")
-        math(EXPR forebay_definition_header_count "${forebay_definition_header_count} + 1")
+    if(NOT header_text MATCHES "#include \"forebay/definition.h\"")
+        continue()
     endif()
+    math(EXPR forebay_definition_header_count "${forebay_definition_header_count} + 1")
     string(REGEX MATCHALL "forebay_[a-z_]+_definition_of[ \t\r\n]*[(][ \t\r\n]*void[ \t\r\n]*[)]"
         declarations "${header_text}")
     foreach(declaration IN LISTS declarations)
         string(REGEX MATCH "forebay_[a-z_]+_definition_of" symbol "${declaration}")
         list(APPEND forebay_definition_symbols ${symbol})
     endforeach()
+    if(NOT declarations)
+        string(REGEX MATCHALL "}[ \t\r\n]*forebay_[a-z_]+_definition;" contracts "${header_text}")
+        foreach(contract IN LISTS contracts)
+            string(REGEX MATCH "forebay_[a-z_]+_definition" definition "${contract}")
+            list(APPEND forebay_contract_definitions ${definition})
+        endforeach()
+    endif()
 endforeach()
 list(REMOVE_DUPLICATES forebay_definition_symbols)
 string(JOIN [[", "]] forebay_definition_symbol_list ${forebay_definition_symbols})
+set(forebay_contract_definition_list "")
+foreach(definition IN LISTS forebay_contract_definitions)
+    string(APPEND forebay_contract_definition_list "\"${definition}\", ")
+endforeach()
 file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/definition_symbols.h
     CONTENT [[#define FOREBAY_DEFINITION_SYMBOLS "@forebay_definition_symbol_list@"
+#define FOREBAY_CONTRACT_DEFINITIONS @forebay_contract_definition_list@
 #define FOREBAY_DEFINITION_HEADER_COUNT @forebay_definition_header_count@
 ]])
 
@@ -166,6 +182,9 @@ set(forebay_description_symbols "")
 foreach(symbol IN LISTS forebay_definition_symbols)
     string(REGEX REPLACE "_of$" "_description" description_symbol "${symbol}")
     list(APPEND forebay_description_symbols ${description_symbol})
+endforeach()
+foreach(definition IN LISTS forebay_contract_definitions)
+    list(APPEND forebay_description_symbols ${definition}_description)
 endforeach()
 string(JOIN "," forebay_expected_exports ${forebay_definition_symbols} ${forebay_description_symbols})
 add_test(NAME forebay_exports_only_definitions_test

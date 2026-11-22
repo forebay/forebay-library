@@ -27,6 +27,7 @@ typedef enum routing_operation {
     ROUTING_ARRIVAL,
     ROUTING_PORT,
     ROUTING_FAILURE,
+    ROUTING_MODEL_ENTRIES,
     ROUTING_UNKNOWN
 } routing_operation;
 
@@ -46,6 +47,7 @@ typedef struct routing_call {
     forebay_port_argument port;
     forebay_port_failure port_failure;
     forebay_failure_argument failure;
+    forebay_model_entries_argument model_entries;
 } routing_call;
 
 typedef struct routing_answers {
@@ -62,6 +64,7 @@ typedef struct routing_answers {
     forebay_arrival_answer arrival;
     forebay_port_answer port;
     forebay_failure_answer failure;
+    forebay_model_entries_answer model_entries;
 } routing_answers;
 
 /** Sets the size of a struct its caller zeroed whole, padding included, so an empty one compares byte for byte. */
@@ -73,7 +76,8 @@ static inline const forebay_routing_definition *routing_definition(void) {
 
 static inline routing_operation routing_operation_named(const char *name) {
     static const char *const names[] = {"tiers",       "modelMap",     "resolve", "outcome", "environment", "limits",
-                                        "passThrough", "replyHeaders", "arrival", "port",    "failure"};
+                                        "passThrough", "replyHeaders", "arrival", "port",    "failure",
+                                        "modelEntries"};
     for (int index = 0; index < ROUTING_UNKNOWN; index++) {
         if (name != NULL && strcmp(names[index], name) == 0) {
             return (routing_operation)index;
@@ -98,6 +102,7 @@ static inline void routing_empty_call(routing_call *call) {
     ROUTING_INIT_INTO(call->port, forebay_port_argument);
     ROUTING_INIT_INTO(call->port_failure, forebay_port_failure);
     ROUTING_INIT_INTO(call->failure, forebay_failure_argument);
+    ROUTING_INIT_INTO(call->model_entries, forebay_model_entries_argument);
 }
 
 static inline void routing_empty_answers(routing_answers *answers) {
@@ -114,6 +119,7 @@ static inline void routing_empty_answers(routing_answers *answers) {
     ROUTING_INIT_INTO(answers->arrival, forebay_arrival_answer);
     ROUTING_INIT_INTO(answers->port, forebay_port_answer);
     ROUTING_INIT_INTO(answers->failure, forebay_failure_answer);
+    ROUTING_INIT_INTO(answers->model_entries, forebay_model_entries_answer);
 }
 
 static inline double routing_number_of(const cJSON *object, const char *name) {
@@ -266,6 +272,10 @@ static inline int routing_read_call(const char *function, const cJSON *argument,
         return routing_read_port(argument, call);
     case ROUTING_FAILURE:
         return routing_read_failure(argument, &call->failure);
+    case ROUTING_MODEL_ENTRIES:
+        call->model_entries.profile = routing_profile_of(routing_member(argument, "profile"));
+        routing_read_catalog(argument, &call->model_entries.catalog, &call->model_entries.catalog_count);
+        return 1;
     default:
         fprintf(stderr, "the function %s is not one of routing's\n", function == NULL ? "(none)" : function);
         return 0;
@@ -312,6 +322,9 @@ static inline void routing_make_call(const routing_call *call, routing_answers *
     case ROUTING_PORT:
         answers->status = routing->port(context, &call->port, &answers->port, refusal);
         break;
+    case ROUTING_MODEL_ENTRIES:
+        answers->status = routing->model_entries(context, &call->model_entries, &answers->model_entries, refusal);
+        break;
     default:
         answers->status = routing->failure(context, &call->failure, &answers->failure, refusal);
         break;
@@ -330,6 +343,7 @@ static inline void routing_release_answers(routing_answers *answers) {
     routing->release_arrival_answer(context, &answers->arrival);
     routing->release_port_answer(context, &answers->port);
     routing->release_failure_answer(context, &answers->failure);
+    routing->release_model_entries_answer(context, &answers->model_entries);
     routing->release_refusal(context, &answers->refusal);
 }
 
@@ -387,6 +401,24 @@ static inline cJSON *routing_limits_json_of(const forebay_limits_answer *answer)
     return result;
 }
 
+static inline cJSON *routing_entries_json_of(const forebay_model_entries_answer *answer) {
+    cJSON *entries = cJSON_CreateArray();
+    for (size_t index = 0; index < answer->entry_count; index++) {
+        const forebay_model_entry *entry = &answer->entries[index];
+        cJSON *json = cJSON_CreateObject();
+        cJSON_AddStringToObject(json, "id", entry->id);
+        cJSON_AddStringToObject(json, "name", entry->name);
+        if (entry->has_context) {
+            cJSON_AddNumberToObject(json, "context", (double)entry->context);
+        }
+        if (entry->has_output) {
+            cJSON_AddNumberToObject(json, "output", (double)entry->output);
+        }
+        cJSON_AddItemToArray(entries, json);
+    }
+    return entries;
+}
+
 static inline cJSON *routing_wrap(const char *name, cJSON *item) {
     cJSON *result = cJSON_CreateObject();
     cJSON_AddItemToObject(result, name, item);
@@ -427,6 +459,8 @@ static inline cJSON *routing_answer_json_of(const routing_call *call, const rout
                                                              answers->reply_headers.header_count));
     case ROUTING_ARRIVAL:
         return routing_arrival_json_of(&answers->arrival);
+    case ROUTING_MODEL_ENTRIES:
+        return routing_wrap("entries", routing_entries_json_of(&answers->model_entries));
     case ROUTING_PORT:
         result = cJSON_CreateObject();
         cJSON_AddNumberToObject(result, "port", answers->port.port);

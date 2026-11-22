@@ -35,5 +35,11 @@
         }
       ]
     }
+  ],
+  "contracts": [
+    {
+      "capability": "forebay.provider",
+      "description": "forebay_provider_definition_description"
+    }
   ]
 }

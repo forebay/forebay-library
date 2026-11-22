@@ -22,6 +22,7 @@
 #include "forebay/definition.h"
 #include "forebay/ir.h"
 #include "forebay/pair.h"
+#include "forebay/reply.h"
 #include "spisor/status.h"
 
 #ifdef __cplusplus
@@ -53,7 +54,7 @@ typedef struct forebay_anthropic_request_answer {
     void *storage;
     const forebay_pair *forwarded_headers;
     size_t forwarded_header_count;
-    /** A forebay_reply_kind of routing.h, 0 when the body was read. */
+    /** A forebay_reply_kind, 0 when the body was read. */
     uint32_t reply_kind;
     uint32_t status;
     const char *message;
@@ -132,13 +133,13 @@ typedef struct forebay_anthropic_stream_encode_argument {
 } forebay_anthropic_stream_encode_argument;
 
 /**
- * An Anthropic error body to write: the `error.type` the wire names, such as `api_error` or `loader_proxy_error`,
- * required and not empty, and the `message`, required, empty allowed. The HTTP status is the caller's to send. First
- * shape ends at `message`.
+ * An Anthropic error body to write: the reply it is, which names the wire's `error.type`, and the `message`, required,
+ * empty allowed. The HTTP status is the caller's to send. First shape ends at `message`.
  */
 typedef struct forebay_anthropic_error_argument {
     uint32_t size;
-    const char *error_type;
+    /** A forebay_reply_kind. */
+    uint32_t reply_kind;
     const char *message;
 } forebay_anthropic_error_argument;
 
@@ -146,9 +147,6 @@ typedef struct forebay_anthropic_error_argument {
  * One model a provider serves, an array element with no size. `id` is required; `name` NULL or empty lists the model
  * under its id; `context` and `output` are the model's token limits when `has_context` and `has_output` are 1, and
  * the profile's defaults otherwise.
- *
- * @implNote Routing's forebay_catalog_model carries no limits, and a model listing needs them, so the listing has its
- * own model type rather than a second catalog that routing would not read.
  */
 typedef struct forebay_anthropic_listed_model {
     const char *id;
@@ -347,9 +345,10 @@ typedef struct forebay_anthropic_definition {
     spisor_status (*stream_encode_finish)(void *context, const forebay_anthropic_stream_encode_argument *argument,
                                           forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
-     * The body of an Anthropic error, `{"type":"error","error":{"type":<error_type>,"message":<message>}}`, with the
-     * message escaped as JSON text. MALFORMED, naming the member, for a NULL or empty `error_type` and a NULL
-     * `message`.
+     * The body of an Anthropic error, `{"type":"error","error":{"type":<type>,"message":<message>}}`, with the message
+     * escaped as JSON text and the type the reply kind's: `loader_proxy_error` for a proxy error, `api_error` for an
+     * API error and a provider failure, `invalid_request_error` for an invalid request and `rate_limit_error` for a
+     * rate limit. MALFORMED, naming the member, for a reply kind the header does not name and a NULL `message`.
      */
     spisor_status (*error_envelope)(void *context, const forebay_anthropic_error_argument *argument,
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);

@@ -7,7 +7,16 @@ format, `forebay-library` 0.2.0, with three services, `routing`, `accounts` and 
 answers a static C struct that begins with its `size`, then the provider's `context`, then one function pointer
 per operation and one release per kind of answer, living until the library is unloaded. The structs are declared
 in `include/forebay/routing.h`, `include/forebay/accounts.h` and `include/forebay/anthropic.h`, which document every operation, what it takes
-and answers, and every refusal; this file says what they decide. No JSON crosses the boundary.
+and answers, and every refusal; this file says what they decide. No JSON crosses the boundary. The reply kinds both
+`routing` and `anthropic` answer with are `include/forebay/reply.h`'s.
+
+`library.json` also declares one contract, a definition this library describes and does not implement:
+`forebay.provider`, whose description is `forebay_provider_definition_description`, generated from
+`include/forebay/provider.h`. A provider plugin implements it: `models` answers its catalog entry (its models with
+their limits, its ranking and its default model), `handle` serves an IR request as a whole response, an upstream
+failure or a stream, and `next` reads that stream event by event to its end or to the message of its failure; `models`,
+`handle` and `next` may block. Every header that includes `definition.h` declares a definition: with a
+`forebay_<id>_definition_of` getter it is a service, and without one it is the contract `forebay.<id>`.
 
 An operation takes the `context` and, when it reads anything, a size-prefixed argument struct; it fills the
 caller's empty answer, or the consumer's empty handle for an operation opening one, or, when it refuses, the
@@ -22,8 +31,10 @@ in snake case.
 ## The routing service
 
 `routing` holds the decisions of basekit's model map and router. The profile members it reads are
-`forebay_routing_profile`, the providers' models a catalog of `forebay_catalog_model`, and the model map a slot
-per tier and the default, each served by `forebay_assignment`s (`provider`, `model`, `name`, `derived`).
+`forebay_routing_profile`, with the default token limits of a model that gives none, the providers' models a
+catalog of `forebay_catalog_model` (each with its limits when it has them) and each provider's default model, and the
+model map a slot per tier and the default, each served by `forebay_assignment`s (`provider`, `model`, `name`,
+`derived`).
 
 | operation | decides |
 | --- | --- |
@@ -38,6 +49,7 @@ per tier and the default, each served by `forebay_assignment`s (`provider`, `mod
 | `limits` | the largest request body, the 413 `proxyError` reply for a larger one, the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
 | `port` | the port and the loopback address for an integer 1 to 65535; else a refusal that the setting is no port, or, given a listen failure, that the port cannot be listened on |
 | `failure` | the reply: for an unreachable upstream a 502 `proxyError` naming the upstream's origin (scheme, host and port) and the detail, an unusable upstream refused as `pass_through` refuses it; for a failed request a 500 `proxyError` whose message is the detail, with a `warn` line `a request failed: <detail>` |
+| `model_entries` | every model id the catalog serves, once as the first provider offers it, with its name (the id when the catalog names none) and each limit the model's or the profile's default; the tier members are not read, so a profile with no tiers lists every model |
 | `environment` | the environment an application starts with: the base URL, and with providers the model pairs named by the application's model variables and the placeholder token unless the application has a login of its own |
 
 A refusal answers REFUSED with the refusal saying what to repair. Windows has no `regcomp`, so one matcher
@@ -71,8 +83,8 @@ provider is not in `providers` is skipped and logged, never called.
 The step argument gives the login command and settings file the 503 names. The hop-by-hop set is one policy for both directions: `connection`, `keep-alive`, `proxy-connection`,
 `transfer-encoding`, `upgrade`, `te`, `trailer`, every name starting `proxy-` and every name the `connection`
 header lists, all compared ignoring case.
-`test/vectors/routing/` holds the vectors, each from a basekit test or a rule of `ModelMap.java` or
-`Router.java`; `routing_step_test` drives `step` call by call. A vector's `files` are laid out in a fresh
+`test/vectors/routing/` holds the vectors, each from a basekit test, a rule of `ModelMap.java` or
+`Router.java`, or a proxy plugin's profile (`model-entries-*`, OpenCode's); `routing_step_test` drives `step` call by call. A vector's `files` are laid out in a fresh
 directory that becomes its `userHome`, or with `filesUnder` the value of the environment variable it names.
 The vectors are JSON test data, turned into the definition's structs by a test-only reader that no shipped
 binary links; a vector naming `"status": 1` is a call the definition refuses as MALFORMED.
@@ -137,15 +149,15 @@ Four operations write the proxy's own replies; the first three answer a `forebay
 
 | operation | does |
 | --- | --- |
-| `error_envelope` | an error type (not empty, such as `api_error` or `loader_proxy_error`) and a message to `{"type":"error","error":{"type":...,"message":...}}`, the message escaped as JSON text |
+| `error_envelope` | a reply kind and a message to `{"type":"error","error":{"type":...,"message":...}}`, the message escaped as JSON text and the type the kind's: `loader_proxy_error` for a proxy error, `api_error` for an API error and a provider failure, `invalid_request_error` for an invalid request, `rate_limit_error` for a rate limit |
 | `model_listing` | providers' models, in order, and the profile's default context and output limits to the `/v1/models` body: each id once as the first provider offers it, `display_name` its name or its id, `created_at` fixed, `max_input_tokens` and `max_tokens` the model's or the defaults, in `data` with `first_id`, `last_id` and `has_more` |
 | `model_lookup`, `release_model_lookup` | the same providers and defaults and a URL-decoded id to the one listed model (`found` 1, answer 200) or the `not_found_error` body (`found` 0, answer 404) |
 | `rate_limit_reply`, `release_reply` | an upstream's own 429 (its headers, the latest reset, the clock's `now`, and the caller's zone name and its `offset_minutes` at the reset, since C does no zone lookup) to a `forebay_anthropic_reply_answer`: status 429, the upstream headers less `content-encoding`, `content-length` and the two `x-hub-` ones, the reset the latest of `reset_at` and the two `anthropic-ratelimit-unified-` reset headers, `content-type`, `retry-after` (seconds to the reset, else 60), and `anthropic-ratelimit-unified-status` and `-reset` when the upstream sent none, with the `rate_limit_error` body naming `h:mm AM` and the zone, or `try again later` for a reset not after `now` |
 | `route_request`, `release_route` | a method and a path to what the proxy does with the request: `messages` for a POST to `/v1/messages`, `modelList` for a GET to `/v1/models` or `/v1/models/`, `modelLookup` with the id for a GET to `/v1/models/<id>`, else `passThrough`; the method is compared ignoring case and a query is cut off. It lives here and not in `routing` because the paths are Anthropic wire names |
 
-`test/vectors/anthropic/` holds the translator's vectors, copied unchanged, and the `rate-limit-*`, `decode-*` and `route-*` ones of the operations the proxy needs beside them;
+`test/vectors/anthropic/` holds the translator's vectors, copied unchanged, and the `rate-limit-*`, `decode-*`, `route-*` and `envelope-*` ones of the operations the proxy needs beside them;
 `anthropic_test` runs every `request-*` and `response-*` one in both directions through the definition, each `rate-limit-*`
-one through `rate_limit_reply`, each `decode-*` one through `decode_request` with its headers, each `route-*` one through `route_request`, `anthropic_stream_test` every `stream-*` one, a decode
+one through `rate_limit_reply`, each `decode-*` one through `decode_request` with its headers, each `route-*` one through `route_request`, each `envelope-*` one through `error_envelope`, `anthropic_stream_test` every `stream-*` one, a decode
 also split in two at every byte and fed a byte at a time, and `anthropic_out_of_memory_test` fails each allocation of
 every vector, singly and from that one on.
 The test-only IR JSON codec the vectors are read with has its own `ir_codec_test` round trip and
@@ -162,18 +174,23 @@ ctest --test-dir build --output-on-failure -C Debug
 The shared C conventions come from `spisor/library`, built from the checkout under `siblings/library`
 at the commit `repo.json` declares (CI checks it out; locally a link to the checkout does), and so do
 weivel's `core`, `standard` and `c` under `siblings/`. The tests call the definitions through the built shared
-library, one CTest executable per concern; `declaration_test` reads `library.json` with the weivel standard and
+library, one CTest executable per concern; `declaration_test` reads `library.json` with the weivel standard,
+requiring a service for every getter and a contract for every header that includes `definition.h` without one, and
 `weivel_host_load_test` loads the library through `weivel/c`'s host, which checks every description with the
 standard's check. Each description is generated at build time by the weivel standard's `weivel_describe` from
 `spisor/status.h` and every `include/forebay` header, so a language that cannot read a C header binds the definition
-from it, and `description_test` loads each one from the built library and runs the standard's own check on it. The
+from it, and `description_test` loads each one, a contract's among them, from the built library and runs the
+standard's own check on it. The
 symbol is the definition's name with `_description`, which is the name another library nesting a forebay definition
 looks for. `forebay_library` links `weivel_standard` statically, and no other weivel library, and exports its
-definitions and their descriptions and nothing else, which `forebay_exports_only_definitions_test` holds.
+definitions, their descriptions and the contract's description and nothing else, which
+`forebay_exports_only_definitions_test` holds.
 `forebay_library_short_shape_test` and `forebay_library_empty_answer_test`, added by `spisor/library`'s
 `spisor_add_described_checks`, walk those descriptions through the built library: every operation with each
 size-prefixed argument and answer one byte short of its first shape, and every operation whose answer counts an array, text or
-bytes with that count nonzero beside NULL storage, each refused MALFORMED with every answer untouched. The `layouts`
+bytes with that count nonzero beside NULL storage, each refused MALFORMED with every answer untouched. They walk the
+services alone: a contract has no definition here to call, so `description_test` and the `layouts` check are what
+hold its description and its structs. The `layouts`
 program prints every public
 struct's fields with offset, size and `sizeof`, held to the headers by `spisor/library`'s
 `cmake/layouts_check.cmake`, and a translation of a header in another language is checked against it. The shared
@@ -205,8 +222,8 @@ or on a 32-bit platform each test is registered as skipped, saying why. Nothing 
 into, staged beside or installed with any shipped artifact: the core's `echo` the cost tests measure against is built
 into `test/bindings/echo`, apart from the shipped library.
 
-`contracts/` keeps the plugin contract schemas, with their vectors in `test/vectors/ir/`, as files; nothing here tests
-them.
+`contracts/ir.schema.json` keeps the IR's schema as a file, which `include/forebay/ir.h` follows member for member,
+with its documents in `test/vectors/ir/`; nothing here validates against it.
 
 ## Releasing
 

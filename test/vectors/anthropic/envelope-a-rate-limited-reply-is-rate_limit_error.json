@@ -1,0 +1,14 @@
+{
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "rateLimited",
+    "message": "slow down"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "rate_limit_error",
+      "message": "slow down"
+    }
+  }
+}

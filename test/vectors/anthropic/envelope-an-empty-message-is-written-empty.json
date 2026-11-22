@@ -1,0 +1,14 @@
+{
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "apiError",
+    "message": ""
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "api_error",
+      "message": ""
+    }
+  }
+}

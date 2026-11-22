@@ -12,6 +12,7 @@
 #include "routing_failure.h"
 #include "routing_headers.h"
 #include "routing_limits.h"
+#include "routing_model_entries.h"
 #include "routing_model_map.h"
 #include "routing_outcome.h"
 #include "routing_resolve.h"
@@ -508,6 +509,8 @@ static const forebay_routing_definition definition = {
     release_failure_answer,
     release_environment_answer,
     spisor_release_refusal,
+    routing_model_entries,
+    routing_release_model_entries_answer,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_routing_definition_of(void) {
