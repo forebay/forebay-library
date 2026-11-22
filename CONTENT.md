@@ -181,7 +181,8 @@ and Debug on Windows.
 ### Bound from TypeScript and Java
 
 `test/bindings/` proves that a language which cannot read a C header binds forebay-library from its descriptions
-alone, through weivel's generic binding and no file naming a forebay type. `bindings_typescript` and `bindings_java`
+alone, through weivel's generic binding: no file translates a forebay header, and the tests name
+`forebay_step_answer.walk` and `forebay_walk` only as strings, the data a check is about. `bindings_typescript` and `bindings_java`
 load the built `forebay_library` from `library.json` through weivel/typescript's and weivel/java's hosts, given the
 standard's check: `routing`'s `step` answers a request for a slot's model as a call of the chain's first entry with
 the `forebay_walk` handle its report hands back, and a second `step` taking that walk and a report that the entry
