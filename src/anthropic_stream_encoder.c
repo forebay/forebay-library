@@ -8,6 +8,7 @@
 #include "spisor/json_write.h"
 
 #define ENCODE_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_stream_encode_argument, event_count)
+#define STREAM_STATUS 200u
 
 /**
  * A stream being written.
@@ -87,7 +88,7 @@ static spisor_status encode_events(const forebay_anthropic_stream_encode_argumen
                                    forebay_anthropic_body_answer *answer, spisor_refusal *refusal,
                                    const char *operation) {
     if (argument == NULL || !spisor_has_shape(argument->size, ENCODE_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
+        !anthropic_body_answer_is_empty(answer)) {
         return spisor_refuse_shape(refusal, operation);
     }
     if (argument->encoder == NULL) {
@@ -101,6 +102,9 @@ static spisor_status encode_events(const forebay_anthropic_stream_encode_argumen
     }
     if (status == SPISOR_OK && !fill_body(&text, answer)) {
         status = SPISOR_OUT_OF_MEMORY;
+    }
+    if (status == SPISOR_OK) {
+        anthropic_head_body(answer, STREAM_STATUS, ANTHROPIC_EVENT_STREAM);
     }
     spisor_memory_release(text.bytes);
     return status == SPISOR_MALFORMED ? anthropic_refuse_problem(refusal, &problem) : status;

@@ -37,3 +37,12 @@ spisor_status anthropic_finish_body(const anthropic_writer *writer, cJSON *wire,
     anthropic_writer_problem(writer, &problem);
     return anthropic_refuse_problem(refusal, &problem);
 }
+
+spisor_status anthropic_finish_reply(const anthropic_writer *writer, cJSON *wire, uint32_t status,
+                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
+    spisor_status finished = anthropic_finish_body(writer, wire, answer, refusal);
+    if (finished == SPISOR_OK) {
+        anthropic_head_body(answer, status, ANTHROPIC_JSON);
+    }
+    return finished;
+}

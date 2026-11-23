@@ -439,6 +439,10 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_body_answer, bytes);
     FIELD(forebay_anthropic_body_answer, length);
     FIELD(forebay_anthropic_body_answer, storage);
+    FIELD(forebay_anthropic_body_answer, status);
+    FIELD(forebay_anthropic_body_answer, content_type);
+    FIELD(forebay_anthropic_body_answer, headers);
+    FIELD(forebay_anthropic_body_answer, header_count);
     SIZE(forebay_anthropic_body_answer);
     FIELD(forebay_anthropic_stream_decode_argument, size);
     FIELD(forebay_anthropic_stream_decode_argument, decoder);
@@ -473,6 +477,10 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_model_lookup_answer, bytes);
     FIELD(forebay_anthropic_model_lookup_answer, length);
     FIELD(forebay_anthropic_model_lookup_answer, storage);
+    FIELD(forebay_anthropic_model_lookup_answer, status);
+    FIELD(forebay_anthropic_model_lookup_answer, content_type);
+    FIELD(forebay_anthropic_model_lookup_answer, headers);
+    FIELD(forebay_anthropic_model_lookup_answer, header_count);
     SIZE(forebay_anthropic_model_lookup_answer);
     FIELD(forebay_anthropic_rate_limit_argument, size);
     FIELD(forebay_anthropic_rate_limit_argument, upstream_headers);

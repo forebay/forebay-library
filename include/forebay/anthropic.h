@@ -82,14 +82,21 @@ typedef struct forebay_anthropic_encode_response_argument {
 
 /**
  * Bytes the service wrote, a body of UTF-8 JSON or a stream's SSE text, `bytes` of `length` with a NUL after them, the
- * provider's until release_body. Every operation that writes bytes answers this, so one release serves them all. First
- * shape ends at `storage`.
+ * provider's until release_body. Every operation that writes bytes answers this, so one release serves them all.
+ * The reply the bytes go out in follows them: `status` the HTTP status, 0 when another decision names it (an error
+ * body's is the one the reply it writes came with) or the bytes are no reply (a request body); `content_type` the
+ * bytes' media type; and `headers` the reply's headers, `content-type` among them, each name once. They are static
+ * text, and an answer short of `header_count` gets none of them. First shape ends at `storage`.
  */
 typedef struct forebay_anthropic_body_answer {
     uint32_t size;
     const uint8_t *bytes;
     size_t length;
     void *storage;
+    uint32_t status;
+    const char *content_type;
+    const forebay_pair *headers;
+    size_t header_count;
 } forebay_anthropic_body_answer;
 
 /**
@@ -167,8 +174,9 @@ typedef struct forebay_anthropic_model_lookup_argument {
 } forebay_anthropic_model_lookup_argument;
 
 /**
- * The body of a lookup, the provider's until release_model_lookup: the listed model when `found` is 1 (answer 200), or
- * the `not_found_error` body when it is 0 (answer 404). First shape ends at `storage`.
+ * The body of a lookup, the provider's until release_model_lookup: the listed model when `found` is 1, or the
+ * `not_found_error` body when it is 0, and the reply it goes out in as forebay_anthropic_body_answer has it: `status`
+ * 200 or 404, `content_type` and `headers`. First shape ends at `storage`.
  */
 typedef struct forebay_anthropic_model_lookup_answer {
     uint32_t size;
@@ -176,6 +184,10 @@ typedef struct forebay_anthropic_model_lookup_answer {
     const uint8_t *bytes;
     size_t length;
     void *storage;
+    uint32_t status;
+    const char *content_type;
+    const forebay_pair *headers;
+    size_t header_count;
 } forebay_anthropic_model_lookup_answer;
 
 /**
@@ -261,7 +273,10 @@ typedef struct forebay_anthropic_definition {
      */
     spisor_status (*decode_request)(void *context, const forebay_anthropic_body_argument *argument,
                                     forebay_anthropic_request_answer *answer, spisor_refusal *refusal);
-    /** An IR request to a body, as encodeRequest does, the members in the order it builds them. */
+    /**
+     * An IR request to a body, as encodeRequest does, the members in the order it builds them: `application/json`,
+     * status 0, since a request body is sent upstream and never answered.
+     */
     spisor_status (*encode_request)(void *context, const forebay_anthropic_encode_request_argument *argument,
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
@@ -272,7 +287,10 @@ typedef struct forebay_anthropic_definition {
      */
     spisor_status (*decode_response)(void *context, const forebay_anthropic_body_argument *argument,
                                      forebay_anthropic_response_answer *answer, spisor_refusal *refusal);
-    /** An IR response to a body, as encodeResponse does, the members in the order it builds them. */
+    /**
+     * An IR response to a body, as encodeResponse does, the members in the order it builds them, answered as a 200
+     * `application/json` reply.
+     */
     spisor_status (*encode_response)(void *context, const forebay_anthropic_encode_response_argument *argument,
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
@@ -311,35 +329,42 @@ typedef struct forebay_anthropic_definition {
                                          spisor_refusal *refusal);
     /**
      * The SSE text of the events, one `event:` and one `data:` line and a blank line per event, as the translator's
-     * stream encoder writes them, with its defaults for what an event leaves NULL. MALFORMED when `encoder` is NULL,
-     * for an event of a kind the header does not name, and a content block start whose `block_kind` is not text,
-     * tool use or thinking.
+     * stream encoder writes them, with its defaults for what an event leaves NULL. Every feed answers the reply the
+     * stream's first bytes begin: 200, `text/event-stream`, and `cache-control: no-cache` among its headers.
+     * MALFORMED when `encoder` is NULL, for an event of a kind the header does not name, and a content block start
+     * whose `block_kind` is not text, tool use or thinking.
      */
     spisor_status (*stream_encode)(void *context, const forebay_anthropic_stream_encode_argument *argument,
                                    forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
-    /** Writes the last events, possibly none, then ends the stream; an Anthropic stream needs nothing after them. */
+    /**
+     * Writes the last events, possibly none, then ends the stream; an Anthropic stream needs nothing after them. Its
+     * reply is stream_encode's.
+     */
     spisor_status (*stream_encode_finish)(void *context, const forebay_anthropic_stream_encode_argument *argument,
                                           forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
      * The body of an Anthropic error, `{"type":"error","error":{"type":<type>,"message":<message>}}`, with the message
      * escaped as JSON text and the type the reply kind's: `loader_proxy_error` for a proxy error, `api_error` for an
      * API error and a provider failure, `invalid_request_error` for an invalid request and `rate_limit_error` for a
-     * rate limit. MALFORMED, naming the member, for a reply kind the header does not name and a NULL `message`.
+     * rate limit. The reply is `application/json` and status 0: its status is the one the decision that chose the
+     * reply named. MALFORMED, naming the member, for a reply kind the header does not name and a NULL `message`.
      */
     spisor_status (*error_envelope)(void *context, const forebay_anthropic_error_argument *argument,
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
      * The `/v1/models` body, as the proxy's `model-listing.ts` writes it: every entry in order, each as `type`, `id`,
      * `display_name` (its name), `created_at` the fixed 2025-01-01T00:00:00Z, and `max_input_tokens` and `max_tokens`
-     * when it has those limits, inside `data`, `first_id` and `last_id` (null for no entry) and `has_more` false.
-     * MALFORMED, naming the member, for a NULL `models` beside a count and an entry whose `id` or `name` is NULL.
+     * when it has those limits, inside `data`, `first_id` and `last_id` (null for no entry) and `has_more` false, as a
+     * 200 `application/json` reply. MALFORMED, naming the member, for a NULL `models` beside a count and an entry
+     * whose `id` or `name` is NULL.
      */
     spisor_status (*model_listing)(void *context, const forebay_anthropic_model_listing_argument *argument,
                                    forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
      * One model of `/v1/models/<id>`: the first entry `id` names, written as the listing writes it, with `found` 1, or
-     * `{"type":"error","error":{"type":"not_found_error","message":"model not found: <id>"}}` with `found` 0, so the
-     * caller answers 200 or 404. MALFORMED, naming the member, as `model_listing` for the entries and for a NULL `id`.
+     * `{"type":"error","error":{"type":"not_found_error","message":"model not found: <id>"}}` with `found` 0, answered
+     * as a 200 or a 404 `application/json` reply. MALFORMED, naming the member, as `model_listing` for the entries
+     * and for a NULL `id`.
      * An empty `id` is not a lookup: `/v1/models/` belongs to `model_listing`, as the TypeScript routes it, and
      * `model_lookup` answers not found for it.
      */

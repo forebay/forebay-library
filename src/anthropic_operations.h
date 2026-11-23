@@ -4,6 +4,7 @@
 #include "anthropic_check.h"
 #include "anthropic_writer.h"
 #include "answer_storage.h"
+#include "anthropic_reply_head.h"
 #include "forebay/anthropic.h"
 #include "spisor/definition.h"
 
@@ -41,7 +42,9 @@ spisor_status anthropic_refuse_bytes(spisor_refusal *refusal);
 spisor_status anthropic_finish_body(const anthropic_writer *writer, cJSON *wire, forebay_anthropic_body_answer *answer,
                                     spisor_refusal *refusal);
 
-void anthropic_release_body(void *context, forebay_anthropic_body_answer *answer);
+/** anthropic_finish_body, then on OK the JSON reply of `status` the body goes out in. */
+spisor_status anthropic_finish_reply(const anthropic_writer *writer, cJSON *wire, uint32_t status,
+                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
 
 spisor_status anthropic_stream_decoder_open(void *context, forebay_anthropic_stream_decoder **decoder,
                                             spisor_refusal *refusal);
@@ -66,6 +69,5 @@ spisor_status anthropic_model_listing(void *context, const forebay_anthropic_mod
                                       forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
 spisor_status anthropic_model_lookup(void *context, const forebay_anthropic_model_lookup_argument *argument,
                                      forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal);
-void anthropic_release_model_lookup(void *context, forebay_anthropic_model_lookup_answer *answer);
 
 #endif

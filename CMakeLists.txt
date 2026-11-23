@@ -48,6 +48,7 @@ add_library(forebay_objects OBJECT
     src/anthropic_rate_limit_reply.c
     src/anthropic_reader.c
     src/anthropic_refusal.c
+    src/anthropic_reply_head.c
     src/anthropic_request_answer.c
     src/anthropic_route.c
     src/anthropic_stop_reason.c
