@@ -6,7 +6,8 @@
     },
     "now": 1000000000000,
     "offsetMinutes": -420,
-    "zone": "PDT"
+    "zoneEnUs": "PDT",
+    "zoneEnGb": "GMT-7"
   },
   "output": {
     "status": 429,

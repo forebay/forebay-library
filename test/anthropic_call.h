@@ -17,9 +17,10 @@
  * test-only IR codec. A wire-shape vector's `input` is the operation's argument as JSON: `replyKind` (a
  * forebay_reply_kind by its vector name, such as `proxyError`) and `message`, or `models`, a list of the entries
  * routing's `model_entries` answers, each with `id`, `name`, `context` and `output`, and for a lookup the `id`.
- * A rate-limit vector's `input` is `upstreamHeaders`, `resetAt`, `now`, `offsetMinutes` and `zone`, and its `output` the
- * `status`, the `headers` in order and the `body` text of the reply. A `decodeRequestWithHeaders` vector's `input` is
- * the wire `body` as JSON, or the text `rawBody` as it is, and the client's `headers`, and its `output` the `forwardedHeaders` in order and either the
+ * A rate-limit vector's `input` is `upstreamHeaders`, `resetAt`, `now`, `offsetMinutes`, `zoneEnUs` and `zoneEnGb`,
+ * and its `output` the `status`, the `headers` in order and the `body` text of the reply. A `decodeRequestWithHeaders`
+ * vector's `input` is the wire `body` as JSON, or the text `rawBody` as it is, and the client's `headers`, and its
+ * `output` the `forwardedHeaders` in order and either the
  * `model` of the request read or the `reply` (`kind`, `status`, `message`) of a body that is no object. A
  * `routeRequest` vector's `input` is the `method` and `path`, and its `output` the `kind` (`messages`, `modelList`,
  * `modelLookup` or `passThrough`) and the `modelId` of a lookup.
@@ -609,7 +610,7 @@ static inline spisor_status anthropic_call_model_listing(const anthropic_input *
     return anthropic_definition()->model_listing(NULL, &input->listing, &answer->body, refusal);
 }
 
-/** A rate-limit vector's input: the upstream headers in order, `resetAt` when present, `now`, the offset and the zone. */
+/** A rate-limit vector's input: the headers in order, `resetAt` when present, `now`, the offset and both zone names. */
 static inline int anthropic_read_rate_limit_input(const cJSON *json, anthropic_input *input) {
     *input = (anthropic_input){0};
     const cJSON *headers = cJSON_GetObjectItemCaseSensitive(json, "upstreamHeaders");
@@ -634,7 +635,8 @@ static inline int anthropic_read_rate_limit_input(const cJSON *json, anthropic_i
     input->rate_limit.reset_at = cJSON_IsNumber(reset_at) ? reset_at->valuedouble : 0;
     input->rate_limit.now = cJSON_GetObjectItemCaseSensitive(json, "now")->valuedouble;
     input->rate_limit.offset_minutes = (int64_t)cJSON_GetObjectItemCaseSensitive(json, "offsetMinutes")->valuedouble;
-    input->rate_limit.zone = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zone"));
+    input->rate_limit.zone_en_us = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zoneEnUs"));
+    input->rate_limit.zone_en_gb = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zoneEnGb"));
     return 1;
 }
 
