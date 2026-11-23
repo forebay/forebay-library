@@ -196,7 +196,7 @@ static void refuses_malformed_catalogs(void) {
     forebay_catalog_answer answer = SPISOR_INIT(forebay_catalog_answer);
     expect_malformed(routing->catalog(NULL, NULL, &answer, &refusal), &refusal, "a catalog without an argument");
     expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal, "a catalog of no event");
-    argument.event = FOREBAY_CATALOG_DERIVE_FAILED + 1;
+    argument.event = FOREBAY_CATALOG_READ + 1;
     expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal, "a catalog of an unnamed event");
     argument.event = FOREBAY_CATALOG_PERIOD;
     argument.now = INFINITY;
@@ -238,6 +238,23 @@ static void an_unasked_answer_needs_the_shapes_that_carry_it(void) {
     answer.size = (uint32_t)(offsetof(forebay_catalog_answer, storage) + sizeof(void *));
     expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal,
                      "an unasked answer into an answer short of drop");
+}
+
+/** A caller compiled before `changed` was appended reads as unchanged: a read with no round open answers NOTHING. */
+static void a_read_short_of_changed_reads_as_unchanged(void) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_catalog_argument argument = SPISOR_INIT(forebay_catalog_argument);
+    forebay_catalog_answer answer = SPISOR_INIT(forebay_catalog_answer);
+    argument.event = FOREBAY_CATALOG_READ;
+    argument.changed = 1;
+    argument.size = (uint32_t)(offsetof(forebay_catalog_argument, unasked) + sizeof(uint32_t));
+    spisor_status status = routing->catalog(NULL, &argument, &answer, &refusal);
+    if (status != SPISOR_OK || answer.action != FOREBAY_CATALOG_NOTHING) {
+        support_failf("a read short of changed", "answered %d, action %u", (int)status, (unsigned)answer.action);
+    }
+    routing->release_catalog_answer(NULL, &answer);
+    routing->release_refusal(NULL, &refusal);
 }
 
 /** A caller compiled before the defaults were appended has a profile ending at `unserved_model_pattern`. */
@@ -296,6 +313,7 @@ int main(void) {
     refuses_malformed_model_entries();
     refuses_malformed_catalogs();
     an_unasked_answer_needs_the_shapes_that_carry_it();
+    a_read_short_of_changed_reads_as_unchanged();
     a_profile_short_of_its_defaults_fills_no_default();
     a_limits_answer_short_of_the_reply_kind_gets_every_limit_but_it();
     printf("routing_test: %d vectors\n", vectors);
