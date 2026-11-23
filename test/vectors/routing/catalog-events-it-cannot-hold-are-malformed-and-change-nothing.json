@@ -1,0 +1,212 @@
+{
+  "source": "a host's misuse is refused before anything changes, so the round goes on as if it had not been reported",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^([a-z]+)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "a",
+          "a"
+        ]
+      },
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "a"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 10,
+        "round": 2,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 10,
+        "round": 1,
+        "implementation": "b",
+        "models": {
+          "beta": {
+            "models": {
+              "small-2": {
+                "name": "Small 2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 10,
+        "round": 1,
+        "implementation": "a"
+      },
+      {
+        "event": "timer",
+        "now": 10,
+        "timer": "period",
+        "implementations": [
+          "a"
+        ],
+        "round": 1
+      },
+      {
+        "event": "timer",
+        "now": 10,
+        "round": 0,
+        "timer": "roundClose"
+      },
+      {
+        "event": "answered",
+        "now": 20,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 30,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "message": "implementations is not a list naming each implementation once",
+        "fix": "set implementations to a list naming each implementation once"
+      },
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "a"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2000
+          }
+        ],
+        "wait": 1
+      },
+      {
+        "message": "round is not a round the catalog started, or 0 for a period timer",
+        "fix": "set round to a round the catalog started, or 0 for a period timer"
+      },
+      {
+        "message": "implementation is not an implementation whose ask the round awaits",
+        "fix": "set implementation to an implementation whose ask the round awaits"
+      },
+      {
+        "message": "models is not a complete catalog provider, for an answer that did not fail",
+        "fix": "set models to a complete catalog provider, for an answer that did not fail"
+      },
+      {
+        "message": "round is not a round the catalog started, or 0 for a period timer",
+        "fix": "set round to a round the catalog started, or 0 for a period timer"
+      },
+      {
+        "message": "round is not a round the catalog started, or 0 for a period timer",
+        "fix": "set round to a round the catalog started, or 0 for a period timer"
+      },
+      {
+        "released": [
+          1
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 1
+          }
+        ]
+      },
+      {
+        "message": "implementation is not an implementation whose ask the round awaits",
+        "fix": "set implementation to an implementation whose ask the round awaits"
+      },
+      {
+        "implementations": [
+          "a"
+        ],
+        "providers": [
+          "alpha"
+        ],
+        "map": {
+          "large": [
+            "alpha/large-1"
+          ],
+          "small": [],
+          "default": [
+            "alpha/large-1"
+          ]
+        },
+        "entries": [
+          "large-1"
+        ]
+      }
+    ]
+  }
+}

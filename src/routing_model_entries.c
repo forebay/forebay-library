@@ -61,31 +61,30 @@ static int fill_entry(void **storage, forebay_catalog_model *entry, const foreba
            forebay_storage_text(storage, forebay_is_text(model->name) ? model->name : model->id, &entry->name);
 }
 
-/** Fills the entries into the answer's storage; 0, with the storage released, when memory runs out. */
-static int fill_entries(const forebay_model_entries_argument *argument, forebay_model_entries_answer *answer) {
-    size_t total = catalog_model_total(argument->catalog, argument->catalog_count);
-    forebay_catalog_model *entries = forebay_storage_array(&answer->storage, total, sizeof *entries);
+int routing_fill_model_entries(void **storage, const forebay_routing_profile *profile,
+                               const forebay_catalog_provider *catalog, size_t catalog_count,
+                               const forebay_catalog_model **entries, size_t *entry_count) {
+    size_t total = catalog_model_total(catalog, catalog_count);
+    forebay_catalog_model *filled = forebay_storage_array(storage, total, sizeof *filled);
     size_t count = 0;
-    if (total > 0 && entries == NULL) {
+    if (total > 0 && filled == NULL) {
         return 0;
     }
-    for (size_t provider = 0; provider < argument->catalog_count; provider++) {
-        const forebay_catalog_provider *offered = &argument->catalog[provider];
+    for (size_t provider = 0; provider < catalog_count; provider++) {
+        const forebay_catalog_provider *offered = &catalog[provider];
         for (size_t index = 0; index < offered->model_count; index++) {
             const forebay_catalog_model *model = &offered->models[index];
-            if (is_entered(entries, count, model->id)) {
+            if (is_entered(filled, count, model->id)) {
                 continue;
             }
-            if (!fill_entry(&answer->storage, &entries[count], model, argument->profile)) {
-                forebay_storage_release(answer->storage);
-                answer->storage = NULL;
+            if (!fill_entry(storage, &filled[count], model, profile)) {
                 return 0;
             }
             count++;
         }
     }
-    answer->entries = entries;
-    answer->entry_count = count;
+    *entries = filled;
+    *entry_count = count;
     return 1;
 }
 
@@ -99,7 +98,13 @@ spisor_status routing_model_entries(void *context, const forebay_model_entries_a
     if (!routing_is_profile(argument->profile, 0) || !routing_is_catalog(argument->catalog, argument->catalog_count)) {
         return forebay_refuse_member(refusal, "the profile or the catalog", "complete, with every text set");
     }
-    return fill_entries(argument, answer) ? SPISOR_OK : SPISOR_OUT_OF_MEMORY;
+    if (!routing_fill_model_entries(&answer->storage, argument->profile, argument->catalog, argument->catalog_count,
+                                    &answer->entries, &answer->entry_count)) {
+        forebay_storage_release(answer->storage);
+        SPISOR_CLEAR_ANSWER(answer, MODEL_ENTRIES_ANSWER_SHAPE);
+        return SPISOR_OUT_OF_MEMORY;
+    }
+    return SPISOR_OK;
 }
 
 void routing_release_model_entries_answer(void *context, forebay_model_entries_answer *answer) {

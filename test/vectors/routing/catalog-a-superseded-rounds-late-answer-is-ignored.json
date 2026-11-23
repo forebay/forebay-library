@@ -1,0 +1,185 @@
+{
+  "source": "task 6 fix round 4 item 2: the superseded round's late answer for an implementation the new round also asks is never kept, nor is its stale timer obeyed",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^([a-z]+)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "a"
+        ]
+      },
+      {
+        "event": "read",
+        "now": 100,
+        "implementations": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 200,
+        "round": 2,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 300,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-9": {
+                "name": "Large 9"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "timer",
+        "now": 2000,
+        "round": 1,
+        "timer": "roundClose"
+      },
+      {
+        "event": "answered",
+        "now": 400,
+        "round": 2,
+        "implementation": "b",
+        "models": {
+          "beta": {
+            "models": {
+              "small-2": {
+                "name": "Small 2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "a"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2000
+          }
+        ],
+        "wait": 1
+      },
+      {
+        "ask": {
+          "round": 2,
+          "implementations": [
+            "a",
+            "b"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 1
+          },
+          {
+            "set": "roundClose",
+            "round": 2,
+            "due": 2100
+          }
+        ],
+        "wait": 2
+      },
+      {},
+      {},
+      {},
+      {
+        "released": [
+          1,
+          2
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 2
+          }
+        ]
+      },
+      {
+        "implementations": [
+          "a",
+          "b"
+        ],
+        "providers": [
+          "alpha",
+          "beta"
+        ],
+        "map": {
+          "large": [
+            "alpha/large-1"
+          ],
+          "small": [
+            "beta/small-2"
+          ],
+          "default": [
+            "alpha/large-1"
+          ]
+        },
+        "entries": [
+          "large-1",
+          "small-2"
+        ]
+      }
+    ]
+  }
+}

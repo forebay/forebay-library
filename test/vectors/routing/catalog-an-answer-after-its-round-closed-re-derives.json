@@ -1,0 +1,238 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:111-112: a late answer re-derives, a late failure never",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^([a-z]+)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 100,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "timer",
+        "now": 2000,
+        "round": 1,
+        "timer": "roundClose"
+      },
+      {
+        "event": "snapshot"
+      },
+      {
+        "event": "answered",
+        "now": 2500,
+        "round": 1,
+        "implementation": "b",
+        "models": {
+          "beta": {
+            "models": {
+              "small-2": {
+                "name": "Small 2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "snapshot"
+      },
+      {
+        "event": "noModel",
+        "now": 5000,
+        "implementations": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "event": "timer",
+        "now": 7000,
+        "round": 2,
+        "timer": "roundClose"
+      },
+      {
+        "event": "answered",
+        "now": 7100,
+        "round": 2,
+        "implementation": "b",
+        "failed": true,
+        "message": "late"
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "a",
+            "b"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2000
+          }
+        ],
+        "wait": 1
+      },
+      {},
+      {
+        "released": [
+          1
+        ]
+      },
+      {
+        "implementations": [
+          "a"
+        ],
+        "providers": [
+          "alpha"
+        ],
+        "map": {
+          "large": [
+            "alpha/large-1"
+          ],
+          "small": [],
+          "default": [
+            "alpha/large-1"
+          ]
+        },
+        "entries": [
+          "large-1"
+        ]
+      },
+      {},
+      {
+        "implementations": [
+          "a",
+          "b"
+        ],
+        "providers": [
+          "alpha",
+          "beta"
+        ],
+        "map": {
+          "large": [
+            "alpha/large-1"
+          ],
+          "small": [
+            "beta/small-2"
+          ],
+          "default": [
+            "alpha/large-1"
+          ]
+        },
+        "entries": [
+          "large-1",
+          "small-2"
+        ]
+      },
+      {
+        "ask": {
+          "round": 2,
+          "implementations": [
+            "a",
+            "b"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 2,
+            "due": 7000
+          }
+        ],
+        "wait": 2
+      },
+      {
+        "released": [
+          2
+        ]
+      },
+      {
+        "log": [
+          {
+            "level": "warn",
+            "message": "a provider answered no models: late"
+          }
+        ]
+      },
+      {
+        "implementations": [
+          "a",
+          "b"
+        ],
+        "providers": [
+          "alpha",
+          "beta"
+        ],
+        "map": {
+          "large": [
+            "alpha/large-1"
+          ],
+          "small": [
+            "beta/small-2"
+          ],
+          "default": [
+            "alpha/large-1"
+          ]
+        },
+        "entries": [
+          "large-1",
+          "small-2"
+        ]
+      }
+    ]
+  }
+}

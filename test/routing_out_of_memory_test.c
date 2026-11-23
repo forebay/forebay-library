@@ -10,7 +10,7 @@
  * Fails every allocation of every routing vector and of a first and a later step, one at a time and from that one on,
  * and requires each failure to answer OUT_OF_MEMORY with every block released and the answer empty, or, where the
  * failed allocation was not one the call needed, the answer it gives without one. A failure is never read as a
- * refusal or a malformed call.
+ * refusal or a malformed call. A catalog vector fails each of its calls in turn, the rest of the run unarmed.
  */
 
 static int answers_as(const routing_call *call, const routing_answers *answers, const cJSON *expected) {
@@ -56,7 +56,8 @@ static void every_failure_of_vector(const char *path, allocation_failure_mode mo
     char label[1100];
     snprintf(label, sizeof label, "%s%s", path, allocation_failure_mode_name(mode));
     if (vector == NULL || cJSON_GetObjectItemCaseSensitive(vector, "files") != NULL ||
-        cJSON_GetObjectItemCaseSensitive(vector, "status") != NULL) {
+        cJSON_GetObjectItemCaseSensitive(vector, "status") != NULL ||
+        routing_operation_named(routing_text_of(vector, "function")) == ROUTING_CATALOG) {
         cJSON_Delete(vector);
         return;
     }
@@ -68,6 +69,83 @@ static void every_failure_of_vector(const char *path, allocation_failure_mode mo
         uint64_t attempt = 1;
         while (attempt < 100000 && fail_vector_once(&call, expected, label, mode, attempt)) {
             attempt++;
+        }
+        routing_release_call(&call);
+    }
+    routing_blocks_release();
+    cJSON_Delete(vector);
+}
+
+/** Which call of a catalog run fails, and how: `target` the event, SIZE_MAX for the open. */
+typedef struct catalog_failure {
+    size_t target;
+    allocation_failure_mode mode;
+    uint64_t attempt;
+    int armed;
+    int failed;
+} catalog_failure;
+
+static void arm_target(void *data, size_t event) {
+    catalog_failure *failure = data;
+    if (event == failure->target) {
+        fail_allocation(failure->mode, failure->attempt);
+        failure->armed = 1;
+    }
+}
+
+static void disarm_target(void *data) {
+    catalog_failure *failure = data;
+    if (failure->armed) {
+        failure->failed = spisor_memory_failed();
+        spisor_memory_fail_at(0);
+        failure->armed = 0;
+    }
+}
+
+/**
+ * One catalog run whose `target` call fails allocation `attempt`: 1 to go on with the next allocation, 0 once the call
+ * ran whole or the run failed a check. The run makes a failed call again unarmed, so its answers must be the vector's
+ * whole result, which they are only if the failed call left the catalog as it was.
+ */
+static int fail_catalog_once(routing_call *call, const cJSON *expected, const char *label, catalog_failure *failure) {
+    routing_catalog_guard guard = {arm_target, disarm_target, failure};
+    routing_answers answers;
+    int64_t baseline = spisor_memory_live_blocks();
+    failure->failed = 0;
+    call->catalog_guard = &guard;
+    routing_make_call(call, &answers);
+    call->catalog_guard = NULL;
+    int answered = answers_as(call, &answers, expected);
+    routing_release_answers(&answers);
+    int64_t leaked = spisor_memory_live_blocks() - baseline;
+    if (leaked != 0 || !answered) {
+        support_failf(label, "failing allocation %llu of call %lld answered wrongly or left %lld blocks",
+                      (unsigned long long)failure->attempt, (long long)failure->target, (long long)leaked);
+        return 0;
+    }
+    return failure->failed;
+}
+
+static void every_failure_of_catalog(const char *path, allocation_failure_mode mode) {
+    cJSON *vector = spisor_vector_read(path);
+    routing_call call;
+    char label[1100];
+    snprintf(label, sizeof label, "%s%s", path, allocation_failure_mode_name(mode));
+    if (vector == NULL || routing_operation_named(routing_text_of(vector, "function")) != ROUTING_CATALOG) {
+        cJSON_Delete(vector);
+        return;
+    }
+    const cJSON *expected = cJSON_GetObjectItemCaseSensitive(vector, "result");
+    const cJSON *argument = cJSON_GetObjectItemCaseSensitive(vector, "argument");
+    if (!routing_read_call("catalog", argument, &call)) {
+        support_fail(label, "not a vector the definition's structs can hold");
+    } else {
+        size_t events = (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(argument, "events"));
+        for (size_t target = 0; target <= events; target++) {
+            catalog_failure failure = {target == 0 ? SIZE_MAX : target - 1, mode, 1, 0, 0};
+            while (failure.attempt < 100000 && fail_catalog_once(&call, expected, label, &failure)) {
+                failure.attempt++;
+            }
         }
         routing_release_call(&call);
     }
@@ -208,6 +286,8 @@ int main(void) {
         if (line[0] != '\0') {
             every_failure_of_vector(line, FAIL_ONE_ALLOCATION);
             every_failure_of_vector(line, FAIL_EVERY_LATER_ALLOCATION);
+            every_failure_of_catalog(line, FAIL_ONE_ALLOCATION);
+            every_failure_of_catalog(line, FAIL_EVERY_LATER_ALLOCATION);
             count++;
         }
     }

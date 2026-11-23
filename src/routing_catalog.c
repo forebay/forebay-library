@@ -4,162 +4,256 @@
 
 #include "answer_storage.h"
 #include "definition_support.h"
+#include "routing_arguments.h"
+#include "routing_catalog_state.h"
 #include "routing_limits.h"
-#include "spisor/definition.h"
+#include "spisor/allocation.h"
 
-#define CATALOG_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_argument, message)
-#define CATALOG_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_answer, storage)
-#define UNASKED_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_argument, unasked)
-#define DROP_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_answer, drop)
-#define CHANGED_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_argument, changed)
+#define OPEN_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_open_argument, settings)
+#define OPEN_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_open_answer, storage)
+#define EVENT_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_event_argument, timer)
+#define EVENT_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_event_answer, storage)
+#define READ_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_read_argument, catalog)
+#define READ_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_read_answer, storage)
+#define PROFILE_DEFAULTS_SHAPE SPISOR_SHAPE_THROUGH(forebay_routing_profile, default_output)
+
+#define CATALOG_RULE "a catalog catalog_open answered"
 
 static const char NO_MODELS_WARNING[] = "a provider answered no models: ";
-static const char NO_MAP_WARNING[] = "the model map could not be derived, so routing keeps the last one: ";
 
-static int is_event(uint32_t event) {
-    return event >= FOREBAY_CATALOG_PROVIDERS_CHANGED && event <= FOREBAY_CATALOG_READ;
+void routing_release_catalog(void *context, forebay_catalog *catalog) {
+    (void)context;
+    if (catalog == NULL) {
+        return;
+    }
+    while (catalog->kept != NULL) {
+        catalog_kept *next = catalog->kept->next;
+        routing_catalog_free_kept(catalog->kept);
+        catalog->kept = next;
+    }
+    routing_catalog_free_round(catalog->round);
+    cJSON_Delete(catalog->map);
+    cJSON_Delete(catalog->profile);
+    cJSON_Delete(catalog->settings);
+    spisor_memory_release(catalog);
 }
 
-static int needs_message(const forebay_catalog_argument *argument) {
-    return argument->event == FOREBAY_CATALOG_DERIVE_FAILED ||
-           (argument->event == FOREBAY_CATALOG_ANSWERED && argument->failed);
+/** The profile members a read's entries need: its size, through its defaults at most, and the defaults it reaches. */
+static forebay_routing_profile defaults_of(const forebay_routing_profile *profile) {
+    forebay_routing_profile defaults = SPISOR_INIT(forebay_routing_profile);
+    if (spisor_has_shape(profile->size, PROFILE_DEFAULTS_SHAPE)) {
+        defaults.default_context = profile->default_context;
+        defaults.default_output = profile->default_output;
+    } else {
+        defaults.size = (uint32_t)offsetof(forebay_routing_profile, default_context);
+    }
+    return defaults;
 }
 
-/** Whether the answering implementation is one the current round did not ask; an argument short of it says no. */
-static int is_unasked(const forebay_catalog_argument *argument) {
-    return argument->event == FOREBAY_CATALOG_ANSWERED && spisor_has_shape(argument->size, UNASKED_SHAPE) &&
-           argument->unasked;
+static int is_open_argument(const forebay_catalog_open_argument *argument) {
+    return forebay_is_finite(argument->now) && routing_is_profile(argument->profile, 1) &&
+           argument->settings != NULL && argument->settings->kind == SPISOR_VALUE_RECORD;
 }
 
-static int is_catalog_argument(const forebay_catalog_argument *argument) {
-    return is_event(argument->event) && forebay_is_finite(argument->now) &&
-           (!argument->asked || forebay_is_finite(argument->last_asked)) &&
-           (!needs_message(argument) || argument->message != NULL);
-}
-
-/** The bytes of an answer of `size` to empty: through its size, at most the whole struct. */
-static size_t cleared_shape(uint32_t size) {
-    return size < sizeof(forebay_catalog_answer) ? size : sizeof(forebay_catalog_answer);
-}
-
-static forebay_limits_answer read_limits(void) {
+static int fill_period(double now, forebay_catalog_open_answer *answer) {
     forebay_limits_answer limits = SPISOR_INIT(forebay_limits_answer);
-    routing_read_limits(&limits);
-    return limits;
-}
-
-/** Whether a request finding no model may ask again: the last round began at least the rederive interval ago. */
-static int is_past_the_interval(const forebay_catalog_argument *argument) {
-    forebay_limits_answer limits = read_limits();
-    return !argument->asked || argument->now - argument->last_asked >= (double)limits.rederive_interval_milliseconds;
-}
-
-/** Whether a read's ordered list of implementations differs from the one last asked; a short argument says no. */
-static int is_changed(const forebay_catalog_argument *argument) {
-    return spisor_has_shape(argument->size, CHANGED_SHAPE) && argument->changed;
-}
-
-/** Whether the event reports a changed ordered list, which a round started for the old list cannot serve. */
-static int is_a_change(const forebay_catalog_argument *argument) {
-    return argument->event == FOREBAY_CATALOG_PROVIDERS_CHANGED ||
-           (argument->event == FOREBAY_CATALOG_READ && is_changed(argument));
-}
-
-/** What to do about an event that may start a round: start one, join the open one, or nothing. */
-static uint32_t action_of(const forebay_catalog_argument *argument) {
-    if (is_a_change(argument)) {
-        return FOREBAY_CATALOG_ASK;
-    }
-    if (argument->asking) {
-        return FOREBAY_CATALOG_WAIT;
-    }
-    if (argument->event == FOREBAY_CATALOG_NO_MODEL && !is_past_the_interval(argument)) {
-        return FOREBAY_CATALOG_NOTHING;
-    }
-    if (argument->event == FOREBAY_CATALOG_READ) {
-        return FOREBAY_CATALOG_NOTHING;
-    }
-    return FOREBAY_CATALOG_ASK;
-}
-
-/** The one warning line of `prefix` and the message, in the answer's storage; 0 when memory runs out. */
-static int warn(forebay_catalog_answer *answer, const char *prefix, const char *message) {
-    size_t prefix_length = strlen(prefix);
-    size_t message_length = strlen(message);
-    forebay_log_line *line = forebay_storage_array(&answer->storage, 1, sizeof *line);
-    char *text = line == NULL ? NULL : forebay_storage_allocate(&answer->storage, prefix_length + message_length + 1);
-    if (text == NULL) {
-        forebay_storage_release(answer->storage);
+    forebay_catalog_timer *timer = forebay_storage_array(&answer->storage, 1, sizeof *timer);
+    if (timer == NULL) {
         return 0;
     }
-    memcpy(text, prefix, prefix_length);
-    memcpy(text + prefix_length, message, message_length + 1);
-    line->level = FOREBAY_LOG_WARN;
-    line->message = text;
-    answer->log = line;
-    answer->log_count = 1;
+    routing_read_limits(&limits);
+    timer->change = FOREBAY_CATALOG_SET;
+    timer->kind = FOREBAY_CATALOG_PERIOD;
+    timer->due = now + (double)limits.refresh_every_milliseconds;
+    answer->timers = timer;
+    answer->timer_count = 1;
     return 1;
 }
 
-static spisor_status decide_answered(const forebay_catalog_argument *argument, forebay_catalog_answer *answer) {
-    if (is_unasked(argument)) {
-        answer->drop = 1;
-    } else if (argument->failed) {
-        answer->keep_last = 1;
-    } else {
-        answer->rederive = argument->round_closed ? 1u : 0u;
-    }
-    if (!argument->failed) {
-        return SPISOR_OK;
-    }
-    return warn(answer, NO_MODELS_WARNING, argument->message) ? SPISOR_OK : SPISOR_OUT_OF_MEMORY;
-}
-
-static spisor_status decide(const forebay_catalog_argument *argument, forebay_catalog_answer *answer) {
-    answer->action = FOREBAY_CATALOG_NOTHING;
-    switch (argument->event) {
-    case FOREBAY_CATALOG_ANSWERED:
-        return decide_answered(argument, answer);
-    case FOREBAY_CATALOG_ROUND_CLOSED:
-        answer->rederive = 1;
-        return SPISOR_OK;
-    case FOREBAY_CATALOG_DERIVE_FAILED:
-        answer->keep_last = 1;
-        return warn(answer, NO_MAP_WARNING, argument->message) ? SPISOR_OK : SPISOR_OUT_OF_MEMORY;
-    default:
-        answer->action = action_of(argument);
-        if (answer->action == FOREBAY_CATALOG_ASK) {
-            answer->budget_milliseconds = read_limits().models_budget_milliseconds;
-        }
-        return SPISOR_OK;
-    }
-}
-
-spisor_status routing_catalog_refresh(void *context, const forebay_catalog_argument *argument,
-                                      forebay_catalog_answer *answer, spisor_refusal *refusal) {
+spisor_status routing_catalog_open(void *context, const forebay_catalog_open_argument *argument,
+                                   forebay_catalog_open_answer *answer, spisor_refusal *refusal) {
     (void)context;
-    if (argument == NULL || !spisor_has_shape(argument->size, CATALOG_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, CATALOG_ANSWER_SHAPE, answer->log_count)) {
-        return spisor_refuse_shape(refusal, "routing's catalog");
+    if (argument == NULL || !spisor_has_shape(argument->size, OPEN_SHAPE) ||
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, OPEN_ANSWER_SHAPE, answer->timer_count) || answer->catalog != NULL) {
+        return spisor_refuse_shape(refusal, "routing's catalog_open");
     }
-    if (!is_catalog_argument(argument)) {
-        return forebay_refuse_member(refusal, "event, now, last_asked or message",
-                                     "a forebay_catalog_event at a finite now, with the message it needs");
+    if (!is_open_argument(argument)) {
+        return forebay_refuse_member(refusal, "now, the profile or settings",
+                                     "a finite now, a profile with its tier members and a settings record");
     }
-    if (is_unasked(argument) && !spisor_has_shape(answer->size, DROP_SHAPE)) {
-        return forebay_refuse_member(refusal, "drop", "an answer that reaches drop, for an answer of an unasked one");
+    forebay_catalog *catalog = spisor_memory_allocate_zeroed(1, sizeof *catalog);
+    if (catalog == NULL) {
+        return SPISOR_OUT_OF_MEMORY;
     }
-    spisor_status status = decide(argument, answer);
+    catalog->defaults = defaults_of(argument->profile);
+    catalog->profile = routing_profile_json(argument->profile);
+    spisor_status status = forebay_json_of_member(argument->settings, "settings", &catalog->settings, refusal);
+    if (status == SPISOR_OK && (catalog->profile == NULL || !fill_period(argument->now, answer))) {
+        status = SPISOR_OUT_OF_MEMORY;
+    }
     if (status != SPISOR_OK) {
-        SPISOR_CLEAR_ANSWER(answer, cleared_shape(answer->size));
+        routing_release_catalog(NULL, catalog);
+        forebay_storage_release(answer->storage);
+        SPISOR_CLEAR_ANSWER(answer, OPEN_ANSWER_SHAPE);
+        return status;
     }
+    answer->catalog = catalog;
+    return SPISOR_OK;
+}
+
+/** Whether `count` texts at a present array are each set and none of them twice. */
+static int is_list(const char *const *texts, size_t count) {
+    if (!routing_are_texts(texts, count)) {
+        return 0;
+    }
+    for (size_t index = 0; index < count; index++) {
+        for (size_t earlier = 0; earlier < index; earlier++) {
+            if (strcmp(texts[earlier], texts[index]) == 0) {
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+static int is_kind(const forebay_catalog_event_argument *event) {
+    return event->kind >= FOREBAY_CATALOG_READ && event->kind <= FOREBAY_CATALOG_TIMER &&
+           forebay_is_finite(event->now);
+}
+
+static spisor_status check_answered(const forebay_catalog_event_argument *event, spisor_refusal *refusal) {
+    if (event->implementation == NULL) {
+        return forebay_refuse_member(refusal, "implementation", "an implementation whose ask the round awaits");
+    }
+    if (event->failed && event->message == NULL) {
+        return forebay_refuse_member(refusal, "message", "the failure's text, for a failed answer");
+    }
+    if (!event->failed && (event->models == NULL || !routing_is_catalog(event->models, 1))) {
+        return forebay_refuse_member(refusal, "models", "a complete catalog provider, for an answer that did not fail");
+    }
+    return SPISOR_OK;
+}
+
+static spisor_status check_event(const forebay_catalog_event_argument *event, spisor_refusal *refusal) {
+    if (event->catalog == NULL) {
+        return forebay_refuse_member(refusal, "catalog", CATALOG_RULE);
+    }
+    if (!is_kind(event)) {
+        return forebay_refuse_member(refusal, "kind or now", "a forebay_catalog_event_kind at a finite now");
+    }
+    if (!is_list(event->implementations, event->implementation_count)) {
+        return forebay_refuse_member(refusal, "implementations", "a list naming each implementation once");
+    }
+    if (event->kind == FOREBAY_CATALOG_ANSWERED) {
+        return check_answered(event, refusal);
+    }
+    if (event->kind == FOREBAY_CATALOG_TIMER && event->timer != FOREBAY_CATALOG_ROUND_CLOSE &&
+        event->timer != FOREBAY_CATALOG_PERIOD) {
+        return forebay_refuse_member(refusal, "timer", "a forebay_catalog_timer_kind");
+    }
+    return SPISOR_OK;
+}
+
+/** Allocates all the event needs, the log lines included; OUT_OF_MEMORY with what it took left in `prepared`. */
+static spisor_status prepare(const forebay_catalog *catalog, const catalog_plan *plan,
+                             const forebay_catalog_event_argument *event, catalog_prepared *prepared, cJSON *log) {
+    uint64_t next = catalog->round == NULL ? 1 : catalog->round->id + 1;
+    if (log == NULL || (plan->warns_failure && !routing_catalog_warn(log, NO_MODELS_WARNING, event->message))) {
+        return SPISOR_OUT_OF_MEMORY;
+    }
+    if (plan->starts) {
+        prepared->round =
+            routing_catalog_new_round(next, event->now, event->implementations, event->implementation_count);
+        if (prepared->round == NULL) {
+            return SPISOR_OUT_OF_MEMORY;
+        }
+    }
+    if (plan->stores) {
+        prepared->kept = routing_catalog_new_kept(event->implementation, event->models);
+        if (prepared->kept == NULL) {
+            return SPISOR_OUT_OF_MEMORY;
+        }
+    }
+    if (!plan->derives) {
+        return SPISOR_OK;
+    }
+    return routing_catalog_derive(catalog, routing_catalog_acted_round(catalog, prepared), prepared->kept,
+                                  &prepared->map, log);
+}
+
+static void discard(catalog_prepared *prepared) {
+    routing_catalog_free_round(prepared->round);
+    routing_catalog_free_kept(prepared->kept);
+    cJSON_Delete(prepared->map);
+}
+
+static int is_empty_event_answer(const forebay_catalog_event_answer *answer) {
+    return SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, EVENT_ANSWER_SHAPE,
+                                          answer->ask_count | answer->timer_count | answer->released_count |
+                                              answer->log_count);
+}
+
+spisor_status routing_catalog_event(void *context, const forebay_catalog_event_argument *argument,
+                                    forebay_catalog_event_answer *answer, spisor_refusal *refusal) {
+    (void)context;
+    if (argument == NULL || !spisor_has_shape(argument->size, EVENT_SHAPE) || !is_empty_event_answer(answer)) {
+        return spisor_refuse_shape(refusal, "routing's catalog_event");
+    }
+    catalog_plan plan;
+    spisor_status status = check_event(argument, refusal);
+    if (status == SPISOR_OK) {
+        status = routing_catalog_decide(argument->catalog, argument, &plan, refusal);
+    }
+    if (status != SPISOR_OK) {
+        return status;
+    }
+    catalog_prepared prepared = {NULL, NULL, NULL};
+    cJSON *log = cJSON_CreateArray();
+    status = prepare(argument->catalog, &plan, argument, &prepared, log);
+    if (status == SPISOR_OK &&
+        !routing_catalog_fill_answer(argument->catalog, &plan, argument, &prepared, log, answer)) {
+        status = SPISOR_OUT_OF_MEMORY;
+    }
+    if (status == SPISOR_OK) {
+        routing_catalog_commit(argument->catalog, &plan, &prepared);
+    } else {
+        forebay_storage_release(answer->storage);
+        SPISOR_CLEAR_ANSWER(answer, EVENT_ANSWER_SHAPE);
+    }
+    discard(&prepared);
+    cJSON_Delete(log);
     return status;
 }
 
-void routing_release_catalog_answer(void *context, forebay_catalog_answer *answer) {
+spisor_status routing_catalog_read(void *context, const forebay_catalog_read_argument *argument,
+                                   forebay_catalog_read_answer *answer, spisor_refusal *refusal) {
     (void)context;
-    if (answer != NULL && spisor_has_shape(answer->size, CATALOG_ANSWER_SHAPE)) {
-        forebay_storage_release(answer->storage);
-        SPISOR_CLEAR_ANSWER(answer, cleared_shape(answer->size));
+    if (argument == NULL || !spisor_has_shape(argument->size, READ_SHAPE) ||
+        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, READ_ANSWER_SHAPE,
+                                        answer->implementation_count | answer->provider_count | answer->slot_count |
+                                            answer->entry_count)) {
+        return spisor_refuse_shape(refusal, "routing's catalog_read");
     }
+    if (argument->catalog == NULL) {
+        return forebay_refuse_member(refusal, "catalog", CATALOG_RULE);
+    }
+    if (!routing_catalog_fill_read(argument->catalog, answer)) {
+        forebay_storage_release(answer->storage);
+        SPISOR_CLEAR_ANSWER(answer, READ_ANSWER_SHAPE);
+        return SPISOR_OUT_OF_MEMORY;
+    }
+    return SPISOR_OK;
 }
+
+#define RELEASE_ANSWER(name, type, shape)                              \
+    void name(void *context, type *answer) {                           \
+        (void)context;                                                 \
+        if (answer != NULL && spisor_has_shape(answer->size, shape)) { \
+            forebay_storage_release(answer->storage);                  \
+            SPISOR_CLEAR_ANSWER(answer, shape);                        \
+        }                                                              \
+    }
+
+RELEASE_ANSWER(routing_release_catalog_open_answer, forebay_catalog_open_answer, OPEN_ANSWER_SHAPE)
+RELEASE_ANSWER(routing_release_catalog_event_answer, forebay_catalog_event_answer, EVENT_ANSWER_SHAPE)
+RELEASE_ANSWER(routing_release_catalog_read_answer, forebay_catalog_read_answer, READ_ANSWER_SHAPE)
