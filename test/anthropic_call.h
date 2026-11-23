@@ -589,7 +589,9 @@ static inline spisor_status anthropic_call_model_lookup(const anthropic_input *i
 }
 
 static inline int anthropic_lookup_matches(const anthropic_answer *answer, const cJSON *expected) {
-    forebay_anthropic_body_answer body = {sizeof body, answer->lookup.bytes, answer->lookup.length, NULL};
+    forebay_anthropic_body_answer body = SPISOR_INIT(forebay_anthropic_body_answer);
+    body.bytes = answer->lookup.bytes;
+    body.length = answer->lookup.length;
     return anthropic_body_equals(&body, expected);
 }
 
