@@ -1,0 +1,29 @@
+{
+  "source": "claude-code-proxy a861192 src/serve.ts:53 writeJson(response, found.found === 1 ? 200 : 404, found.bytes)",
+  "direction": "modelLookup",
+  "input": {
+    "models": [
+      {
+        "id": "a",
+        "name": "A",
+        "context": 9,
+        "output": 8
+      }
+    ],
+    "id": "zz"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "not_found_error",
+      "message": "model not found: zz"
+    }
+  },
+  "reply": {
+    "status": 404,
+    "contentType": "application/json",
+    "headers": {
+      "content-type": "application/json"
+    }
+  }
+}

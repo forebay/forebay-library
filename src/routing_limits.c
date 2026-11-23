@@ -1,6 +1,9 @@
 #include "routing_limits.h"
 
+#include "spisor/definition.h"
+
 #define TOO_LARGE_STATUS 413u
+#define REPLY_KIND_SHAPE SPISOR_SHAPE_THROUGH(forebay_limits_answer, too_large_reply_kind)
 #define MODELS_BUDGET_MILLISECONDS 2000u
 #define REDERIVE_INTERVAL_MILLISECONDS 3000u
 #define REFRESH_EVERY_MILLISECONDS (60u * 60u * 1000u)
@@ -17,4 +20,7 @@ void routing_read_limits(forebay_limits_answer *answer) {
     answer->models_budget_milliseconds = MODELS_BUDGET_MILLISECONDS;
     answer->rederive_interval_milliseconds = REDERIVE_INTERVAL_MILLISECONDS;
     answer->refresh_every_milliseconds = REFRESH_EVERY_MILLISECONDS;
+    if (spisor_has_shape(answer->size, REPLY_KIND_SHAPE)) {
+        answer->too_large_reply_kind = FOREBAY_REPLY_PROXY_ERROR;
+    }
 }

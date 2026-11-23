@@ -20,6 +20,7 @@
 #define DECODE_VECTOR_COUNT 41
 #define ROUTE_VECTOR_COUNT 20
 #define ERROR_ENVELOPE_VECTOR_COUNT 7
+#define REPLY_VECTOR_COUNT 7
 
 static cJSON *parse(const char *text) {
     int out_of_memory = 0;
@@ -62,6 +63,101 @@ static int run_vectors(const char *prefix) {
     for (char *line = strtok(list, "\r\n"); line != NULL; line = strtok(NULL, "\r\n")) {
         if (strstr(line, prefix) != NULL) {
             run_vector(line);
+            count++;
+        }
+    }
+    free(list);
+    return count;
+}
+
+/** The reply a body goes out in, as an answer of any kind holds it. */
+typedef struct reply_head {
+    uint32_t status;
+    const char *content_type;
+    const forebay_pair *headers;
+    size_t header_count;
+} reply_head;
+
+static reply_head head_of_body(const forebay_anthropic_body_answer *body) {
+    return (reply_head){body->status, body->content_type, body->headers, body->header_count};
+}
+
+static int is_head(const reply_head *head, const cJSON *expected) {
+    const cJSON *headers = cJSON_GetObjectItemCaseSensitive(expected, "headers");
+    const char *content_type = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "contentType"));
+    int same = head->status == (uint32_t)cJSON_GetObjectItemCaseSensitive(expected, "status")->valuedouble &&
+               head->content_type != NULL && content_type != NULL && strcmp(head->content_type, content_type) == 0 &&
+               head->header_count == (size_t)cJSON_GetArraySize(headers);
+    size_t index = 0;
+    const cJSON *header = NULL;
+    cJSON_ArrayForEach(header, headers) {
+        same = same && index < head->header_count && strcmp(head->headers[index].name, header->string) == 0 &&
+               strcmp(head->headers[index].value, cJSON_GetStringValue(header)) == 0;
+        index++;
+    }
+    return same;
+}
+
+/** Whether every answer the direction gave carries the reply `expected`: a stream's every feed, else its one body. */
+static int answers_the_head(const anthropic_direction *direction, const anthropic_answer *answer,
+                            const cJSON *expected) {
+    if (strcmp(direction->name, "modelLookup") == 0) {
+        const forebay_anthropic_model_lookup_answer *lookup = &answer->lookup;
+        reply_head head = {lookup->status, lookup->content_type, lookup->headers, lookup->header_count};
+        return is_head(&head, expected);
+    }
+    if (strcmp(direction->name, "encodeStream") != 0) {
+        reply_head head = head_of_body(&answer->body);
+        return is_head(&head, expected);
+    }
+    int every = answer->stream.count > 0;
+    for (size_t index = 0; index < answer->stream.count; index++) {
+        reply_head head = head_of_body(&answer->stream.texts[index]);
+        every = every && is_head(&head, expected);
+    }
+    return every;
+}
+
+/** A reply vector: its direction's call answers the `output`, and the `reply` the output goes out in. */
+static void run_reply_vector(const char *path) {
+    cJSON *vector = spisor_vector_read(path);
+    const cJSON *input_json = cJSON_GetObjectItemCaseSensitive(vector, "input");
+    const cJSON *output = cJSON_GetObjectItemCaseSensitive(vector, "output");
+    const cJSON *reply = cJSON_GetObjectItemCaseSensitive(vector, "reply");
+    const anthropic_direction *direction = anthropic_direction_of(vector);
+    anthropic_input input = {0};
+    if (input_json == NULL || output == NULL || reply == NULL || direction == NULL ||
+        !direction->read_input(input_json, &input)) {
+        support_fail(path, "not a reply vector with an input, an output, a reply and a direction");
+        anthropic_input_release(&input);
+        cJSON_Delete(vector);
+        return;
+    }
+    anthropic_answer answer;
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    anthropic_start_answer(direction, &answer);
+    spisor_status status = direction->call(&input, &answer, &refusal);
+    if (status != SPISOR_OK || !direction->matches(&answer, output)) {
+        support_failf(path, "%s answered %d, or not the output", direction->name, (int)status);
+    } else if (!answers_the_head(direction, &answer, reply)) {
+        support_failf(path, "%s did not answer the reply", direction->name);
+    }
+    direction->release(&answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+    anthropic_input_release(&input);
+    cJSON_Delete(vector);
+}
+
+static int run_reply_vectors(void) {
+    char *list = support_read_text(ANTHROPIC_VECTOR_LIST);
+    int count = 0;
+    if (list == NULL) {
+        support_fail("vector list", ANTHROPIC_VECTOR_LIST);
+        return 0;
+    }
+    for (char *line = strtok(list, "\r\n"); line != NULL; line = strtok(NULL, "\r\n")) {
+        if (strstr(line, "/reply-") != NULL) {
+            run_reply_vector(line);
             count++;
         }
     }
@@ -1028,6 +1124,34 @@ static void releasing_an_answer_never_filled_does_nothing(void) {
     anthropic_definition()->release_route(NULL, NULL);
 }
 
+/** A caller compiled before the reply was appended gets the bytes alone, and a release empties all it holds. */
+static void an_answer_short_of_the_reply_gets_the_body_alone(void) {
+    static const forebay_catalog_model model = {.id = "a", .name = "A"};
+    forebay_anthropic_model_listing_argument listing = SPISOR_INIT(forebay_anthropic_model_listing_argument);
+    listing.models = &model;
+    listing.model_count = 1;
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_anthropic_body_answer short_answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    short_answer.size = (uint32_t)(offsetof(forebay_anthropic_body_answer, storage) + sizeof(void *));
+    short_answer.status = 7;
+    spisor_status status = anthropic_definition()->model_listing(NULL, &listing, &short_answer, &refusal);
+    if (status != SPISOR_OK || short_answer.bytes == NULL || short_answer.status != 7 ||
+        short_answer.content_type != NULL) {
+        support_failf("a body answer short of the reply", "answered %d, status %u", (int)status,
+                      (unsigned)short_answer.status);
+    }
+    anthropic_definition()->release_body(NULL, &short_answer);
+    forebay_anthropic_body_answer answer = SPISOR_INIT(forebay_anthropic_body_answer);
+    status = anthropic_definition()->model_listing(NULL, &listing, &answer, &refusal);
+    anthropic_definition()->release_body(NULL, &answer);
+    if (status != SPISOR_OK || answer.status != 0 || answer.content_type != NULL || answer.headers != NULL ||
+        answer.header_count != 0) {
+        support_failf("a released body answer", "still holds status %u and %zu headers", (unsigned)answer.status,
+                      answer.header_count);
+    }
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
 int main(void) {
     spisor_json_use_library_allocator();
     int vectors = run_vectors("request-");
@@ -1054,6 +1178,10 @@ int main(void) {
     if (error_envelope_vectors != ERROR_ENVELOPE_VECTOR_COUNT) {
         support_failf("error-envelope vectors", "%d files, expected %d", error_envelope_vectors,
                       ERROR_ENVELOPE_VECTOR_COUNT);
+    }
+    int reply_vectors = run_reply_vectors();
+    if (reply_vectors != REPLY_VECTOR_COUNT) {
+        support_failf("reply vectors", "%d files, expected %d", reply_vectors, REPLY_VECTOR_COUNT);
     }
     the_rate_limit_vectors_cover_the_required_cases();
     a_rate_limit_call_that_breaks_its_header_is_malformed();
@@ -1084,6 +1212,7 @@ int main(void) {
     a_listing_that_breaks_its_header_is_malformed();
     a_lookup_answers_found_or_not_found_with_the_proxys_bodies();
     a_lookup_that_breaks_its_header_is_malformed();
+    an_answer_short_of_the_reply_gets_the_body_alone();
     releasing_an_answer_never_filled_does_nothing();
     printf("anthropic_test: %d request vectors, %d response vectors\n", vectors, response_vectors);
     return support_summary("anthropic_test");

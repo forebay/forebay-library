@@ -1,0 +1,15 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:64 now - lastAsked < rederive_interval_milliseconds",
+  "function": "catalog",
+  "argument": {
+    "event": "noModel",
+    "now": 6999,
+    "lastAsked": 4000
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": false,
+    "rederive": false,
+    "log": []
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:111-112 a failure never re-derives",
+  "function": "catalog",
+  "argument": {
+    "event": "answered",
+    "now": 6500,
+    "lastAsked": 4000,
+    "roundClosed": true,
+    "failed": true,
+    "message": ""
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": true,
+    "rederive": false,
+    "log": [
+      {
+        "level": "warn",
+        "message": "a provider answered no models: "
+      }
+    ]
+  }
+}

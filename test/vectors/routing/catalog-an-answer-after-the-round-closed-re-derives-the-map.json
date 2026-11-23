@@ -1,0 +1,16 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:102 late = true after the budget, :110 a late answer re-derives",
+  "function": "catalog",
+  "argument": {
+    "event": "answered",
+    "now": 6500,
+    "lastAsked": 4000,
+    "roundClosed": true
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": false,
+    "rederive": true,
+    "log": []
+  }
+}

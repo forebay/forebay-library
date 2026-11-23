@@ -1,0 +1,36 @@
+{
+  "source": "claude-code-proxy a861192 src/serve.ts:49 writeJson(response, 200, listing)",
+  "direction": "modelListing",
+  "input": {
+    "models": [
+      {
+        "id": "a",
+        "name": "A",
+        "context": 9,
+        "output": 8
+      }
+    ]
+  },
+  "output": {
+    "data": [
+      {
+        "type": "model",
+        "id": "a",
+        "display_name": "A",
+        "created_at": "2025-01-01T00:00:00Z",
+        "max_input_tokens": 9,
+        "max_tokens": 8
+      }
+    ],
+    "first_id": "a",
+    "last_id": "a",
+    "has_more": false
+  },
+  "reply": {
+    "status": 200,
+    "contentType": "application/json",
+    "headers": {
+      "content-type": "application/json"
+    }
+  }
+}

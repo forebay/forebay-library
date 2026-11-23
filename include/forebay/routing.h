@@ -322,8 +322,9 @@ typedef struct forebay_step_answer {
 } forebay_step_answer;
 
 /**
- * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, and
- * `too_large_message` is static text. It owns nothing. First shape ends at `refresh_every_milliseconds`.
+ * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, of
+ * `too_large_reply_kind`, `too_large_status` and `too_large_message`, static text. It owns nothing. First shape ends
+ * at `refresh_every_milliseconds`.
  */
 typedef struct forebay_limits_answer {
     uint32_t size;
@@ -333,7 +334,69 @@ typedef struct forebay_limits_answer {
     uint64_t models_budget_milliseconds;
     uint64_t rederive_interval_milliseconds;
     uint64_t refresh_every_milliseconds;
+    /** A forebay_reply_kind. */
+    uint32_t too_large_reply_kind;
 } forebay_limits_answer;
+
+/** What happened to the providers' catalog. Append-only: a published value keeps its number. */
+typedef enum forebay_catalog_event {
+    FOREBAY_CATALOG_PROVIDERS_CHANGED = 1,
+    FOREBAY_CATALOG_NO_MODEL = 2,
+    FOREBAY_CATALOG_PERIOD = 3,
+    FOREBAY_CATALOG_ANSWERED = 4,
+    FOREBAY_CATALOG_ROUND_CLOSED = 5,
+    FOREBAY_CATALOG_DERIVE_FAILED = 6
+} forebay_catalog_event;
+
+/** What the host does about a catalog event. Append-only: a published value keeps its number. */
+typedef enum forebay_catalog_action {
+    FOREBAY_CATALOG_NOTHING = 1,
+    FOREBAY_CATALOG_ASK = 2,
+    FOREBAY_CATALOG_WAIT = 3
+} forebay_catalog_action;
+
+/**
+ * One event of the catalog the host keeps of its providers' models, at `now`, epoch milliseconds: the set of
+ * implementations differs from the one last asked (PROVIDERS_CHANGED), a step answered FOREBAY_STEP_REFRESH_MODELS
+ * (NO_MODEL), the periodic timer of `routing.limits`' `refresh_every_milliseconds` fired (PERIOD), one provider's ask
+ * settled (ANSWERED), a round closed because every ask settled or its budget ran out (ROUND_CLOSED), or `model_map`
+ * refused (DERIVE_FAILED). `asked` is 1 once a round was ever started, `last_asked` then the start of the last, and
+ * `asking` 1 while a round is open. An ANSWERED event carries `failed` 1 with `message` when the ask failed, and
+ * `round_closed` 1 when the round it belongs to closed before it; a DERIVE_FAILED event carries the refusal's
+ * `message`. First shape ends at `message`.
+ */
+typedef struct forebay_catalog_argument {
+    uint32_t size;
+    /** A forebay_catalog_event. */
+    uint32_t event;
+    double now;
+    uint32_t asked;
+    double last_asked;
+    uint32_t asking;
+    uint32_t failed;
+    uint32_t round_closed;
+    const char *message;
+} forebay_catalog_argument;
+
+/**
+ * What to do about the event. ASK: start a round, its start `now`: drop the models of every implementation no
+ * longer offered, ask every one, report each as it settles, and the round as closed once every ask settled or
+ * `budget_milliseconds` passed, whichever is first. WAIT: the open round answers this event too, so a request waits
+ * for its close. NOTHING: nothing to ask. `keep_last` 1: keep what the event would replace, the provider's last
+ * models for a failed ask, the last model map for a failed derivation. `rederive` 1: derive the model map again over
+ * the catalog as it now stands. `log` the lines to write. First shape ends at `storage`.
+ */
+typedef struct forebay_catalog_answer {
+    uint32_t size;
+    /** A forebay_catalog_action. */
+    uint32_t action;
+    uint64_t budget_milliseconds;
+    uint32_t keep_last;
+    uint32_t rederive;
+    const forebay_log_line *log;
+    size_t log_count;
+    void *storage;
+} forebay_catalog_answer;
 
 /**
  * A request to send upstream undecoded, with the placeholder authorization a client sent. First shape ends at
@@ -577,6 +640,19 @@ typedef struct forebay_routing_definition {
     spisor_status (*model_entries)(void *context, const forebay_model_entries_argument *argument,
                                    forebay_model_entries_answer *answer, spisor_refusal *refusal);
     void (*release_model_entries_answer)(void *context, forebay_model_entries_answer *answer);
+    /**
+     * What a host does about an event of its providers' catalog, so it keeps only the timers, the asks and the
+     * models: whether to ask every provider again and within which budget, whether a failed ask or derivation keeps
+     * what it held, whether the model map must be derived again, and the warning lines, `a provider answered no
+     * models: <message>` and `the model map could not be derived, so routing keeps the last one: <message>`.
+     * PROVIDERS_CHANGED and PERIOD ask unless a round is open, which they wait for; NO_MODEL does the same, except
+     * that it asks nothing while the last round began less than `limits`' `rederive_interval_milliseconds` ago; an
+     * ANSWERED event re-derives only once its round closed, and never for a failed ask; ROUND_CLOSED re-derives.
+     * MALFORMED for a `now` or `last_asked` that is not finite and a NULL `message` an event needs.
+     */
+    spisor_status (*catalog)(void *context, const forebay_catalog_argument *argument, forebay_catalog_answer *answer,
+                             spisor_refusal *refusal);
+    void (*release_catalog_answer)(void *context, forebay_catalog_answer *answer);
 } forebay_routing_definition;
 
 /** The static forebay_routing_definition, living until the library is unloaded. */

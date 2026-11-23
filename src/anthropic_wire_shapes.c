@@ -9,7 +9,9 @@
 #define ERROR_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_error_argument, message)
 #define LISTING_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_model_listing_argument, model_count)
 #define LOOKUP_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_model_lookup_argument, id)
-#define LOOKUP_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_model_lookup_answer, storage)
+#define OK_STATUS 200u
+#define NOT_FOUND_STATUS 404u
+#define NO_STATUS 0u
 #define MEMBER_NAME_LIMIT 96
 
 /** What a listing and a lookup read alike: the entries routing decided. */
@@ -54,7 +56,7 @@ spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_er
                                        forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ERROR_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
+        !anthropic_body_answer_is_empty(answer)) {
         return spisor_refuse_shape(refusal, "anthropic's error_envelope");
     }
     const char *error_type = error_type_of(argument->reply_kind);
@@ -66,7 +68,7 @@ spisor_status anthropic_error_envelope(void *context, const forebay_anthropic_er
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
     cJSON *wire = anthropic_error_object(&writer, error_type, argument->message);
-    return anthropic_finish_body(&writer, wire, answer, refusal);
+    return anthropic_finish_reply(&writer, wire, NO_STATUS, answer, refusal);
 }
 
 /** The refusal of an entry's member named by its position; the longest name, a 20-digit index, fits the buffer. */
@@ -124,7 +126,7 @@ spisor_status anthropic_model_listing(void *context, const forebay_anthropic_mod
                                       forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, LISTING_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
+        !anthropic_body_answer_is_empty(answer)) {
         return spisor_refuse_shape(refusal, "anthropic's model_listing");
     }
     listing_view view = LISTING_VIEW_OF(argument);
@@ -139,7 +141,7 @@ spisor_status anthropic_model_listing(void *context, const forebay_anthropic_mod
     anthropic_set_text_or_null(&writer, wire, "first_id", edge_id(attached, 0));
     anthropic_set_text_or_null(&writer, wire, "last_id", edge_id(attached, 1));
     anthropic_set_flag(&writer, wire, "has_more", 0);
-    return anthropic_finish_body(&writer, wire, answer, refusal);
+    return anthropic_finish_reply(&writer, wire, OK_STATUS, answer, refusal);
 }
 
 /** The first entry `id` names, NULL for none. */
@@ -182,7 +184,7 @@ spisor_status anthropic_model_lookup(void *context, const forebay_anthropic_mode
                                      forebay_anthropic_model_lookup_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, LOOKUP_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, LOOKUP_ANSWER_SHAPE, answer->length)) {
+        !anthropic_lookup_answer_is_empty(answer)) {
         return spisor_refuse_shape(refusal, "anthropic's model_lookup");
     }
     listing_view view = LISTING_VIEW_OF(argument);
@@ -200,8 +202,8 @@ spisor_status anthropic_model_lookup(void *context, const forebay_anthropic_mode
         answer->length = body.length;
         answer->storage = body.storage;
         answer->found = entry != NULL ? 1 : 0;
+        anthropic_head_lookup(answer, entry != NULL ? OK_STATUS : NOT_FOUND_STATUS);
     }
     return status;
 }
 
-ANTHROPIC_RELEASE_ANSWER(anthropic_release_model_lookup, forebay_anthropic_model_lookup_answer, LOOKUP_ANSWER_SHAPE)

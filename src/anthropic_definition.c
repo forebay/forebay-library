@@ -15,6 +15,8 @@
 #define ENCODE_REQUEST_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_encode_request_argument, request)
 #define RESPONSE_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_response_answer, storage)
 #define ENCODE_RESPONSE_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_encode_response_argument, response)
+#define OK_STATUS 200u
+#define NO_STATUS 0u
 
 static spisor_status refuse_not_json(spisor_refusal *refusal) {
     static const char detail[] =
@@ -128,7 +130,7 @@ static spisor_status encode_request(void *context, const forebay_anthropic_encod
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ENCODE_REQUEST_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
+        !anthropic_body_answer_is_empty(answer)) {
         return spisor_refuse_shape(refusal, "anthropic's encode_request");
     }
     anthropic_problem problem;
@@ -141,14 +143,14 @@ static spisor_status encode_request(void *context, const forebay_anthropic_encod
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
     cJSON *wire = anthropic_encode_request_object(&writer, argument->request);
-    return anthropic_finish_body(&writer, wire, answer, refusal);
+    return anthropic_finish_reply(&writer, wire, NO_STATUS, answer, refusal);
 }
 
 static spisor_status encode_response(void *context, const forebay_anthropic_encode_response_argument *argument,
                                      forebay_anthropic_body_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ENCODE_RESPONSE_SHAPE) ||
-        !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, ANTHROPIC_BODY_ANSWER_SHAPE, answer->length)) {
+        !anthropic_body_answer_is_empty(answer)) {
         return spisor_refuse_shape(refusal, "anthropic's encode_response");
     }
     anthropic_problem problem;
@@ -161,11 +163,10 @@ static spisor_status encode_response(void *context, const forebay_anthropic_enco
     }
     anthropic_writer writer = {SPISOR_OK, NULL};
     cJSON *wire = anthropic_encode_response_object(&writer, argument->response);
-    return anthropic_finish_body(&writer, wire, answer, refusal);
+    return anthropic_finish_reply(&writer, wire, OK_STATUS, answer, refusal);
 }
 
 static ANTHROPIC_RELEASE_ANSWER(release_response, forebay_anthropic_response_answer, RESPONSE_ANSWER_SHAPE)
-ANTHROPIC_RELEASE_ANSWER(anthropic_release_body, forebay_anthropic_body_answer, ANTHROPIC_BODY_ANSWER_SHAPE)
 
 static const forebay_anthropic_definition definition = {
     sizeof(forebay_anthropic_definition),

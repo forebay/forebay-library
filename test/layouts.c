@@ -279,7 +279,27 @@ static void print_routing_layouts(void) {
     FIELD(forebay_limits_answer, models_budget_milliseconds);
     FIELD(forebay_limits_answer, rederive_interval_milliseconds);
     FIELD(forebay_limits_answer, refresh_every_milliseconds);
+    FIELD(forebay_limits_answer, too_large_reply_kind);
     SIZE(forebay_limits_answer);
+    FIELD(forebay_catalog_argument, size);
+    FIELD(forebay_catalog_argument, event);
+    FIELD(forebay_catalog_argument, now);
+    FIELD(forebay_catalog_argument, asked);
+    FIELD(forebay_catalog_argument, last_asked);
+    FIELD(forebay_catalog_argument, asking);
+    FIELD(forebay_catalog_argument, failed);
+    FIELD(forebay_catalog_argument, round_closed);
+    FIELD(forebay_catalog_argument, message);
+    SIZE(forebay_catalog_argument);
+    FIELD(forebay_catalog_answer, size);
+    FIELD(forebay_catalog_answer, action);
+    FIELD(forebay_catalog_answer, budget_milliseconds);
+    FIELD(forebay_catalog_answer, keep_last);
+    FIELD(forebay_catalog_answer, rederive);
+    FIELD(forebay_catalog_answer, log);
+    FIELD(forebay_catalog_answer, log_count);
+    FIELD(forebay_catalog_answer, storage);
+    SIZE(forebay_catalog_answer);
     FIELD(forebay_pass_through_argument, size);
     FIELD(forebay_pass_through_argument, upstream);
     FIELD(forebay_pass_through_argument, url);
@@ -405,6 +425,8 @@ static void print_routing_layouts(void) {
     FIELD(forebay_routing_definition, release_refusal);
     FIELD(forebay_routing_definition, model_entries);
     FIELD(forebay_routing_definition, release_model_entries_answer);
+    FIELD(forebay_routing_definition, catalog);
+    FIELD(forebay_routing_definition, release_catalog_answer);
     SIZE(forebay_routing_definition);
 }
 
@@ -438,6 +460,10 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_body_answer, bytes);
     FIELD(forebay_anthropic_body_answer, length);
     FIELD(forebay_anthropic_body_answer, storage);
+    FIELD(forebay_anthropic_body_answer, status);
+    FIELD(forebay_anthropic_body_answer, content_type);
+    FIELD(forebay_anthropic_body_answer, headers);
+    FIELD(forebay_anthropic_body_answer, header_count);
     SIZE(forebay_anthropic_body_answer);
     FIELD(forebay_anthropic_stream_decode_argument, size);
     FIELD(forebay_anthropic_stream_decode_argument, decoder);
@@ -472,6 +498,10 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_model_lookup_answer, bytes);
     FIELD(forebay_anthropic_model_lookup_answer, length);
     FIELD(forebay_anthropic_model_lookup_answer, storage);
+    FIELD(forebay_anthropic_model_lookup_answer, status);
+    FIELD(forebay_anthropic_model_lookup_answer, content_type);
+    FIELD(forebay_anthropic_model_lookup_answer, headers);
+    FIELD(forebay_anthropic_model_lookup_answer, header_count);
     SIZE(forebay_anthropic_model_lookup_answer);
     FIELD(forebay_anthropic_rate_limit_argument, size);
     FIELD(forebay_anthropic_rate_limit_argument, upstream_headers);

@@ -1,0 +1,22 @@
+{
+  "source": "claude-code-proxy a861192 src/serve.ts:26 and src/walk.ts:117 writeJson with the status routing, arrival or the decode answered",
+  "direction": "errorEnvelope",
+  "input": {
+    "replyKind": "proxyError",
+    "message": "no provider serves claude-x"
+  },
+  "output": {
+    "type": "error",
+    "error": {
+      "type": "loader_proxy_error",
+      "message": "no provider serves claude-x"
+    }
+  },
+  "reply": {
+    "status": 0,
+    "contentType": "application/json",
+    "headers": {
+      "content-type": "application/json"
+    }
+  }
+}

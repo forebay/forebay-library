@@ -46,10 +46,11 @@ model map a slot per tier and the default, each served by `forebay_assignment`s 
 | `pass_through` | the target (the request path appended to the upstream's origin and path, trailing slashes dropped) and the request headers without the hop-by-hop set, `host` and `content-length`, and without an `authorization` equal to the placeholder, then `host` (with the port only when the upstream names one) and `content-length` set; a relative, non-http(s) or userinfo-carrying upstream, and a path not starting with `/`, are refused |
 | `reply_headers` | the reply headers without the hop-by-hop set, and for a rewritten body also without `content-encoding` and `content-length` |
 | `arrival` | refuse (with a 403 `proxyError` reply) when an `origin` header is present, whatever its value, or `host`, ignoring case, is neither `127.0.0.1:<port>` nor `localhost:<port>`; else health (200, `text/plain`, `ok`) for the path `/health` without its query; else route |
-| `limits` | the largest request body, the 413 `proxyError` reply for a larger one, the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
+| `limits` | the largest request body, the 413 `proxyError` reply for a larger one (its kind, status and message), the wait for providers' models at a start or a request finding no model, the least time between that request's asks, and the interval of the periodic refresh |
 | `port` | the port and the loopback address for an integer 1 to 65535; else a refusal that the setting is no port, or, given a listen failure, that the port cannot be listened on |
 | `failure` | the reply: for an unreachable upstream a 502 `proxyError` naming the upstream's origin (scheme, host and port) and the detail, an unusable upstream refused as `pass_through` refuses it; for a failed request a 500 `proxyError` whose message is the detail, with a `warn` line `a request failed: <detail>` |
 | `model_entries` | every model id the catalog serves, once as the first provider offers it, with its name (the id when the catalog names none) and each limit the model's or the profile's default; the tier members are not read, so a profile with no tiers lists every model |
+| `catalog` | what a host does about an event of its providers' catalog, so it keeps only the timers, the asks and the models: a change of providers and the periodic refresh ask every provider within `limits`' budget unless a round is open, which they wait for; a request finding no model does the same, but asks nothing within `limits`' interval of the last round's start; a failed ask keeps the provider's last models with the `warn` line `a provider answered no models: <message>`; an answer after its round closed, and a closed round, re-derive the model map; a failed derivation keeps the last map with the `warn` line `the model map could not be derived, so routing keeps the last one: <message>` |
 | `environment` | the environment an application starts with: the base URL, and with providers the model pairs named by the application's model variables and the placeholder token unless the application has a login of its own |
 
 A refusal answers REFUSED with the refusal saying what to repair. Windows has no `regcomp`, so one matcher
@@ -145,6 +146,12 @@ line, a frame or a CRLF. A feed that runs out of memory leaves its handle as it 
 | `stream_encoder_open`, `release_stream_encoder` | a new encoder, answered as a decoder is; freeing one |
 | `stream_encode`, `stream_encode_finish` | IR events to SSE text, `event:`, `data:` and a blank line each, with the translator's defaults for what an event leaves out; an event of a kind the header does not name is refused MALFORMED |
 
+Every body and lookup answer carries the reply it goes out in, so a proxy names no status, media type or header of
+its own: `status` (0 where another decision names it, an error body's, or where the bytes are no reply, a request
+body's), `content_type` and `headers`. A JSON body is `application/json`; a stream's every feed is a 200
+`text/event-stream` reply with `cache-control: no-cache`; an encoded response and a listing are 200, and a lookup 200
+or 404. An answer short of `header_count` gets the bytes alone.
+
 Four operations write the proxy's own replies; the first three answer a `forebay_anthropic_body_answer`:
 
 | operation | does |
@@ -155,9 +162,9 @@ Four operations write the proxy's own replies; the first three answer a `forebay
 | `rate_limit_reply`, `release_reply` | an upstream's own 429 (its headers, the latest reset, the clock's `now`, and the caller's zone name and its `offset_minutes` at the reset, since C does no zone lookup) to a `forebay_anthropic_reply_answer`: status 429, the upstream headers less `content-encoding`, `content-length` and the two `x-hub-` ones, the reset the latest of `reset_at` and the two `anthropic-ratelimit-unified-` reset headers, `content-type`, `retry-after` (seconds to the reset, else 60), and `anthropic-ratelimit-unified-status` and `-reset` when the upstream sent none, with the `rate_limit_error` body naming `h:mm AM` and the zone, or `try again later` for a reset not after `now` |
 | `route_request`, `release_route` | a method and a path to what the proxy does with the request: `messages` for a POST to `/v1/messages`, `modelList` for a GET to `/v1/models` or `/v1/models/`, `modelLookup` with the id for a GET to `/v1/models/<id>`, else `passThrough`; the method is compared ignoring case and a query is cut off. It lives here and not in `routing` because the paths are Anthropic wire names |
 
-`test/vectors/anthropic/` holds the translator's vectors, copied unchanged, and the `rate-limit-*`, `decode-*`, `route-*` and `envelope-*` ones of the operations the proxy needs beside them;
+`test/vectors/anthropic/` holds the translator's vectors, copied unchanged, and the `rate-limit-*`, `decode-*`, `route-*`, `envelope-*` and `reply-*` ones of the operations the proxy needs beside them;
 `anthropic_test` runs every `request-*` and `response-*` one in both directions through the definition, each `rate-limit-*`
-one through `rate_limit_reply`, each `decode-*` one through `decode_request` with its headers, each `route-*` one through `route_request`, each `envelope-*` one through `error_envelope`, `anthropic_stream_test` every `stream-*` one, a decode
+one through `rate_limit_reply`, each `decode-*` one through `decode_request` with its headers, each `route-*` one through `route_request`, each `envelope-*` one through `error_envelope`, each `reply-*` one through its direction with the reply its answer names, `anthropic_stream_test` every `stream-*` one, a decode
 also split in two at every byte and fed a byte at a time, and `anthropic_out_of_memory_test` fails each allocation of
 every vector, singly and from that one on.
 The test-only IR JSON codec the vectors are read with has its own `ir_codec_test` round trip and
