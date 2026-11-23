@@ -322,8 +322,9 @@ typedef struct forebay_step_answer {
 } forebay_step_answer;
 
 /**
- * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, and
- * `too_large_message` is static text. It owns nothing. First shape ends at `refresh_every_milliseconds`.
+ * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, of
+ * `too_large_reply_kind`, `too_large_status` and `too_large_message`, static text. It owns nothing. First shape ends
+ * at `refresh_every_milliseconds`.
  */
 typedef struct forebay_limits_answer {
     uint32_t size;
@@ -333,6 +334,8 @@ typedef struct forebay_limits_answer {
     uint64_t models_budget_milliseconds;
     uint64_t rederive_interval_milliseconds;
     uint64_t refresh_every_milliseconds;
+    /** A forebay_reply_kind. */
+    uint32_t too_large_reply_kind;
 } forebay_limits_answer;
 
 /**

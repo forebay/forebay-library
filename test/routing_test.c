@@ -218,6 +218,21 @@ static void a_profile_short_of_its_defaults_fills_no_default(void) {
     }
 }
 
+/** A caller compiled before the reply kind was appended has a limits answer ending at `refresh_every_milliseconds`. */
+static void a_limits_answer_short_of_the_reply_kind_gets_every_limit_but_it(void) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_limits_answer answer = SPISOR_INIT(forebay_limits_answer);
+    answer.size = (uint32_t)(offsetof(forebay_limits_answer, refresh_every_milliseconds) + sizeof(uint64_t));
+    answer.too_large_reply_kind = 99;
+    spisor_status status = routing->limits(NULL, &answer, &refusal);
+    if (status != SPISOR_OK || answer.too_large_status != 413 || answer.too_large_reply_kind != 99) {
+        support_failf("a limits answer short of the reply kind", "answered %d, kind %u", (int)status,
+                      (unsigned)answer.too_large_reply_kind);
+    }
+    routing->release_refusal(NULL, &refusal);
+}
+
 int main(void) {
     spisor_json_use_library_allocator();
     int vectors = run_every_vector();
@@ -229,6 +244,7 @@ int main(void) {
     refuses_malformed_steps();
     refuses_malformed_model_entries();
     a_profile_short_of_its_defaults_fills_no_default();
+    a_limits_answer_short_of_the_reply_kind_gets_every_limit_but_it();
     printf("routing_test: %d vectors\n", vectors);
     return support_summary("routing_test");
 }

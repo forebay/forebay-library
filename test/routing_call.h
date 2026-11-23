@@ -393,8 +393,9 @@ static inline cJSON *routing_arrival_json_of(const forebay_arrival_answer *answe
 static inline cJSON *routing_limits_json_of(const forebay_limits_answer *answer) {
     cJSON *result = cJSON_CreateObject();
     cJSON_AddNumberToObject(result, "maxRequestBytes", (double)answer->max_request_bytes);
-    cJSON_AddItemToObject(result, "tooLarge", routing_reply_json_of(FOREBAY_REPLY_PROXY_ERROR, answer->too_large_status,
-                                                                    answer->too_large_message));
+    cJSON_AddItemToObject(result, "tooLarge",
+                          routing_reply_json_of(answer->too_large_reply_kind, answer->too_large_status,
+                                                answer->too_large_message));
     cJSON_AddNumberToObject(result, "modelsBudgetMilliseconds", (double)answer->models_budget_milliseconds);
     cJSON_AddNumberToObject(result, "rederiveIntervalMilliseconds", (double)answer->rederive_interval_milliseconds);
     cJSON_AddNumberToObject(result, "refreshEveryMilliseconds", (double)answer->refresh_every_milliseconds);
