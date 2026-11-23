@@ -479,8 +479,11 @@ typedef struct forebay_catalog_read_answer {
 } forebay_catalog_read_answer;
 
 /**
- * A request to send upstream undecoded, with the placeholder authorization a client sent. First shape ends at
- * `placeholder_authorization`.
+ * A request to send upstream undecoded, with the placeholder authorization a client sent. The placeholder never goes
+ * upstream: an `authorization` header equal to `placeholder_authorization` exactly is dropped, and so is an
+ * `x-api-key` header equal either to that whole value, as a client given the whole placeholder as its key sends it,
+ * or to the key it carries, the text after a leading `Bearer ` (the scheme compared ignoring case), as a client given
+ * the bare key sends it. First shape ends at `placeholder_authorization`.
  */
 typedef struct forebay_pass_through_argument {
     uint32_t size;
