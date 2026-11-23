@@ -747,9 +747,11 @@ typedef struct forebay_routing_definition {
      * answer of the latest round from an implementation whose ask it does not wait on, a failed answer without a
      * message and models that are no complete catalog provider. For an event answered anything but OK, which leaves
      * the catalog as it was, the host logs the refusal and does one more thing by its kind: a READ or NO_MODEL's
-     * request reads the catalog as it stands through `catalog_read`; a TIMER is reported again at once with a fresh
-     * `now`, until it is answered or the catalog is released, since nothing else closes its round or re-sets the
-     * period; an ANSWERED is only logged, its round closing at its own round close timer, and no other round ends.
+     * request reads the catalog as it stands through `catalog_read`; a TIMER answered OUT_OF_MEMORY is reported again
+     * at once with a fresh `now`, until it is answered otherwise or the catalog is released, since nothing else closes
+     * its round or re-sets the period, while a TIMER answered MALFORMED or REFUSED is the host's misuse, only logged
+     * and never reported again; an ANSWERED is only logged, its round closing at its own round close timer, and no
+     * other round ends.
      */
     spisor_status (*catalog_event)(void *context, const forebay_catalog_event_argument *argument,
                                    forebay_catalog_event_answer *answer, spisor_refusal *refusal);
