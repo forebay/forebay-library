@@ -90,15 +90,25 @@ static int is_set_by_the_proxy(const char *name) {
     return routing_equals_ignoring_case(name, "host") || routing_equals_ignoring_case(name, "content-length");
 }
 
-static int is_placeholder_authorization(const cJSON *entry, const char *placeholder) {
-    return routing_equals_ignoring_case(entry->string, "authorization") && strcmp(entry->valuestring, placeholder) == 0;
+/** The key the placeholder authorization carries: what follows a `Bearer ` scheme, or the whole value without one. */
+static const char *placeholder_key(const char *placeholder) {
+    static const char scheme[] = "Bearer ";
+    return routing_starts_with_ignoring_case(placeholder, scheme) ? placeholder + sizeof scheme - 1 : placeholder;
+}
+
+static int is_placeholder_credential(const cJSON *entry, const char *placeholder) {
+    if (routing_equals_ignoring_case(entry->string, "authorization")) {
+        return strcmp(entry->valuestring, placeholder) == 0;
+    }
+    return routing_equals_ignoring_case(entry->string, "x-api-key") &&
+           strcmp(entry->valuestring, placeholder_key(placeholder)) == 0;
 }
 
 static void drop_what_the_proxy_replaces(cJSON *headers, const char *placeholder) {
     cJSON *entry = headers->child;
     while (entry != NULL) {
         cJSON *next = entry->next;
-        if (is_set_by_the_proxy(entry->string) || is_placeholder_authorization(entry, placeholder)) {
+        if (is_set_by_the_proxy(entry->string) || is_placeholder_credential(entry, placeholder)) {
             cJSON_Delete(cJSON_DetachItemViaPointer(headers, entry));
         }
         entry = next;
