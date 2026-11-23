@@ -59,15 +59,24 @@ static int is_changed(const forebay_catalog_argument *argument) {
     return spisor_has_shape(argument->size, CHANGED_SHAPE) && argument->changed;
 }
 
-/** What to do about an event that may start a round: join the open one, start one, or nothing. */
+/** Whether the event reports a changed ordered list, which a round started for the old list cannot serve. */
+static int is_a_change(const forebay_catalog_argument *argument) {
+    return argument->event == FOREBAY_CATALOG_PROVIDERS_CHANGED ||
+           (argument->event == FOREBAY_CATALOG_READ && is_changed(argument));
+}
+
+/** What to do about an event that may start a round: start one, join the open one, or nothing. */
 static uint32_t action_of(const forebay_catalog_argument *argument) {
+    if (is_a_change(argument)) {
+        return FOREBAY_CATALOG_ASK;
+    }
     if (argument->asking) {
         return FOREBAY_CATALOG_WAIT;
     }
     if (argument->event == FOREBAY_CATALOG_NO_MODEL && !is_past_the_interval(argument)) {
         return FOREBAY_CATALOG_NOTHING;
     }
-    if (argument->event == FOREBAY_CATALOG_READ && !is_changed(argument)) {
+    if (argument->event == FOREBAY_CATALOG_READ) {
         return FOREBAY_CATALOG_NOTHING;
     }
     return FOREBAY_CATALOG_ASK;
