@@ -168,8 +168,13 @@ static spisor_status refused_then_reported_again(forebay_catalog_event_argument 
     if (empty_unless_answered(refused, answer, sizeof *answer) != SPISOR_OUT_OF_MEMORY) {
         support_failf(label, "with no memory answered %d", (int)refused);
     }
+    routing->release_catalog_event_answer(NULL, answer);
+    routing->release_refusal(NULL, &refusal);
+    start_empty(answer, sizeof *answer);
     event->now = retried;
-    return routing->catalog_event(NULL, event, answer, &refusal);
+    spisor_status status = routing->catalog_event(NULL, event, answer, &refusal);
+    routing->release_refusal(NULL, &refusal);
+    return status;
 }
 
 /**
@@ -190,6 +195,8 @@ static void a_refused_timer_reported_again_does_what_it_would_have(void) {
     open.settings = &settings;
     if (routing->catalog_open(NULL, &open, &opened, &refusal) != SPISOR_OK) {
         support_fail("a refused timer", "the catalog did not open");
+        routing->release_catalog_open_answer(NULL, &opened);
+        routing->release_refusal(NULL, &refusal);
         return;
     }
     event.catalog = opened.catalog;
