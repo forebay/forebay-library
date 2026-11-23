@@ -101,7 +101,8 @@ static int is_placeholder_credential(const cJSON *entry, const char *placeholder
         return strcmp(entry->valuestring, placeholder) == 0;
     }
     return routing_equals_ignoring_case(entry->string, "x-api-key") &&
-           strcmp(entry->valuestring, placeholder_key(placeholder)) == 0;
+           (strcmp(entry->valuestring, placeholder) == 0 ||
+            strcmp(entry->valuestring, placeholder_key(placeholder)) == 0);
 }
 
 static void drop_what_the_proxy_replaces(cJSON *headers, const char *placeholder) {
