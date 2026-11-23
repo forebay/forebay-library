@@ -18,6 +18,7 @@
         "level": "warn",
         "message": "a provider answered no models: "
       }
-    ]
+    ],
+    "drop": false
   }
 }

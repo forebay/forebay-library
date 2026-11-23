@@ -216,6 +216,30 @@ static void refuses_malformed_catalogs(void) {
     routing->release_catalog_answer(NULL, NULL);
 }
 
+/**
+ * A caller compiled before `unasked` was appended reports every answer as asked; one whose answer stops short of
+ * `drop` cannot be told to drop, so an unasked answer is refused it.
+ */
+static void an_unasked_answer_needs_the_shapes_that_carry_it(void) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_catalog_argument argument = SPISOR_INIT(forebay_catalog_argument);
+    forebay_catalog_answer answer = SPISOR_INIT(forebay_catalog_answer);
+    argument.event = FOREBAY_CATALOG_ANSWERED;
+    argument.round_closed = 1;
+    argument.unasked = 1;
+    argument.size = (uint32_t)(offsetof(forebay_catalog_argument, message) + sizeof(const char *));
+    spisor_status status = routing->catalog(NULL, &argument, &answer, &refusal);
+    if (status != SPISOR_OK || answer.drop != 0 || answer.rederive != 1) {
+        support_failf("an argument short of unasked", "answered %d, drop %u", (int)status, (unsigned)answer.drop);
+    }
+    routing->release_catalog_answer(NULL, &answer);
+    argument.size = (uint32_t)sizeof argument;
+    answer.size = (uint32_t)(offsetof(forebay_catalog_answer, storage) + sizeof(void *));
+    expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal,
+                     "an unasked answer into an answer short of drop");
+}
+
 /** A caller compiled before the defaults were appended has a profile ending at `unserved_model_pattern`. */
 static void a_profile_short_of_its_defaults_fills_no_default(void) {
     const forebay_routing_definition *routing = routing_definition();
@@ -271,6 +295,7 @@ int main(void) {
     refuses_malformed_steps();
     refuses_malformed_model_entries();
     refuses_malformed_catalogs();
+    an_unasked_answer_needs_the_shapes_that_carry_it();
     a_profile_short_of_its_defaults_fills_no_default();
     a_limits_answer_short_of_the_reply_kind_gets_every_limit_but_it();
     printf("routing_test: %d vectors\n", vectors);

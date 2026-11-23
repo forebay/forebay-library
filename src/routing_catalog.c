@@ -9,6 +9,8 @@
 
 #define CATALOG_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_argument, message)
 #define CATALOG_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_answer, storage)
+#define UNASKED_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_argument, unasked)
+#define DROP_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_answer, drop)
 
 static const char NO_MODELS_WARNING[] = "a provider answered no models: ";
 static const char NO_MAP_WARNING[] = "the model map could not be derived, so routing keeps the last one: ";
@@ -22,10 +24,21 @@ static int needs_message(const forebay_catalog_argument *argument) {
            (argument->event == FOREBAY_CATALOG_ANSWERED && argument->failed);
 }
 
+/** Whether the answering implementation is one the current round did not ask; an argument short of it says no. */
+static int is_unasked(const forebay_catalog_argument *argument) {
+    return argument->event == FOREBAY_CATALOG_ANSWERED && spisor_has_shape(argument->size, UNASKED_SHAPE) &&
+           argument->unasked;
+}
+
 static int is_catalog_argument(const forebay_catalog_argument *argument) {
     return is_event(argument->event) && forebay_is_finite(argument->now) &&
            (!argument->asked || forebay_is_finite(argument->last_asked)) &&
            (!needs_message(argument) || argument->message != NULL);
+}
+
+/** The bytes of an answer of `size` to empty: through its size, at most the whole struct. */
+static size_t cleared_shape(uint32_t size) {
+    return size < sizeof(forebay_catalog_answer) ? size : sizeof(forebay_catalog_answer);
 }
 
 static forebay_limits_answer read_limits(void) {
@@ -70,16 +83,25 @@ static int warn(forebay_catalog_answer *answer, const char *prefix, const char *
     return 1;
 }
 
+static spisor_status decide_answered(const forebay_catalog_argument *argument, forebay_catalog_answer *answer) {
+    if (is_unasked(argument)) {
+        answer->drop = 1;
+    } else if (argument->failed) {
+        answer->keep_last = 1;
+    } else {
+        answer->rederive = argument->round_closed ? 1u : 0u;
+    }
+    if (!argument->failed) {
+        return SPISOR_OK;
+    }
+    return warn(answer, NO_MODELS_WARNING, argument->message) ? SPISOR_OK : SPISOR_OUT_OF_MEMORY;
+}
+
 static spisor_status decide(const forebay_catalog_argument *argument, forebay_catalog_answer *answer) {
     answer->action = FOREBAY_CATALOG_NOTHING;
     switch (argument->event) {
     case FOREBAY_CATALOG_ANSWERED:
-        if (argument->failed) {
-            answer->keep_last = 1;
-            return warn(answer, NO_MODELS_WARNING, argument->message) ? SPISOR_OK : SPISOR_OUT_OF_MEMORY;
-        }
-        answer->rederive = argument->round_closed ? 1u : 0u;
-        return SPISOR_OK;
+        return decide_answered(argument, answer);
     case FOREBAY_CATALOG_ROUND_CLOSED:
         answer->rederive = 1;
         return SPISOR_OK;
@@ -106,9 +128,12 @@ spisor_status routing_catalog_refresh(void *context, const forebay_catalog_argum
         return forebay_refuse_member(refusal, "event, now, last_asked or message",
                                      "a forebay_catalog_event at a finite now, with the message it needs");
     }
+    if (is_unasked(argument) && !spisor_has_shape(answer->size, DROP_SHAPE)) {
+        return forebay_refuse_member(refusal, "drop", "an answer that reaches drop, for an answer of an unasked one");
+    }
     spisor_status status = decide(argument, answer);
     if (status != SPISOR_OK) {
-        SPISOR_CLEAR_ANSWER(answer, CATALOG_ANSWER_SHAPE);
+        SPISOR_CLEAR_ANSWER(answer, cleared_shape(answer->size));
     }
     return status;
 }
@@ -117,6 +142,6 @@ void routing_release_catalog_answer(void *context, forebay_catalog_answer *answe
     (void)context;
     if (answer != NULL && spisor_has_shape(answer->size, CATALOG_ANSWER_SHAPE)) {
         forebay_storage_release(answer->storage);
-        SPISOR_CLEAR_ANSWER(answer, CATALOG_ANSWER_SHAPE);
+        SPISOR_CLEAR_ANSWER(answer, cleared_shape(answer->size));
     }
 }

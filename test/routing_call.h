@@ -248,7 +248,7 @@ static inline int routing_read_headers_calls(const cJSON *argument, routing_call
 
 /**
  * A catalog vector's argument: the `event` by name, `now`, `lastAsked` when a round was ever started, the flags
- * `asking`, `failed` and `roundClosed`, and the `message`.
+ * `asking`, `failed`, `roundClosed` and `unasked`, and the `message`.
  */
 static inline int routing_read_catalog_event(const cJSON *argument, forebay_catalog_argument *catalog) {
     static const char *const events[] = {"providersChanged", "noModel", "period", "answered", "roundClosed",
@@ -268,6 +268,7 @@ static inline int routing_read_catalog_event(const cJSON *argument, forebay_cata
     catalog->failed = cJSON_IsTrue(routing_member(argument, "failed")) ? 1u : 0u;
     catalog->round_closed = cJSON_IsTrue(routing_member(argument, "roundClosed")) ? 1u : 0u;
     catalog->message = routing_text_of(argument, "message");
+    catalog->unasked = cJSON_IsTrue(routing_member(argument, "unasked")) ? 1u : 0u;
     return 1;
 }
 
@@ -465,6 +466,7 @@ static inline cJSON *routing_catalog_json_of(const forebay_catalog_answer *answe
     }
     cJSON_AddBoolToObject(result, "keepLast", answer->keep_last);
     cJSON_AddBoolToObject(result, "rederive", answer->rederive);
+    cJSON_AddBoolToObject(result, "drop", answer->drop);
     cJSON_AddItemToObject(result, "log", routing_log_json_of(answer->log, answer->log_count));
     return result;
 }

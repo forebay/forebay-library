@@ -290,6 +290,7 @@ static void print_routing_layouts(void) {
     FIELD(forebay_catalog_argument, failed);
     FIELD(forebay_catalog_argument, round_closed);
     FIELD(forebay_catalog_argument, message);
+    FIELD(forebay_catalog_argument, unasked);
     SIZE(forebay_catalog_argument);
     FIELD(forebay_catalog_answer, size);
     FIELD(forebay_catalog_answer, action);
@@ -299,6 +300,7 @@ static void print_routing_layouts(void) {
     FIELD(forebay_catalog_answer, log);
     FIELD(forebay_catalog_answer, log_count);
     FIELD(forebay_catalog_answer, storage);
+    FIELD(forebay_catalog_answer, drop);
     SIZE(forebay_catalog_answer);
     FIELD(forebay_pass_through_argument, size);
     FIELD(forebay_pass_through_argument, upstream);

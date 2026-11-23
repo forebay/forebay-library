@@ -323,8 +323,10 @@ typedef struct forebay_step_answer {
 
 /**
  * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, of
- * `too_large_reply_kind`, `too_large_status` and `too_large_message`, static text. It owns nothing. First shape ends
- * at `refresh_every_milliseconds`.
+ * `too_large_reply_kind`, `too_large_status` and `too_large_message`, static text. `refresh_every_milliseconds` is
+ * the period of the host's catalog timer. `models_budget_milliseconds` and `rederive_interval_milliseconds` are the
+ * numbers `catalog` decides with: a host reads the budget from `catalog`'s ASK, and the interval is C's alone. It owns
+ * nothing. First shape ends at `refresh_every_milliseconds`.
  */
 typedef struct forebay_limits_answer {
     uint32_t size;
@@ -356,14 +358,16 @@ typedef enum forebay_catalog_action {
 } forebay_catalog_action;
 
 /**
- * One event of the catalog the host keeps of its providers' models, at `now`, epoch milliseconds: the set of
- * implementations differs from the one last asked (PROVIDERS_CHANGED), a step answered FOREBAY_STEP_REFRESH_MODELS
+ * One event of the catalog the host keeps of its providers' models, at `now`, epoch milliseconds: the ordered list of
+ * implementations differs from the one last asked, a reordering included, since `model_entries` lists a model as the
+ * first provider offers it (PROVIDERS_CHANGED), a step answered FOREBAY_STEP_REFRESH_MODELS
  * (NO_MODEL), the periodic timer of `routing.limits`' `refresh_every_milliseconds` fired (PERIOD), one provider's ask
  * settled (ANSWERED), a round closed because every ask settled or its budget ran out (ROUND_CLOSED), or `model_map`
  * refused (DERIVE_FAILED). `asked` is 1 once a round was ever started, `last_asked` then the start of the last, and
  * `asking` 1 while a round is open. An ANSWERED event carries `failed` 1 with `message` when the ask failed, and
- * `round_closed` 1 when the round it belongs to closed before it; a DERIVE_FAILED event carries the refusal's
- * `message`. First shape ends at `message`.
+ * `round_closed` 1 when the round it belongs to closed before it, and `unasked` 1 when the implementation that answered
+ * is not among those the current round asked, because a later round dropped it; a DERIVE_FAILED event carries the
+ * refusal's `message`. First shape ends at `message`.
  */
 typedef struct forebay_catalog_argument {
     uint32_t size;
@@ -376,15 +380,20 @@ typedef struct forebay_catalog_argument {
     uint32_t failed;
     uint32_t round_closed;
     const char *message;
+    uint32_t unasked;
 } forebay_catalog_argument;
 
 /**
  * What to do about the event. ASK: start a round, its start `now`: drop the models of every implementation no
  * longer offered, ask every one, report each as it settles, and the round as closed once every ask settled or
- * `budget_milliseconds` passed, whichever is first. WAIT: the open round answers this event too, so a request waits
- * for its close. NOTHING: nothing to ask. `keep_last` 1: keep what the event would replace, the provider's last
- * models for a failed ask, the last model map for a failed derivation. `rederive` 1: derive the model map again over
- * the catalog as it now stands. `log` the lines to write. First shape ends at `storage`.
+ * `budget_milliseconds` passed, whichever is first; the request whose event asked waits for that close and the
+ * re-derivation it answers before it reads the catalog. WAIT: the open round answers this event too, so its request
+ * waits the same way, for the round's close and the re-derivation that follows. NOTHING: nothing to ask, the request
+ * reads the catalog as it stands. `keep_last` 1: keep what the event would replace, the provider's last models for a
+ * failed ask, the last model map for a failed derivation. `rederive` 1: derive the model map again over the catalog
+ * as it now stands. `drop` 1: discard what an ANSWERED event carries, models or failure, so nothing of it reaches the
+ * catalog, which also leaves no re-derivation to do; it is answered only to an answer that reaches it. `log` the
+ * lines to write. First shape ends at `storage`.
  */
 typedef struct forebay_catalog_answer {
     uint32_t size;
@@ -396,6 +405,7 @@ typedef struct forebay_catalog_answer {
     const forebay_log_line *log;
     size_t log_count;
     void *storage;
+    uint32_t drop;
 } forebay_catalog_answer;
 
 /**
@@ -647,7 +657,8 @@ typedef struct forebay_routing_definition {
      * models: <message>` and `the model map could not be derived, so routing keeps the last one: <message>`.
      * PROVIDERS_CHANGED and PERIOD ask unless a round is open, which they wait for; NO_MODEL does the same, except
      * that it asks nothing while the last round began less than `limits`' `rederive_interval_milliseconds` ago; an
-     * ANSWERED event re-derives only once its round closed, and never for a failed ask; ROUND_CLOSED re-derives.
+     * ANSWERED event re-derives only once its round closed, and never for a failed ask; one from an implementation
+     * the current round did not ask is dropped, a failure of it still warned; ROUND_CLOSED re-derives.
      * MALFORMED for a `now` or `last_asked` that is not finite and a NULL `message` an event needs.
      */
     spisor_status (*catalog)(void *context, const forebay_catalog_argument *argument, forebay_catalog_answer *answer,
