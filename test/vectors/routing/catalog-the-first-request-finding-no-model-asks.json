@@ -10,6 +10,7 @@
     "budgetMilliseconds": 2000,
     "keepLast": false,
     "rederive": false,
-    "log": []
+    "log": [],
+    "drop": false
   }
 }

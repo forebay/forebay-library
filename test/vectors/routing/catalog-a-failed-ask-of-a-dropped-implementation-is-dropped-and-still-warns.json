@@ -1,0 +1,25 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:111-112 the warning is written whatever was asked; :77-79 nothing of it reaches routing",
+  "function": "catalog",
+  "argument": {
+    "event": "answered",
+    "now": 6500,
+    "lastAsked": 6000,
+    "asking": true,
+    "unasked": true,
+    "failed": true,
+    "message": "socket hang up"
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": false,
+    "rederive": false,
+    "drop": true,
+    "log": [
+      {
+        "level": "warn",
+        "message": "a provider answered no models: socket hang up"
+      }
+    ]
+  }
+}

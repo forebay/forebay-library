@@ -10,6 +10,7 @@
     "action": "nothing",
     "keepLast": false,
     "rederive": false,
-    "log": []
+    "log": [],
+    "drop": false
   }
 }

@@ -1,0 +1,18 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:98 a later round dropped the implementation, :77-79 the snapshot reads only the asked ones, so its answer never reaches routing",
+  "function": "catalog",
+  "argument": {
+    "event": "answered",
+    "now": 6500,
+    "lastAsked": 6000,
+    "asking": true,
+    "unasked": true
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": false,
+    "rederive": false,
+    "drop": true,
+    "log": []
+  }
+}

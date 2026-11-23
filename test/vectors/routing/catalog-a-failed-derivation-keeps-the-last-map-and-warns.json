@@ -16,6 +16,7 @@
         "level": "warn",
         "message": "the model map could not be derived, so routing keeps the last one: the tier regex uses a lookahead"
       }
-    ]
+    ],
+    "drop": false
   }
 }
