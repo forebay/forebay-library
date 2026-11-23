@@ -1,5 +1,5 @@
 {
-  "source": "claude-code-proxy a861192 src/catalog.ts:90 #askAll joins the shared round",
+  "source": "READ fix round 1 ruling: a change always starts a new round, which supersedes the open one",
   "function": "catalog",
   "argument": {
     "event": "providersChanged",
@@ -8,10 +8,11 @@
     "asking": true
   },
   "result": {
-    "action": "wait",
+    "action": "ask",
+    "budgetMilliseconds": 2000,
     "keepLast": false,
     "rederive": false,
-    "log": [],
-    "drop": false
+    "drop": false,
+    "log": []
   }
 }

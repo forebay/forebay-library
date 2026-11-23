@@ -391,7 +391,9 @@ typedef struct forebay_catalog_argument {
  * What to do about the event. ASK: start a round, its start `now`: drop the models of every implementation no
  * longer offered, ask every one, report each as it settles, and the round as closed once every ask settled or
  * `budget_milliseconds` passed, whichever is first; the request whose event asked waits for that close and the
- * re-derivation it answers before it reads the catalog. WAIT: the open round answers this event too, so its request
+ * re-derivation it answers before it reads the catalog. An ASK while a round is open supersedes that round: the new
+ * round is the current one, and a late answer of the old one from an implementation the new round does not ask is
+ * reported `unasked` and dropped. WAIT: the open round answers this event too, so its request
  * waits the same way, for the round's close and the re-derivation that follows. NOTHING: nothing to ask, the request
  * reads the catalog as it stands. `keep_last` 1: keep what the event would replace, the provider's last models for a
  * failed ask, the last model map for a failed derivation. `rederive` 1: derive the model map again over the catalog
@@ -659,9 +661,10 @@ typedef struct forebay_routing_definition {
      * models: whether to ask every provider again and within which budget, whether a failed ask or derivation keeps
      * what it held, whether the model map must be derived again, and the warning lines, `a provider answered no
      * models: <message>` and `the model map could not be derived, so routing keeps the last one: <message>`.
-     * PROVIDERS_CHANGED and PERIOD ask unless a round is open, which they wait for; READ waits while a round is
-     * open, else asks when the list `changed` and answers NOTHING when it did not, an argument short of `changed`
-     * reading as unchanged; NO_MODEL does the same as PROVIDERS_CHANGED, except
+     * A change always starts a new round: PROVIDERS_CHANGED, and a READ whose list `changed`, ask whether or not a
+     * round is open, since a round started for the old list cannot serve the new one. PERIOD asks unless a round is
+     * open, which it waits for; a READ whose list did not change waits while a round is open and answers NOTHING
+     * otherwise, an argument short of `changed` reading as unchanged; NO_MODEL does the same as PERIOD, except
      * that it asks nothing while the last round began less than `limits`' `rederive_interval_milliseconds` ago; an
      * ANSWERED event re-derives only once its round closed, and never for a failed ask; one from an implementation
      * the current round did not ask is dropped, a failure of it still warned; ROUND_CLOSED re-derives.
