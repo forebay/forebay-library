@@ -8,6 +8,7 @@
 #include "routing_answers.h"
 #include "routing_arguments.h"
 #include "routing_arrival.h"
+#include "routing_catalog.h"
 #include "routing_environment.h"
 #include "routing_failure.h"
 #include "routing_headers.h"
@@ -511,6 +512,8 @@ static const forebay_routing_definition definition = {
     spisor_release_refusal,
     routing_model_entries,
     routing_release_model_entries_answer,
+    routing_catalog_refresh,
+    routing_release_catalog_answer,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_routing_definition_of(void) {

@@ -1,0 +1,16 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:101-103 the map is re-derived once every ask settled or the budget ran out",
+  "function": "catalog",
+  "argument": {
+    "event": "roundClosed",
+    "now": 6000,
+    "lastAsked": 4000,
+    "asking": true
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": false,
+    "rederive": true,
+    "log": []
+  }
+}

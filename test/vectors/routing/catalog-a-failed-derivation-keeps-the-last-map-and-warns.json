@@ -1,0 +1,21 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:120-121 the slots are not replaced and the warning is written",
+  "function": "catalog",
+  "argument": {
+    "event": "deriveFailed",
+    "now": 6000,
+    "lastAsked": 4000,
+    "message": "the tier regex uses a lookahead"
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": true,
+    "rederive": false,
+    "log": [
+      {
+        "level": "warn",
+        "message": "the model map could not be derived, so routing keeps the last one: the tier regex uses a lookahead"
+      }
+    ]
+  }
+}

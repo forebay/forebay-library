@@ -62,6 +62,7 @@ add_library(forebay_objects OBJECT
     src/routing_answers.c
     src/routing_arguments.c
     src/routing_arrival.c
+    src/routing_catalog.c
     src/routing_definition.c
     src/routing_definition_step.c
     src/routing_environment.c

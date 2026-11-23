@@ -189,6 +189,33 @@ static void refuses_malformed_model_entries(void) {
                      "entries, a short argument");
 }
 
+static void refuses_malformed_catalogs(void) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    forebay_catalog_argument argument = SPISOR_INIT(forebay_catalog_argument);
+    forebay_catalog_answer answer = SPISOR_INIT(forebay_catalog_answer);
+    expect_malformed(routing->catalog(NULL, NULL, &answer, &refusal), &refusal, "a catalog without an argument");
+    expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal, "a catalog of no event");
+    argument.event = FOREBAY_CATALOG_DERIVE_FAILED + 1;
+    expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal, "a catalog of an unnamed event");
+    argument.event = FOREBAY_CATALOG_PERIOD;
+    argument.now = INFINITY;
+    expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal, "a catalog at no finite now");
+    argument.now = 1;
+    argument.asked = 1;
+    argument.last_asked = NAN;
+    expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal,
+                     "a catalog asked at no finite time");
+    argument.last_asked = 0;
+    answer.log_count = 1;
+    expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal,
+                     "a catalog into an answer whose count is not zero beside no storage");
+    answer.log_count = 0;
+    argument.size = 4;
+    expect_malformed(routing->catalog(NULL, &argument, &answer, &refusal), &refusal, "a catalog, a short argument");
+    routing->release_catalog_answer(NULL, NULL);
+}
+
 /** A caller compiled before the defaults were appended has a profile ending at `unserved_model_pattern`. */
 static void a_profile_short_of_its_defaults_fills_no_default(void) {
     const forebay_routing_definition *routing = routing_definition();
@@ -243,6 +270,7 @@ int main(void) {
     refuses_malformed_failures_and_ports();
     refuses_malformed_steps();
     refuses_malformed_model_entries();
+    refuses_malformed_catalogs();
     a_profile_short_of_its_defaults_fills_no_default();
     a_limits_answer_short_of_the_reply_kind_gets_every_limit_but_it();
     printf("routing_test: %d vectors\n", vectors);

@@ -1,0 +1,16 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:110 only a late answer re-derives",
+  "function": "catalog",
+  "argument": {
+    "event": "answered",
+    "now": 4100,
+    "lastAsked": 4000,
+    "asking": true
+  },
+  "result": {
+    "action": "nothing",
+    "keepLast": false,
+    "rederive": false,
+    "log": []
+  }
+}

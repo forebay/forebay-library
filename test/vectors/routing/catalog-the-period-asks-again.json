@@ -1,0 +1,16 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:50 setInterval(#askAll, refresh_every_milliseconds)",
+  "function": "catalog",
+  "argument": {
+    "event": "period",
+    "now": 3604000,
+    "lastAsked": 4000
+  },
+  "result": {
+    "action": "ask",
+    "budgetMilliseconds": 2000,
+    "keepLast": false,
+    "rederive": false,
+    "log": []
+  }
+}

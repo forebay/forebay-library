@@ -1,0 +1,16 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts:66-67 awaits the shared round whatever the time",
+  "function": "catalog",
+  "argument": {
+    "event": "noModel",
+    "now": 99999,
+    "lastAsked": 4000,
+    "asking": true
+  },
+  "result": {
+    "action": "wait",
+    "keepLast": false,
+    "rederive": false,
+    "log": []
+  }
+}
