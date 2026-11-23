@@ -6,13 +6,14 @@
 #include <string.h>
 
 #include "routing_blocks.h"
+#include "routing_catalog_run.h"
 #include "vector_reader.h"
 
 /**
  * @file
  * One routing vector as a call through the definition: its JSON argument read into the operation's structs, the
- * call made, and the answer written back as the JSON result the vector expects. `step` has no vectors; its test
- * builds its structs by hand.
+ * call made, and the answer written back as the JSON result the vector expects. A catalog vector is a run of events
+ * against one catalog, as routing_catalog_run.h describes. `step` has no vectors; its test builds its structs by hand.
  */
 
 typedef enum routing_operation {
@@ -49,7 +50,9 @@ typedef struct routing_call {
     forebay_port_failure port_failure;
     forebay_failure_argument failure;
     forebay_model_entries_argument model_entries;
-    forebay_catalog_argument catalog;
+    forebay_catalog_open_argument catalog_open;
+    const cJSON *catalog_events;
+    const routing_catalog_guard *catalog_guard;
 } routing_call;
 
 typedef struct routing_answers {
@@ -67,7 +70,7 @@ typedef struct routing_answers {
     forebay_port_answer port;
     forebay_failure_answer failure;
     forebay_model_entries_answer model_entries;
-    forebay_catalog_answer catalog;
+    cJSON *catalog;
 } routing_answers;
 
 /** Sets the size of a struct its caller zeroed whole, padding included, so an empty one compares byte for byte. */
@@ -106,7 +109,7 @@ static inline void routing_empty_call(routing_call *call) {
     ROUTING_INIT_INTO(call->port_failure, forebay_port_failure);
     ROUTING_INIT_INTO(call->failure, forebay_failure_argument);
     ROUTING_INIT_INTO(call->model_entries, forebay_model_entries_argument);
-    ROUTING_INIT_INTO(call->catalog, forebay_catalog_argument);
+    ROUTING_INIT_INTO(call->catalog_open, forebay_catalog_open_argument);
 }
 
 static inline void routing_empty_answers(routing_answers *answers) {
@@ -124,7 +127,6 @@ static inline void routing_empty_answers(routing_answers *answers) {
     ROUTING_INIT_INTO(answers->port, forebay_port_answer);
     ROUTING_INIT_INTO(answers->failure, forebay_failure_answer);
     ROUTING_INIT_INTO(answers->model_entries, forebay_model_entries_answer);
-    ROUTING_INIT_INTO(answers->catalog, forebay_catalog_answer);
 }
 
 static inline double routing_number_of(const cJSON *object, const char *name) {
@@ -246,30 +248,16 @@ static inline int routing_read_headers_calls(const cJSON *argument, routing_call
     return routing_pairs_of(routing_member(argument, "headers"), &call->arrival.headers, &call->arrival.header_count);
 }
 
-/**
- * A catalog vector's argument: the `event` by name, `now`, `lastAsked` when a round was ever started, the flags
- * `asking`, `failed`, `roundClosed`, `unasked` and `changed`, and the `message`.
- */
-static inline int routing_read_catalog_event(const cJSON *argument, forebay_catalog_argument *catalog) {
-    static const char *const events[] = {"providersChanged", "noModel", "period", "answered", "roundClosed",
-                                         "deriveFailed", "read"};
-    const char *event = routing_text_of(argument, "event");
-    for (uint32_t index = 0; event != NULL && index < sizeof events / sizeof events[0]; index++) {
-        catalog->event = strcmp(events[index], event) == 0 ? index + 1 : catalog->event;
-    }
-    if (catalog->event == 0) {
-        fprintf(stderr, "the event %s is no forebay_catalog_event\n", event == NULL ? "(none)" : event);
+/** A catalog vector's `open`: {now, profile, settings}; its events are read as the run reports them. */
+static inline int routing_read_catalog_run(const cJSON *argument, routing_call *call) {
+    const cJSON *open = routing_member(argument, "open");
+    call->catalog_open.now = routing_number_of(open, "now");
+    call->catalog_open.profile = routing_profile_of(routing_member(open, "profile"));
+    call->catalog_events = routing_member(argument, "events");
+    if (!spisor_vector_value(open, "settings", &call->value)) {
         return 0;
     }
-    catalog->now = routing_number_of(argument, "now");
-    catalog->asked = cJSON_IsNumber(routing_member(argument, "lastAsked")) ? 1u : 0u;
-    catalog->last_asked = routing_number_of(argument, "lastAsked");
-    catalog->asking = cJSON_IsTrue(routing_member(argument, "asking")) ? 1u : 0u;
-    catalog->failed = cJSON_IsTrue(routing_member(argument, "failed")) ? 1u : 0u;
-    catalog->round_closed = cJSON_IsTrue(routing_member(argument, "roundClosed")) ? 1u : 0u;
-    catalog->message = routing_text_of(argument, "message");
-    catalog->unasked = cJSON_IsTrue(routing_member(argument, "unasked")) ? 1u : 0u;
-    catalog->changed = cJSON_IsTrue(routing_member(argument, "changed")) ? 1u : 0u;
+    call->catalog_open.settings = &call->value.root;
     return 1;
 }
 
@@ -309,7 +297,7 @@ static inline int routing_read_call(const char *function, const cJSON *argument,
         routing_read_catalog(argument, &call->model_entries.catalog, &call->model_entries.catalog_count);
         return 1;
     case ROUTING_CATALOG:
-        return routing_read_catalog_event(argument, &call->catalog);
+        return routing_read_catalog_run(argument, call);
     default:
         fprintf(stderr, "the function %s is not one of routing's\n", function == NULL ? "(none)" : function);
         return 0;
@@ -360,7 +348,8 @@ static inline void routing_make_call(const routing_call *call, routing_answers *
         answers->status = routing->model_entries(context, &call->model_entries, &answers->model_entries, refusal);
         break;
     case ROUTING_CATALOG:
-        answers->status = routing->catalog(context, &call->catalog, &answers->catalog, refusal);
+        answers->catalog =
+            routing_catalog_run(&call->catalog_open, call->catalog_events, call->catalog_guard, &answers->status);
         break;
     default:
         answers->status = routing->failure(context, &call->failure, &answers->failure, refusal);
@@ -381,7 +370,8 @@ static inline void routing_release_answers(routing_answers *answers) {
     routing->release_port_answer(context, &answers->port);
     routing->release_failure_answer(context, &answers->failure);
     routing->release_model_entries_answer(context, &answers->model_entries);
-    routing->release_catalog_answer(context, &answers->catalog);
+    cJSON_Delete(answers->catalog);
+    answers->catalog = NULL;
     routing->release_refusal(context, &answers->refusal);
 }
 
@@ -458,20 +448,6 @@ static inline cJSON *routing_entries_json_of(const forebay_model_entries_answer 
     return entries;
 }
 
-static inline cJSON *routing_catalog_json_of(const forebay_catalog_answer *answer) {
-    static const char *const actions[] = {"(none)", "nothing", "ask", "wait"};
-    cJSON *result = cJSON_CreateObject();
-    cJSON_AddStringToObject(result, "action", answer->action <= 3 ? actions[answer->action] : "(unknown)");
-    if (answer->action == FOREBAY_CATALOG_ASK) {
-        cJSON_AddNumberToObject(result, "budgetMilliseconds", (double)answer->budget_milliseconds);
-    }
-    cJSON_AddBoolToObject(result, "keepLast", answer->keep_last);
-    cJSON_AddBoolToObject(result, "rederive", answer->rederive);
-    cJSON_AddBoolToObject(result, "drop", answer->drop);
-    cJSON_AddItemToObject(result, "log", routing_log_json_of(answer->log, answer->log_count));
-    return result;
-}
-
 static inline cJSON *routing_wrap(const char *name, cJSON *item) {
     cJSON *result = cJSON_CreateObject();
     cJSON_AddItemToObject(result, name, item);
@@ -515,7 +491,7 @@ static inline cJSON *routing_answer_json_of(const routing_call *call, const rout
     case ROUTING_MODEL_ENTRIES:
         return routing_wrap("entries", routing_entries_json_of(&answers->model_entries));
     case ROUTING_CATALOG:
-        return routing_catalog_json_of(&answers->catalog);
+        return cJSON_Duplicate(answers->catalog, 1);
     case ROUTING_PORT:
         result = cJSON_CreateObject();
         cJSON_AddNumberToObject(result, "port", answers->port.port);

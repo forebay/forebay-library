@@ -1,0 +1,52 @@
+{
+  "source": "claude-code-proxy 48c36cb src/catalog.ts: an unchanged empty list before any round reads the empty catalog",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^([a-z]+)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": []
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {},
+      {
+        "implementations": [],
+        "providers": [],
+        "map": {},
+        "entries": []
+      }
+    ]
+  }
+}

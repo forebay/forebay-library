@@ -1,0 +1,108 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts: a derivation model_map refuses keeps the last map and warns",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^(large|small)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "a"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 100,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "a"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2000
+          }
+        ],
+        "wait": 1
+      },
+      {
+        "released": [
+          1
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 1
+          }
+        ],
+        "log": [
+          {
+            "level": "warn",
+            "message": "the model map could not be derived, so routing keeps the last one: tier_regex uses an unsupported construct: alternation with |"
+          }
+        ]
+      },
+      {
+        "implementations": [
+          "a"
+        ],
+        "providers": [
+          "alpha"
+        ],
+        "map": {},
+        "entries": [
+          "large-1"
+        ]
+      }
+    ]
+  }
+}

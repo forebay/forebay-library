@@ -1,0 +1,210 @@
+{
+  "source": "task 6 fix round 3 item 2: an answer from an implementation a later round dropped is dropped, its failure still warned",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^([a-z]+)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 10,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 20,
+        "round": 1,
+        "implementation": "b",
+        "models": {
+          "beta": {
+            "models": {
+              "small-2": {
+                "name": "Small 2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "read",
+        "now": 100,
+        "implementations": [
+          "a"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 150,
+        "round": 1,
+        "implementation": "b",
+        "failed": true,
+        "message": "gone"
+      },
+      {
+        "event": "answered",
+        "now": 160,
+        "round": 1,
+        "implementation": "b",
+        "models": {
+          "beta": {
+            "models": {
+              "small-2": {
+                "name": "Small 2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 200,
+        "round": 2,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "a",
+            "b"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2000
+          }
+        ],
+        "wait": 1
+      },
+      {},
+      {
+        "released": [
+          1
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 1
+          }
+        ]
+      },
+      {
+        "ask": {
+          "round": 2,
+          "implementations": [
+            "a"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 2,
+            "due": 2100
+          }
+        ],
+        "wait": 2
+      },
+      {
+        "log": [
+          {
+            "level": "warn",
+            "message": "a provider answered no models: gone"
+          }
+        ]
+      },
+      {},
+      {
+        "released": [
+          2
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 2
+          }
+        ]
+      },
+      {
+        "implementations": [
+          "a"
+        ],
+        "providers": [
+          "alpha"
+        ],
+        "map": {
+          "large": [
+            "alpha/large-1"
+          ],
+          "small": [],
+          "default": [
+            "alpha/large-1"
+          ]
+        },
+        "entries": [
+          "large-1"
+        ]
+      }
+    ]
+  }
+}

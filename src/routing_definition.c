@@ -512,8 +512,13 @@ static const forebay_routing_definition definition = {
     spisor_release_refusal,
     routing_model_entries,
     routing_release_model_entries_answer,
-    routing_catalog_refresh,
-    routing_release_catalog_answer,
+    routing_catalog_open,
+    routing_catalog_event,
+    routing_catalog_read,
+    routing_release_catalog_open_answer,
+    routing_release_catalog_event_answer,
+    routing_release_catalog_read_answer,
+    routing_release_catalog,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_routing_definition_of(void) {

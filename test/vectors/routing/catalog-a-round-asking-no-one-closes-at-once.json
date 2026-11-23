@@ -1,0 +1,115 @@
+{
+  "source": "claude-code-proxy a861192 src/catalog.ts: a round over no implementation settles at once, dropping every answer",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^([a-z]+)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "a"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 100,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "read",
+        "now": 200,
+        "implementations": []
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "a"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2000
+          }
+        ],
+        "wait": 1
+      },
+      {
+        "released": [
+          1
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 1
+          }
+        ]
+      },
+      {
+        "ask": {
+          "round": 2,
+          "implementations": [],
+          "budgetMilliseconds": 2000
+        },
+        "released": [
+          2
+        ]
+      },
+      {
+        "implementations": [],
+        "providers": [],
+        "map": {
+          "large": [],
+          "small": [],
+          "default": []
+        },
+        "entries": []
+      }
+    ]
+  }
+}

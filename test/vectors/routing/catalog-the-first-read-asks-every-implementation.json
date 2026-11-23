@@ -1,0 +1,142 @@
+{
+  "source": "claude-code-proxy 7afe862 src/catalog.ts: a READ whose list changed asks within C's budget; the round closes once every ask settled, re-derives, and releases its waiters",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 1000,
+        "defaultOutput": 100,
+        "tierSourceProvider": "source",
+        "tierOrder": [
+          "large",
+          "small"
+        ],
+        "tierFallback": [
+          "large",
+          "small"
+        ],
+        "tierRegex": "^([a-z]+)-\\d"
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 10,
+        "implementations": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 20,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "alpha": {
+            "models": {
+              "large-1": {
+                "name": "Large 1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 30,
+        "round": 1,
+        "implementation": "b",
+        "models": {
+          "beta": {
+            "models": {
+              "small-2": {
+                "name": "Small 2"
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "snapshot"
+      },
+      {
+        "event": "read",
+        "now": 40,
+        "implementations": [
+          "a",
+          "b"
+        ]
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "a",
+            "b"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2010
+          }
+        ],
+        "wait": 1
+      },
+      {},
+      {
+        "released": [
+          1
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 1
+          }
+        ]
+      },
+      {
+        "implementations": [
+          "a",
+          "b"
+        ],
+        "providers": [
+          "alpha",
+          "beta"
+        ],
+        "map": {
+          "large": [
+            "alpha/large-1"
+          ],
+          "small": [
+            "beta/small-2"
+          ],
+          "default": [
+            "alpha/large-1"
+          ]
+        },
+        "entries": [
+          "large-1",
+          "small-2"
+        ]
+      },
+      {}
+    ]
+  }
+}
