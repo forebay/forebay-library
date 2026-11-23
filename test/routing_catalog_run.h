@@ -285,8 +285,9 @@ static inline cJSON *routing_catalog_run(const forebay_catalog_open_argument *op
     const cJSON *event = NULL;
     size_t index = 0;
     cJSON_ArrayForEach(event, events) {
-        cJSON *answer = routing_catalog_is_snapshot(event) ? routing_catalog_snapshot(opened.catalog, index, guard)
-                                                           : routing_catalog_report(opened.catalog, event, index, guard);
+        cJSON *answer = routing_catalog_is_snapshot(event)
+                            ? routing_catalog_snapshot(opened.catalog, index, guard)
+                            : routing_catalog_report(opened.catalog, event, index, guard);
         index++;
         if (answer == NULL) {
             *status = SPISOR_OUT_OF_MEMORY;

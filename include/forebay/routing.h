@@ -325,7 +325,8 @@ typedef struct forebay_step_answer {
  * The proxy's fixed limits: a request larger than `max_request_bytes` is answered with the too large reply, of
  * `too_large_reply_kind`, `too_large_status` and `too_large_message`, static text. `models_budget_milliseconds`,
  * `rederive_interval_milliseconds` and `refresh_every_milliseconds` are the numbers a catalog decides with; a host
- * reads the budget and every timer's due time from the catalog's answers. It owns nothing. First shape ends at `refresh_every_milliseconds`.
+ * reads the budget and every timer's due time from the catalog's answers. It owns nothing. First shape ends at
+ * `refresh_every_milliseconds`.
  */
 typedef struct forebay_limits_answer {
     uint32_t size;
@@ -430,8 +431,10 @@ typedef struct forebay_catalog_event_argument {
 /**
  * What to do about the event. `asks`: ask each of these implementations, reporting each answer with `ask_round`, which
  * is set whenever a round starts, within `budget_milliseconds`. `timers`: the timers to set or clear, in order.
- * `wait_round`: the round a READ or NO_MODEL waits on, 0 when it reads the catalog now. `released`: the rounds whose
- * waiting requests read the catalog now. `log` the lines to write. First shape ends at `storage`.
+ * `wait_round`: the round a READ or NO_MODEL waits on, 0 when it reads the catalog now. `released`: the rounds this
+ * event closed, in order, the closing round last and before it every round it superseded while they were open,
+ * whether or not a request waits on any of them; a request waiting on one reads the catalog now. `log` the lines to
+ * write. First shape ends at `storage`.
  */
 typedef struct forebay_catalog_event_answer {
     uint32_t size;
@@ -742,8 +745,11 @@ typedef struct forebay_routing_definition {
      * catalog as it was, for a NULL `catalog`, a `now` that is not finite, a kind the header does not name, a list
      * holding a NULL or one implementation twice, a round the catalog never started, a period timer naming a round, an
      * answer of the latest round from an implementation whose ask it does not wait on, a failed answer without a
-     * message and models that are no complete catalog provider. A host whose event of a round was refused, or could
-     * not be sent, reports that round's close timer as fired, so the refusal ends that round alone.
+     * message and models that are no complete catalog provider. For an event answered anything but OK, which leaves
+     * the catalog as it was, the host logs the refusal and does one more thing by its kind: a READ or NO_MODEL's
+     * request reads the catalog as it stands through `catalog_read`; a TIMER is reported again at once with a fresh
+     * `now`, until it is answered or the catalog is released, since nothing else closes its round or re-sets the
+     * period; an ANSWERED is only logged, its round closing at its own round close timer, and no other round ends.
      */
     spisor_status (*catalog_event)(void *context, const forebay_catalog_event_argument *argument,
                                    forebay_catalog_event_answer *answer, spisor_refusal *refusal);

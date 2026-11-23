@@ -153,6 +153,82 @@ static void every_failure_of_catalog(const char *path, allocation_failure_mode m
     cJSON_Delete(vector);
 }
 
+static const forebay_routing_profile tiered = {sizeof(forebay_routing_profile), "source", NULL, 0, NULL, 0,
+                                               "^([a-z]+)-\\d", NULL, NULL, 0, 0};
+
+/** Reports `event` with no memory to spare, then again at `retried` with memory back, answering the second status. */
+static spisor_status refused_then_reported_again(forebay_catalog_event_argument *event, double retried,
+                                                 forebay_catalog_event_answer *answer, const char *label) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    start_empty(answer, sizeof *answer);
+    fail_allocation(FAIL_EVERY_LATER_ALLOCATION, 1);
+    spisor_status refused = routing->catalog_event(NULL, event, answer, &refusal);
+    spisor_memory_fail_at(0);
+    if (empty_unless_answered(refused, answer, sizeof *answer) != SPISOR_OUT_OF_MEMORY) {
+        support_failf(label, "with no memory answered %d", (int)refused);
+    }
+    event->now = retried;
+    return routing->catalog_event(NULL, event, answer, &refusal);
+}
+
+/**
+ * A refused timer leaves the catalog as it was, so the host's report of it again with a fresh `now` closes the round
+ * and releases its waiters, or re-sets the period, as the first report would have.
+ */
+static void a_refused_timer_reported_again_does_what_it_would_have(void) {
+    const forebay_routing_definition *routing = routing_definition();
+    spisor_value settings = {.kind = SPISOR_VALUE_RECORD};
+    const char *const offered[] = {"a"};
+    forebay_catalog_open_argument open = SPISOR_INIT(forebay_catalog_open_argument);
+    forebay_catalog_open_answer opened = SPISOR_INIT(forebay_catalog_open_answer);
+    forebay_catalog_event_argument event = SPISOR_INIT(forebay_catalog_event_argument);
+    forebay_catalog_event_answer answer;
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    int64_t baseline = spisor_memory_live_blocks();
+    open.profile = &tiered;
+    open.settings = &settings;
+    if (routing->catalog_open(NULL, &open, &opened, &refusal) != SPISOR_OK) {
+        support_fail("a refused timer", "the catalog did not open");
+        return;
+    }
+    event.catalog = opened.catalog;
+    event.kind = FOREBAY_CATALOG_READ;
+    event.implementations = offered;
+    event.implementation_count = 1;
+    start_empty(&answer, sizeof answer);
+    if (routing->catalog_event(NULL, &event, &answer, &refusal) != SPISOR_OK || answer.wait_round != 1) {
+        support_fail("a refused close", "the read did not wait on round 1");
+    }
+    routing->release_catalog_event_answer(NULL, &answer);
+    event.kind = FOREBAY_CATALOG_TIMER;
+    event.timer = FOREBAY_CATALOG_ROUND_CLOSE;
+    event.round = 1;
+    event.now = 2000;
+    spisor_status status = refused_then_reported_again(&event, 2001, &answer, "a refused close");
+    if (status != SPISOR_OK || answer.released_count != 1 || answer.released[0] != 1) {
+        support_failf("a refused close reported again", "answered %d releasing %zu rounds", (int)status,
+                      answer.released_count);
+    }
+    routing->release_catalog_event_answer(NULL, &answer);
+    event.timer = FOREBAY_CATALOG_PERIOD;
+    event.round = 0;
+    event.now = 3600000;
+    status = refused_then_reported_again(&event, 3600001, &answer, "a refused period");
+    if (status != SPISOR_OK || answer.ask_round != 2 || answer.timer_count != 2 ||
+        answer.timers[1].kind != FOREBAY_CATALOG_PERIOD || answer.timers[1].due != 7200001) {
+        support_failf("a refused period reported again", "answered %d asking round %llu", (int)status,
+                      (unsigned long long)answer.ask_round);
+    }
+    routing->release_catalog_event_answer(NULL, &answer);
+    routing->release_catalog(NULL, opened.catalog);
+    routing->release_catalog_open_answer(NULL, &opened);
+    routing->release_refusal(NULL, &refusal);
+    if (spisor_memory_live_blocks() != baseline) {
+        support_fail("a refused timer", "left blocks behind");
+    }
+}
+
 static const forebay_assignment chain[] = {{"alpha", "alpha-large", "Alpha Large", 0},
                                            {"beta", "beta-large", "Beta Large", 0}};
 static const forebay_slot slots[] = {{"large", chain, 2}};
@@ -294,6 +370,7 @@ int main(void) {
     free(list);
     every_failure_of_the_steps(FAIL_ONE_ALLOCATION);
     every_failure_of_the_steps(FAIL_EVERY_LATER_ALLOCATION);
+    a_refused_timer_reported_again_does_what_it_would_have();
     a_port_out_of_range_is_malformed_without_memory(0);
     a_port_out_of_range_is_malformed_without_memory(70000);
     printf("routing_out_of_memory_test: %d vectors and the steps, every allocation failed singly and for good\n",
