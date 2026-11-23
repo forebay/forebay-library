@@ -1,0 +1,37 @@
+{
+  "source": "opencode-proxy task 7: a profile declaring no tier pattern names no tier by any model, as an empty tier order with no match does, so only the default slot is derived, and with no tier filled it copies none",
+  "function": "modelMap",
+  "argument": {
+    "profile": {
+      "defaultContext": 200000,
+      "defaultOutput": 64000,
+      "tierSourceProvider": "opencode",
+      "tierOrder": [],
+      "tierFallback": []
+    },
+    "settings": {},
+    "models": {
+      "opencode": {
+        "models": {
+          "big-pickle": {
+            "name": "Big Pickle"
+          },
+          "grok-code": {}
+        }
+      },
+      "anthropic": {
+        "models": {
+          "claude-opus-4": {
+            "name": "Claude Opus 4"
+          }
+        }
+      }
+    }
+  },
+  "result": {
+    "map": {
+      "default": []
+    },
+    "healed": []
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "source": "opencode-proxy task 7: OpenCode's profile declares no tier pattern, so no model names a tier and every model is listed as its provider offers it",
+  "function": "catalog",
+  "argument": {
+    "open": {
+      "now": 0,
+      "profile": {
+        "defaultContext": 200000,
+        "defaultOutput": 64000,
+        "tierSourceProvider": "opencode",
+        "tierOrder": [],
+        "tierFallback": []
+      },
+      "settings": {}
+    },
+    "events": [
+      {
+        "event": "read",
+        "now": 0,
+        "implementations": [
+          "o",
+          "a"
+        ]
+      },
+      {
+        "event": "answered",
+        "now": 10,
+        "round": 1,
+        "implementation": "o",
+        "models": {
+          "opencode": {
+            "models": {
+              "big-pickle": {
+                "name": "Big Pickle",
+                "context": 400000
+              },
+              "grok-code": {}
+            }
+          }
+        }
+      },
+      {
+        "event": "answered",
+        "now": 20,
+        "round": 1,
+        "implementation": "a",
+        "models": {
+          "anthropic": {
+            "models": {
+              "claude-opus-4": {
+                "name": "Claude Opus 4",
+                "output": 32000
+              }
+            }
+          }
+        }
+      },
+      {
+        "event": "snapshot"
+      }
+    ]
+  },
+  "result": {
+    "open": [
+      {
+        "set": "period",
+        "round": 0,
+        "due": 3600000
+      }
+    ],
+    "events": [
+      {
+        "ask": {
+          "round": 1,
+          "implementations": [
+            "o",
+            "a"
+          ],
+          "budgetMilliseconds": 2000
+        },
+        "timers": [
+          {
+            "set": "roundClose",
+            "round": 1,
+            "due": 2000
+          }
+        ],
+        "wait": 1
+      },
+      {},
+      {
+        "released": [
+          1
+        ],
+        "timers": [
+          {
+            "clear": "roundClose",
+            "round": 1
+          }
+        ]
+      },
+      {
+        "implementations": [
+          "o",
+          "a"
+        ],
+        "providers": [
+          "opencode",
+          "anthropic"
+        ],
+        "map": {
+          "default": []
+        },
+        "entries": [
+          "big-pickle",
+          "grok-code",
+          "claude-opus-4"
+        ]
+      }
+    ]
+  }
+}

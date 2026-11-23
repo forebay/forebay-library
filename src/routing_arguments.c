@@ -80,7 +80,7 @@ int routing_is_profile(const forebay_routing_profile *profile, int needs_tiers) 
         !routing_are_texts(profile->tier_fallback, profile->tier_fallback_count)) {
         return 0;
     }
-    return !needs_tiers || (profile->tier_source_provider != NULL && profile->tier_regex != NULL);
+    return !needs_tiers || profile->tier_source_provider != NULL;
 }
 
 int routing_add_json(cJSON *object, const char *name, cJSON *item) {
