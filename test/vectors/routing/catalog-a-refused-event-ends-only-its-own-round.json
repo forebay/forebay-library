@@ -1,5 +1,5 @@
 {
-  "source": "task 6 fix round 3 item 3: a refused event leaves the catalog as it was, and the host's report of that round's close ends that round alone",
+  "source": "task 6 fix round 3 item 3: a refused event leaves the catalog as it was and ends no round; the round it named closes at its own budget timer, releasing its waiters and those of the round it superseded",
   "function": "catalog",
   "argument": {
     "open": {
@@ -44,12 +44,6 @@
         "failed": true
       },
       {
-        "event": "timer",
-        "now": 150,
-        "round": 1,
-        "timer": "roundClose"
-      },
-      {
         "event": "read",
         "now": 160,
         "implementations": [
@@ -65,12 +59,6 @@
         "failed": true
       },
       {
-        "event": "timer",
-        "now": 200,
-        "round": 2,
-        "timer": "roundClose"
-      },
-      {
         "event": "answered",
         "now": 300,
         "round": 2,
@@ -84,6 +72,20 @@
             }
           }
         }
+      },
+      {
+        "event": "read",
+        "now": 400,
+        "implementations": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "event": "timer",
+        "now": 2100,
+        "round": 2,
+        "timer": "roundClose"
       },
       {
         "event": "snapshot"
@@ -142,7 +144,6 @@
         "message": "message is not the failure's text, for a failed answer",
         "fix": "set message to the failure's text, for a failed answer"
       },
-      {},
       {
         "wait": 2
       },
@@ -150,13 +151,16 @@
         "message": "message is not the failure's text, for a failed answer",
         "fix": "set message to the failure's text, for a failed answer"
       },
+      {},
+      {
+        "wait": 2
+      },
       {
         "released": [
           1,
           2
         ]
       },
-      {},
       {
         "implementations": [
           "b"
