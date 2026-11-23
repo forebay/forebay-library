@@ -11,12 +11,13 @@
 #define CATALOG_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_answer, storage)
 #define UNASKED_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_argument, unasked)
 #define DROP_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_answer, drop)
+#define CHANGED_SHAPE SPISOR_SHAPE_THROUGH(forebay_catalog_argument, changed)
 
 static const char NO_MODELS_WARNING[] = "a provider answered no models: ";
 static const char NO_MAP_WARNING[] = "the model map could not be derived, so routing keeps the last one: ";
 
 static int is_event(uint32_t event) {
-    return event >= FOREBAY_CATALOG_PROVIDERS_CHANGED && event <= FOREBAY_CATALOG_DERIVE_FAILED;
+    return event >= FOREBAY_CATALOG_PROVIDERS_CHANGED && event <= FOREBAY_CATALOG_READ;
 }
 
 static int needs_message(const forebay_catalog_argument *argument) {
@@ -53,12 +54,20 @@ static int is_past_the_interval(const forebay_catalog_argument *argument) {
     return !argument->asked || argument->now - argument->last_asked >= (double)limits.rederive_interval_milliseconds;
 }
 
+/** Whether a read's ordered list of implementations differs from the one last asked; a short argument says no. */
+static int is_changed(const forebay_catalog_argument *argument) {
+    return spisor_has_shape(argument->size, CHANGED_SHAPE) && argument->changed;
+}
+
 /** What to do about an event that may start a round: join the open one, start one, or nothing. */
 static uint32_t action_of(const forebay_catalog_argument *argument) {
     if (argument->asking) {
         return FOREBAY_CATALOG_WAIT;
     }
     if (argument->event == FOREBAY_CATALOG_NO_MODEL && !is_past_the_interval(argument)) {
+        return FOREBAY_CATALOG_NOTHING;
+    }
+    if (argument->event == FOREBAY_CATALOG_READ && !is_changed(argument)) {
         return FOREBAY_CATALOG_NOTHING;
     }
     return FOREBAY_CATALOG_ASK;

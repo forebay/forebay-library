@@ -347,7 +347,8 @@ typedef enum forebay_catalog_event {
     FOREBAY_CATALOG_PERIOD = 3,
     FOREBAY_CATALOG_ANSWERED = 4,
     FOREBAY_CATALOG_ROUND_CLOSED = 5,
-    FOREBAY_CATALOG_DERIVE_FAILED = 6
+    FOREBAY_CATALOG_DERIVE_FAILED = 6,
+    FOREBAY_CATALOG_READ = 7
 } forebay_catalog_event;
 
 /** What the host does about a catalog event. Append-only: a published value keeps its number. */
@@ -360,7 +361,9 @@ typedef enum forebay_catalog_action {
 /**
  * One event of the catalog the host keeps of its providers' models, at `now`, epoch milliseconds: the ordered list of
  * implementations differs from the one last asked, a reordering included, since `model_entries` lists a model as the
- * first provider offers it (PROVIDERS_CHANGED), a step answered FOREBAY_STEP_REFRESH_MODELS
+ * first provider offers it, as the host's watch of its implementations sees it (PROVIDERS_CHANGED), a request wants
+ * the catalog (READ, sent by every request before it reads, with `changed` 1 when that ordered list differs from the
+ * one last asked), a step answered FOREBAY_STEP_REFRESH_MODELS
  * (NO_MODEL), the periodic timer of `routing.limits`' `refresh_every_milliseconds` fired (PERIOD), one provider's ask
  * settled (ANSWERED), a round closed because every ask settled or its budget ran out (ROUND_CLOSED), or `model_map`
  * refused (DERIVE_FAILED). `asked` is 1 once a round was ever started, `last_asked` then the start of the last, and
@@ -381,6 +384,7 @@ typedef struct forebay_catalog_argument {
     uint32_t round_closed;
     const char *message;
     uint32_t unasked;
+    uint32_t changed;
 } forebay_catalog_argument;
 
 /**
@@ -655,7 +659,9 @@ typedef struct forebay_routing_definition {
      * models: whether to ask every provider again and within which budget, whether a failed ask or derivation keeps
      * what it held, whether the model map must be derived again, and the warning lines, `a provider answered no
      * models: <message>` and `the model map could not be derived, so routing keeps the last one: <message>`.
-     * PROVIDERS_CHANGED and PERIOD ask unless a round is open, which they wait for; NO_MODEL does the same, except
+     * PROVIDERS_CHANGED and PERIOD ask unless a round is open, which they wait for; READ waits while a round is
+     * open, else asks when the list `changed` and answers NOTHING when it did not, an argument short of `changed`
+     * reading as unchanged; NO_MODEL does the same as PROVIDERS_CHANGED, except
      * that it asks nothing while the last round began less than `limits`' `rederive_interval_milliseconds` ago; an
      * ANSWERED event re-derives only once its round closed, and never for a failed ask; one from an implementation
      * the current round did not ask is dropped, a failure of it still warned; ROUND_CLOSED re-derives.

@@ -291,6 +291,7 @@ static void print_routing_layouts(void) {
     FIELD(forebay_catalog_argument, round_closed);
     FIELD(forebay_catalog_argument, message);
     FIELD(forebay_catalog_argument, unasked);
+    FIELD(forebay_catalog_argument, changed);
     SIZE(forebay_catalog_argument);
     FIELD(forebay_catalog_answer, size);
     FIELD(forebay_catalog_answer, action);
