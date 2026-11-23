@@ -4,7 +4,8 @@
     "upstreamHeaders": {},
     "now": 1000000000000,
     "offsetMinutes": 0,
-    "zone": "UTC"
+    "zoneEnUs": "UTC",
+    "zoneEnGb": "UTC"
   },
   "output": {
     "status": 429,

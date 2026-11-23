@@ -7,8 +7,7 @@
       "defaultOutput": 64000,
       "tierSourceProvider": "opencode",
       "tierOrder": [],
-      "tierFallback": [],
-      "tierRegex": "(?!)"
+      "tierFallback": []
     },
     "models": {
       "first": {

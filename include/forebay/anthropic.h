@@ -194,9 +194,12 @@ typedef struct forebay_anthropic_model_lookup_answer {
  * An upstream's own 429 to answer the client: its response `upstream_headers`, a later pair with a name already given
  * replacing the earlier one, names compared ignoring case; `reset_at`, epoch milliseconds, when `has_reset_at` is 1;
  * `now`, epoch milliseconds, which both numbers must hold exactly (at most 2^53 in size); and the zone the caller
- * names the reset in: `zone` the short name it read, such as `CEST` or `UTC`, required and not empty, and
- * `offset_minutes` the zone's offset from UTC at the reset instant, within 1440 either way, which the caller reads
- * because C does no zone lookup. Borrowed for the call. First shape ends at `zone`.
+ * names the reset in, which it reads because C does no zone lookup: `offset_minutes` the zone's offset from UTC at
+ * the reset instant, within 1440 either way, and its short names at that instant, `zone_en_us` as the en-US locale
+ * writes it and `zone_en_gb` as the en-GB locale does, each required and not empty. The reply names the zone by its
+ * en-US name, unless that is an offset (`GMT+` or `GMT-` and more) and the en-GB name is not, which then names it;
+ * an argument short of `zone_en_gb` names it by `zone_en_us` as given. Borrowed for the call. First shape ends at
+ * `zone_en_us`.
  */
 typedef struct forebay_anthropic_rate_limit_argument {
     uint32_t size;
@@ -206,7 +209,8 @@ typedef struct forebay_anthropic_rate_limit_argument {
     double reset_at;
     double now;
     int64_t offset_minutes;
-    const char *zone;
+    const char *zone_en_us;
+    const char *zone_en_gb;
 } forebay_anthropic_rate_limit_argument;
 
 /**
@@ -384,7 +388,7 @@ typedef struct forebay_anthropic_definition {
      * " resets at <h:mm AM> <zone>", the time the reset plus `offset_minutes` read as a clock, or " try again later"
      * when the reset is not after `now`. MALFORMED, naming the member, for a NULL `upstream_headers` beside a count, a
      * pair with no name or no value, a `reset_at` or `now` that is not an exact number, an `offset_minutes` out of
-     * range and a NULL or empty `zone`.
+     * range and a NULL or empty zone name the argument reaches.
      */
     spisor_status (*rate_limit_reply)(void *context, const forebay_anthropic_rate_limit_argument *argument,
                                       forebay_anthropic_reply_answer *answer, spisor_refusal *refusal);

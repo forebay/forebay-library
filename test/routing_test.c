@@ -107,12 +107,13 @@ static void refuses_malformed_tiers(void) {
     spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
     forebay_tiers_argument argument = SPISOR_INIT(forebay_tiers_argument);
     forebay_tiers_answer answer = SPISOR_INIT(forebay_tiers_answer);
-    forebay_routing_profile no_regex = tier_profile;
+    forebay_routing_profile no_source = tier_profile;
     expect_malformed(routing->tiers(NULL, NULL, &answer, &refusal), &refusal, "tiers without an argument");
     expect_malformed(routing->tiers(NULL, &argument, &answer, &refusal), &refusal, "tiers without a profile");
-    no_regex.tier_regex = NULL;
-    argument.profile = &no_regex;
-    expect_malformed(routing->tiers(NULL, &argument, &answer, &refusal), &refusal, "tiers without tier_regex");
+    no_source.tier_source_provider = NULL;
+    argument.profile = &no_source;
+    expect_malformed(routing->tiers(NULL, &argument, &answer, &refusal), &refusal,
+                     "tiers without tier_source_provider");
     argument.profile = &tier_profile;
     argument.provider_count = 2;
     expect_malformed(routing->tiers(NULL, &argument, &answer, &refusal), &refusal, "tiers, a count at no catalog");

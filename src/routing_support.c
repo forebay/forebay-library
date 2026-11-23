@@ -61,32 +61,33 @@ static int profile_list(const cJSON *profile, const profile_member *named, const
     return 1;
 }
 
+/** A pattern member the profile may leave out: NULL when it is absent or null. */
+static int read_optional_pattern(const cJSON *profile, const profile_member *named, const char **value,
+                                 service_reply *reply, spisor_status *status) {
+    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, named->key);
+    if (member == NULL || cJSON_IsNull(member)) {
+        *value = NULL;
+        return 1;
+    }
+    return profile_string(profile, named, value, reply, status);
+}
+
 static int read_tier_members(const cJSON *profile, routing_profile *read, service_reply *reply,
                              spisor_status *status) {
     return profile_string(profile, &tier_source_provider, &read->tier_source_provider, reply, status) &&
            profile_list(profile, &tier_order, &read->tier_order, reply, status) &&
            profile_list(profile, &tier_fallback, &read->tier_fallback, reply, status) &&
-           profile_string(profile, &tier_regex, &read->tier_regex, reply, status);
+           read_optional_pattern(profile, &tier_regex, &read->tier_regex, reply, status);
 }
 
 static int read_native_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
                                spisor_status *status) {
-    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, native_model_pattern.key);
-    if (member == NULL || cJSON_IsNull(member)) {
-        read->native_model_pattern = NULL;
-        return 1;
-    }
-    return profile_string(profile, &native_model_pattern, &read->native_model_pattern, reply, status);
+    return read_optional_pattern(profile, &native_model_pattern, &read->native_model_pattern, reply, status);
 }
 
 static int read_unserved_pattern(const cJSON *profile, routing_profile *read, service_reply *reply,
                                  spisor_status *status) {
-    const cJSON *member = cJSON_GetObjectItemCaseSensitive(profile, unserved_model_pattern.key);
-    if (member == NULL || cJSON_IsNull(member)) {
-        read->unserved_model_pattern = NULL;
-        return 1;
-    }
-    return profile_string(profile, &unserved_model_pattern, &read->unserved_model_pattern, reply, status);
+    return read_optional_pattern(profile, &unserved_model_pattern, &read->unserved_model_pattern, reply, status);
 }
 
 int routing_read_profile(const cJSON *profile, int need, routing_profile *read, service_reply *reply,

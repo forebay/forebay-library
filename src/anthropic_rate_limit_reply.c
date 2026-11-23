@@ -11,7 +11,8 @@
 #include "spisor/allocation.h"
 #include "spisor/definition.h"
 
-#define ARGUMENT_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_rate_limit_argument, zone)
+#define ARGUMENT_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_rate_limit_argument, zone_en_us)
+#define EN_GB_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_rate_limit_argument, zone_en_gb)
 #define ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_reply_answer, storage)
 
 #define STATUS_HEADER "anthropic-ratelimit-unified-status"
@@ -142,9 +143,28 @@ static void print_clock(double instant, int64_t offset_minutes, char *text, size
     snprintf(text, size, "%d:%02d %s", twelve_hour, minute_of_day % 60, hour < 12 ? "AM" : "PM");
 }
 
+static int is_offset_name(const char *zone) {
+    return strncmp(zone, "GMT+", 4) == 0 || strncmp(zone, "GMT-", 4) == 0;
+}
+
+/**
+ * The zone name the reply shows.
+ *
+ * @implNote en-US names only the zones that have an American abbreviation and spells the rest as an offset; en-GB
+ * supplies the local one, such as CEST, for those. A zone neither names stays an offset.
+ */
+static const char *shown_zone(const forebay_anthropic_rate_limit_argument *argument) {
+    if (!spisor_has_shape(argument->size, EN_GB_SHAPE) || !is_offset_name(argument->zone_en_us) ||
+        is_offset_name(argument->zone_en_gb)) {
+        return argument->zone_en_us;
+    }
+    return argument->zone_en_gb;
+}
+
 /** The message of the reply in memory the caller releases, NULL when memory runs out. */
 static char *limit_message(double reset, const forebay_anthropic_rate_limit_argument *argument) {
-    size_t size = strlen(argument->zone) + MESSAGE_FIXED_LIMIT;
+    const char *zone = shown_zone(argument);
+    size_t size = strlen(zone) + MESSAGE_FIXED_LIMIT;
     char *message = spisor_memory_allocate(size);
     if (message == NULL) {
         return NULL;
@@ -152,7 +172,7 @@ static char *limit_message(double reset, const forebay_anthropic_rate_limit_argu
     if (reset > argument->now) {
         char clock[NUMBER_TEXT_LIMIT];
         print_clock(reset, argument->offset_minutes, clock, sizeof clock);
-        snprintf(message, size, "%s resets at %s %s", LIMIT_MESSAGE, clock, argument->zone);
+        snprintf(message, size, "%s resets at %s %s", LIMIT_MESSAGE, clock, zone);
     } else {
         snprintf(message, size, "%s try again later", LIMIT_MESSAGE);
     }
@@ -263,8 +283,11 @@ static spisor_status check_argument(const forebay_anthropic_rate_limit_argument 
     if (argument->offset_minutes < -MINUTES_PER_DAY || argument->offset_minutes > MINUTES_PER_DAY) {
         return forebay_refuse_member(refusal, "offset_minutes", "a zone offset within 1440 minutes of UTC");
     }
-    if (!forebay_is_text(argument->zone)) {
-        return forebay_refuse_member(refusal, "zone", "a zone's short name, such as UTC");
+    if (!forebay_is_text(argument->zone_en_us)) {
+        return forebay_refuse_member(refusal, "zone_en_us", "a zone's en-US short name, such as UTC");
+    }
+    if (spisor_has_shape(argument->size, EN_GB_SHAPE) && !forebay_is_text(argument->zone_en_gb)) {
+        return forebay_refuse_member(refusal, "zone_en_gb", "a zone's en-GB short name, such as UTC");
     }
     return SPISOR_OK;
 }

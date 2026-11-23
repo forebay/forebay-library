@@ -553,7 +553,8 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_rate_limit_argument, reset_at);
     FIELD(forebay_anthropic_rate_limit_argument, now);
     FIELD(forebay_anthropic_rate_limit_argument, offset_minutes);
-    FIELD(forebay_anthropic_rate_limit_argument, zone);
+    FIELD(forebay_anthropic_rate_limit_argument, zone_en_us);
+    FIELD(forebay_anthropic_rate_limit_argument, zone_en_gb);
     SIZE(forebay_anthropic_rate_limit_argument);
     FIELD(forebay_anthropic_reply_answer, size);
     FIELD(forebay_anthropic_reply_answer, status);

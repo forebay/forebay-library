@@ -6,7 +6,8 @@
     },
     "now": 1000000000000,
     "offsetMinutes": 120,
-    "zone": "CEST"
+    "zoneEnUs": "GMT+2",
+    "zoneEnGb": "CEST"
   },
   "output": {
     "status": 429,

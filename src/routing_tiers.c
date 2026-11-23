@@ -112,6 +112,10 @@ static cJSON *detect_with(const routing_pattern *pattern, const routing_profile 
 }
 
 cJSON *routing_detect_tiers(const routing_profile *profile, const cJSON *models, routing_refusal *refusal) {
+    refusal->refused = 0;
+    if (profile->tier_regex == NULL) {
+        return cJSON_Duplicate(profile->tier_fallback, 1);
+    }
     routing_pattern *pattern = routing_compile_profile_pattern("tier_regex", profile->tier_regex, 1, refusal);
     if (pattern == NULL) {
         return NULL;

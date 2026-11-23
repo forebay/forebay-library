@@ -16,7 +16,7 @@
 
 #define REQUEST_VECTOR_COUNT 18
 #define RESPONSE_VECTOR_COUNT 16
-#define RATE_LIMIT_VECTOR_COUNT 18
+#define RATE_LIMIT_VECTOR_COUNT 20
 #define DECODE_VECTOR_COUNT 41
 #define ROUTE_VECTOR_COUNT 20
 #define ERROR_ENVELOPE_VECTOR_COUNT 7
@@ -1031,7 +1031,8 @@ static void the_rate_limit_vectors_cover_the_required_cases(void) {
 static forebay_anthropic_rate_limit_argument valid_rate_limit(void) {
     forebay_anthropic_rate_limit_argument argument = SPISOR_INIT(forebay_anthropic_rate_limit_argument);
     argument.now = 1000;
-    argument.zone = "UTC";
+    argument.zone_en_us = "UTC";
+    argument.zone_en_gb = "UTC";
     return argument;
 }
 
@@ -1048,6 +1049,27 @@ static void expect_rate_limit_malformed(const char *label, const forebay_anthrop
     anthropic_definition()->release_refusal(NULL, &refusal);
 }
 
+/** A caller compiled before `zone_en_gb` was appended passes one name, which the reply uses as it is given. */
+static void an_argument_short_of_the_en_gb_name_uses_the_en_us_one(void) {
+    forebay_anthropic_rate_limit_argument argument = valid_rate_limit();
+    forebay_anthropic_reply_answer answer = SPISOR_INIT(forebay_anthropic_reply_answer);
+    spisor_refusal refusal = SPISOR_INIT(spisor_refusal);
+    argument.size = (uint32_t)offsetof(forebay_anthropic_rate_limit_argument, zone_en_gb);
+    argument.has_reset_at = 1;
+    argument.reset_at = 1000000300000;
+    argument.now = 1000000000000;
+    argument.offset_minutes = 120;
+    argument.zone_en_us = "GMT+2";
+    argument.zone_en_gb = "CEST";
+    spisor_status status = anthropic_definition()->rate_limit_reply(NULL, &argument, &answer, &refusal);
+    if (status != SPISOR_OK || answer.body == NULL || strstr(answer.body, "resets at 3:51 AM GMT+2\"") == NULL) {
+        support_failf("an argument short of zone_en_gb", "answered %d with %s", (int)status,
+                      answer.body == NULL ? "no body" : answer.body);
+    }
+    anthropic_definition()->release_reply(NULL, &answer);
+    anthropic_definition()->release_refusal(NULL, &refusal);
+}
+
 static void a_rate_limit_call_that_breaks_its_header_is_malformed(void) {
     const uint32_t answer_size = (uint32_t)sizeof(forebay_anthropic_reply_answer);
     forebay_anthropic_rate_limit_argument argument = valid_rate_limit();
@@ -1056,10 +1078,15 @@ static void a_rate_limit_call_that_breaks_its_header_is_malformed(void) {
     argument.size = (uint32_t)sizeof argument.size;
     expect_rate_limit_malformed("an argument short of its first shape", &argument, answer_size);
     argument = valid_rate_limit();
-    argument.zone = NULL;
-    expect_rate_limit_malformed("a NULL zone", &argument, answer_size);
-    argument.zone = "";
-    expect_rate_limit_malformed("an empty zone", &argument, answer_size);
+    argument.zone_en_us = NULL;
+    expect_rate_limit_malformed("a NULL en-US zone", &argument, answer_size);
+    argument.zone_en_us = "";
+    expect_rate_limit_malformed("an empty en-US zone", &argument, answer_size);
+    argument = valid_rate_limit();
+    argument.zone_en_gb = NULL;
+    expect_rate_limit_malformed("a NULL en-GB zone", &argument, answer_size);
+    argument.zone_en_gb = "";
+    expect_rate_limit_malformed("an empty en-GB zone", &argument, answer_size);
     argument = valid_rate_limit();
     argument.upstream_header_count = 1;
     expect_rate_limit_malformed("a header count beside NULL headers", &argument, answer_size);
@@ -1185,6 +1212,7 @@ int main(void) {
     }
     the_rate_limit_vectors_cover_the_required_cases();
     a_rate_limit_call_that_breaks_its_header_is_malformed();
+    an_argument_short_of_the_en_gb_name_uses_the_en_us_one();
     a_rate_limit_clock_follows_the_offset();
     run_decode_cases();
     a_root_that_is_no_object_is_answered_as_an_invalid_request();

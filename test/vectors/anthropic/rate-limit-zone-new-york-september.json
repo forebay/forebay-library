@@ -6,7 +6,8 @@
     },
     "now": 1000000000000,
     "offsetMinutes": -240,
-    "zone": "EDT"
+    "zoneEnUs": "EDT",
+    "zoneEnGb": "GMT-4"
   },
   "output": {
     "status": 429,
