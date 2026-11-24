@@ -53,6 +53,7 @@ add_library(forebay_objects OBJECT
     src/anthropic_refusal.c
     src/anthropic_reply_head.c
     src/anthropic_request_answer.c
+    src/anthropic_reset_time.c
     src/anthropic_route.c
     src/anthropic_stop_reason.c
     src/anthropic_stream_decoder.c

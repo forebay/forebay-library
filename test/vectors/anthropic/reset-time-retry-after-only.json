@@ -1,0 +1,13 @@
+{
+  "direction": "resetTime",
+  "input": {
+    "headers": {
+      "retry-after": "42"
+    },
+    "now": 9000
+  },
+  "output": {
+    "hasResetAt": true,
+    "resetAt": 51000
+  }
+}

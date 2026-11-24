@@ -259,6 +259,28 @@ typedef struct forebay_anthropic_route_answer {
 } forebay_anthropic_route_answer;
 
 /**
+ * An upstream reply's response `headers` to read the reset from, a later pair with a name already given replacing the
+ * earlier one, names compared ignoring case, and `now`, epoch milliseconds, an exact number (at most 2^53 in size).
+ * Borrowed for the call. First shape ends at `now`.
+ */
+typedef struct forebay_anthropic_reset_argument {
+    uint32_t size;
+    const forebay_pair *headers;
+    size_t header_count;
+    double now;
+} forebay_anthropic_reset_argument;
+
+/**
+ * When the upstream's limit resets, `reset_at` epoch milliseconds, when `has_reset_at` is 1. It owns nothing, so it
+ * has no release. First shape ends at `reset_at`.
+ */
+typedef struct forebay_anthropic_reset_answer {
+    uint32_t size;
+    uint32_t has_reset_at;
+    double reset_at;
+} forebay_anthropic_reset_answer;
+
+/**
  * The anthropic service. Every operation answers MALFORMED, before it allocates, for an argument or an answer absent
  * or short of its first shape, an answer that is not empty and `bytes` NULL beside a nonzero `length`; MALFORMED,
  * with the refusal saying what to repair, for a body `decode_response` is given that is not JSON and for an IR that
@@ -381,13 +403,11 @@ typedef struct forebay_anthropic_definition {
     /**
      * The reply to an upstream's own 429, as the proxy's `rateLimitReply` answers it: status 429; the upstream headers
      * without `content-encoding`, `content-length`, `x-hub-rate-limited` and `x-hub-retry-after-ms`; the reset the
-     * latest of `reset_at` (0 when absent or negative) and the `anthropic-ratelimit-unified-5h-reset` and
-     * `anthropic-ratelimit-unified-reset` headers, each read in whole seconds as `[+-]digits` after trimming ASCII
-     * whitespace and times 1000, and ignored otherwise or beyond 2^53 milliseconds; `content-type` set to
-     * `application/json` and `retry-after` to the seconds from `now` to the reset, rounded, or 60 when the reset is
-     * not after `now`; `anthropic-ratelimit-unified-status` set to `rejected` and `anthropic-ratelimit-unified-reset`
-     * to the reset in whole seconds (`now` when there is none) only when the upstream sent none. A header set again
-     * keeps its position and one added follows the others. The body is `{"type":"error","error":{"type":
+     * latest of `reset_at` (0 when absent or negative) and the one `reset_time` reads from the upstream headers with
+     * `now`; `content-type` set to `application/json` and `retry-after` to the seconds from `now` to the reset,
+     * rounded, or 60 when the reset is not after `now`; `anthropic-ratelimit-unified-status` set to `rejected` and
+     * `anthropic-ratelimit-unified-reset` to the reset in whole seconds (`now` when there is none) only when the
+     * upstream sent none. A header set again keeps its position and one added follows the others. The body is `{"type":"error","error":{"type":
      * "rate_limit_error","message":...}}`, the message "You've hit your usage limit", a middle dot (U+00B7), then
      * " resets at <h:mm AM> <zone>", the time the reset plus `offset_minutes` read as a clock, or " try again later"
      * when the reset is not after `now`. MALFORMED, naming the member, for a NULL `upstream_headers` beside a count, a
@@ -420,6 +440,18 @@ typedef struct forebay_anthropic_definition {
                                    forebay_anthropic_route_answer *answer, spisor_refusal *refusal);
     /** Frees a route answer, NULL or one never filled doing nothing. */
     void (*release_route)(void *context, forebay_anthropic_route_answer *answer);
+    /**
+     * When an upstream reply's limit resets, the one reading of it every consumer shares. A header value, after
+     * trimming ASCII whitespace, matching `+?[0-9]+(.[0-9]+)?` (the dot a literal one) and above zero is that many
+     * seconds; anything else, an exponent, a sign `-` and an empty value among it, is no value. The reset is the latest
+     * of `anthropic-ratelimit-unified-5h-reset` and `anthropic-ratelimit-unified-reset`, each epoch seconds, times
+     * 1000 and truncated; with neither, `now` plus `retry-after` times 1000 and truncated; with none, `has_reset_at`
+     * 0. A fraction is read in decimal, exactly, so its milliseconds are its first three digits. A header whose
+     * milliseconds, or a `retry-after` whose sum with `now`, is past 2^53 is no value. MALFORMED, naming the member,
+     * for a NULL `headers` beside a count, a pair with no name or no value and a `now` that is not an exact number.
+     */
+    spisor_status (*reset_time)(void *context, const forebay_anthropic_reset_argument *argument,
+                                forebay_anthropic_reset_answer *answer, spisor_refusal *refusal);
 } forebay_anthropic_definition;
 
 /** The static forebay_anthropic_definition, living until the library is unloaded. */

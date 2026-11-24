@@ -32,27 +32,12 @@ int anthropic_request_answer_is_empty(const forebay_anthropic_request_answer *an
     return SPISOR_IS_EMPTY_ANSWER(answer, FIRST_ANSWER_SHAPE);
 }
 
-static int is_named_pairs(const forebay_pair *pairs, size_t count) {
-    for (size_t index = 0; index < count; index++) {
-        if (pairs[index].name == NULL || pairs[index].value == NULL) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
 spisor_status anthropic_check_forwarded_headers(const forebay_anthropic_body_argument *argument,
                                                 spisor_refusal *refusal) {
     if (!reaches_the_headers(argument)) {
         return SPISOR_OK;
     }
-    if (argument->headers == NULL && argument->header_count > 0) {
-        return forebay_refuse_member(refusal, "headers", "a pointer to header_count pairs");
-    }
-    if (!is_named_pairs(argument->headers, argument->header_count)) {
-        return forebay_refuse_member(refusal, "headers", "pairs that each carry a name and a value");
-    }
-    return SPISOR_OK;
+    return forebay_check_pairs(argument->headers, argument->header_count, "headers", "header_count", refusal);
 }
 
 spisor_status anthropic_answer_forwarded_headers(const forebay_anthropic_body_argument *argument,

@@ -7,6 +7,7 @@
 
 #include "anthropic_header_names.h"
 #include "anthropic_operations.h"
+#include "anthropic_reset_time.h"
 #include "definition_support.h"
 #include "spisor/allocation.h"
 #include "spisor/definition.h"
@@ -25,12 +26,8 @@
 #define FALLBACK_RETRY_AFTER_SECONDS 60.0
 #define REPLY_STATUS 429
 
-/** The largest magnitude a double holds exactly as an integer, which is also what JSON.stringify prints in full. */
-static const double EXACT_LIMIT = 9007199254740992.0;
-
 static const char *const DROPPED_HEADERS[] = {"content-encoding", "content-length", "x-hub-rate-limited",
                                               "x-hub-retry-after-ms"};
-static const char *const RESET_HEADERS[] = {"anthropic-ratelimit-unified-5h-reset", RESET_HEADER};
 static const char LIMIT_MESSAGE[] = "You've hit your usage limit \xc2\xb7";
 
 /** The headers of the reply as they are built: names and values borrowed until they are copied into the answer. */
@@ -82,49 +79,11 @@ static void copy_upstream_headers(const forebay_anthropic_rate_limit_argument *a
     }
 }
 
-static int is_ascii_space(char character) {
-    return character == ' ' || (character >= '\t' && character <= '\r');
-}
-
-/** The header read as whole seconds in `[+-]digits` after trimming, in milliseconds; 0 for anything else. */
-static double header_reset_milliseconds(const char *value) {
-    if (value == NULL) {
-        return 0;
-    }
-    while (is_ascii_space(*value)) {
-        value++;
-    }
-    const char *end = value + strlen(value);
-    while (end > value && is_ascii_space(end[-1])) {
-        end--;
-    }
-    int negative = value < end && *value == '-';
-    if (value < end && (*value == '-' || *value == '+')) {
-        value++;
-    }
-    double seconds = 0;
-    for (const char *digit = value; digit < end; digit++) {
-        if (*digit < '0' || *digit > '9') {
-            return 0;
-        }
-        seconds = seconds * 10 + (*digit - '0');
-        if (seconds > EXACT_LIMIT) {
-            return 0;
-        }
-    }
-    double milliseconds = seconds * 1000;
-    if (value == end || milliseconds > EXACT_LIMIT) {
-        return 0;
-    }
-    return negative ? -milliseconds : milliseconds;
-}
-
 static double reconciled_reset(const header_set *set, const forebay_anthropic_rate_limit_argument *argument) {
     double latest = argument->has_reset_at && argument->reset_at > 0 ? argument->reset_at : 0;
-    for (size_t index = 0; index < sizeof RESET_HEADERS / sizeof RESET_HEADERS[0]; index++) {
-        const forebay_pair *header = find_header(set, RESET_HEADERS[index]);
-        double milliseconds = header == NULL ? 0 : header_reset_milliseconds(header->value);
-        latest = milliseconds > latest ? milliseconds : latest;
+    double read = 0;
+    if (anthropic_read_reset(set->pairs, set->count, argument->now, &read) && read > latest) {
+        latest = read;
     }
     return latest;
 }
@@ -254,31 +213,17 @@ static spisor_status answer_reply(const forebay_anthropic_rate_limit_argument *a
     return status;
 }
 
-static int is_exact_number(double number) {
-    return forebay_is_finite(number) && fabs(number) <= EXACT_LIMIT;
-}
-
-static int are_pairs(const forebay_pair *pairs, size_t count) {
-    for (size_t index = 0; index < count; index++) {
-        if (pairs[index].name == NULL || pairs[index].value == NULL) {
-            return 0;
-        }
-    }
-    return 1;
-}
-
 static spisor_status check_argument(const forebay_anthropic_rate_limit_argument *argument, spisor_refusal *refusal) {
-    if (argument->upstream_headers == NULL && argument->upstream_header_count > 0) {
-        return forebay_refuse_member(refusal, "upstream_headers", "a pointer to upstream_header_count pairs");
+    spisor_status checked = forebay_check_pairs(argument->upstream_headers, argument->upstream_header_count,
+                                                "upstream_headers", "upstream_header_count", refusal);
+    if (checked == SPISOR_OK && argument->has_reset_at) {
+        checked = forebay_check_exact_milliseconds(argument->reset_at, "reset_at", refusal);
     }
-    if (!are_pairs(argument->upstream_headers, argument->upstream_header_count)) {
-        return forebay_refuse_member(refusal, "upstream_headers", "pairs that each carry a name and a value");
+    if (checked == SPISOR_OK) {
+        checked = forebay_check_exact_milliseconds(argument->now, "now", refusal);
     }
-    if (argument->has_reset_at && !is_exact_number(argument->reset_at)) {
-        return forebay_refuse_member(refusal, "reset_at", "a finite number of at most 2^53 milliseconds");
-    }
-    if (!is_exact_number(argument->now)) {
-        return forebay_refuse_member(refusal, "now", "a finite number of at most 2^53 milliseconds");
+    if (checked != SPISOR_OK) {
+        return checked;
     }
     if (argument->offset_minutes < -MINUTES_PER_DAY || argument->offset_minutes > MINUTES_PER_DAY) {
         return forebay_refuse_member(refusal, "offset_minutes", "a zone offset within 1440 minutes of UTC");
