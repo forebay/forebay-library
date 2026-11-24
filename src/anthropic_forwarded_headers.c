@@ -1,9 +1,9 @@
 #include "anthropic_forwarded_headers.h"
 
-#include <ctype.h>
 #include <string.h>
 
 #include "answer_storage.h"
+#include "anthropic_header_names.h"
 
 static const char *const NOT_FORWARDED[] = {"authorization",
                                             "x-api-key",
@@ -33,7 +33,7 @@ static const char *lowered_copy(void **storage, const char *name) {
     size_t length = strlen(name);
     char *copy = forebay_storage_allocate(storage, length + 1);
     for (size_t index = 0; copy != NULL && index < length; index++) {
-        copy[index] = (char)tolower((unsigned char)name[index]);
+        copy[index] = anthropic_ascii_lower(name[index]);
     }
     return copy;
 }
@@ -57,11 +57,14 @@ int anthropic_forward_headers(void **storage, const forebay_pair *headers, size_
     for (size_t index = 0; index < count; index++) {
         const char *lowered = lowered_copy(storage, headers[index].name);
         const char *value = NULL;
-        if (lowered == NULL || !forebay_storage_text(storage, headers[index].value, &value)) {
+        if (lowered == NULL) {
             return 0;
         }
         if (is_not_forwarded(lowered)) {
             continue;
+        }
+        if (!forebay_storage_text(storage, headers[index].value, &value)) {
+            return 0;
         }
         forebay_pair *existing = pair_named(kept, kept_count, lowered);
         if (existing != NULL) {
