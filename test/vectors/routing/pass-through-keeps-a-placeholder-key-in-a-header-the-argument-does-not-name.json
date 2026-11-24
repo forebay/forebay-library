@@ -1,0 +1,23 @@
+{
+  "source": "a header carrying the bare placeholder key passes upstream when the argument names no header a key is carried in: routing knows no protocol's key header",
+  "function": "passThrough",
+  "argument": {
+    "upstream": "https://api.example.test/v1/",
+    "url": "/messages",
+    "headers": {
+      "x-api-key": "placeholder",
+      "accept": "application/json"
+    },
+    "bodyLength": 12,
+    "placeholderAuthorization": "Bearer placeholder"
+  },
+  "result": {
+    "target": "https://api.example.test/v1/messages",
+    "headers": {
+      "x-api-key": "placeholder",
+      "accept": "application/json",
+      "host": "api.example.test",
+      "content-length": "12"
+    }
+  }
+}

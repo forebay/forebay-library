@@ -180,6 +180,8 @@ static inline int routing_read_pass_through(const cJSON *argument, forebay_pass_
     pass->upstream = routing_text_of(argument, "upstream");
     pass->url = routing_text_of(argument, "url");
     pass->placeholder_authorization = routing_text_of(argument, "placeholderAuthorization");
+    pass->placeholder_key_headers = routing_texts_of(routing_member(argument, "placeholderKeyHeaders"),
+                                                     &pass->placeholder_key_header_count);
     if (length < 0 || floor(length) != length) {
         fprintf(stderr, "bodyLength %g cannot be a uint64_t\n", length);
         return 0;

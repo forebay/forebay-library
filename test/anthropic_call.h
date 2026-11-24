@@ -23,7 +23,7 @@
  * `output` the `forwardedHeaders` in order and either the
  * `model` of the request read or the `reply` (`kind`, `status`, `message`) of a body that is no object. A
  * `routeRequest` vector's `input` is the `method` and `path`, and its `output` the `kind` (`messages`, `modelList`,
- * `modelLookup` or `passThrough`) and the `modelId` of a lookup.
+ * `modelLookup` or `passThrough`), the `modelId` of a lookup and the `keyHeaders` of a pass-through.
  */
 
 static inline const forebay_anthropic_definition *anthropic_definition(void) {
@@ -770,14 +770,32 @@ static inline spisor_status anthropic_call_route_request(const anthropic_input *
     return anthropic_definition()->route_request(NULL, &input->route, &answer->route, refusal);
 }
 
+/** Whether the answer's key headers are the vector's `keyHeaders`, in order, none when it names none. */
+static inline int anthropic_key_headers_match(const forebay_anthropic_route_answer *route, const cJSON *expected) {
+    const cJSON *names = cJSON_GetObjectItemCaseSensitive(expected, "keyHeaders");
+    size_t index = 0;
+    const cJSON *name = NULL;
+    if (route->key_header_count != (size_t)cJSON_GetArraySize(names) ||
+        (route->key_headers == NULL) != (route->key_header_count == 0)) {
+        return 0;
+    }
+    cJSON_ArrayForEach(name, names) {
+        if (!cJSON_IsString(name) || strcmp(route->key_headers[index++], name->valuestring) != 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static inline int anthropic_route_matches(const anthropic_answer *answer, const cJSON *expected) {
     static const char *const kinds[] = {"messages", "modelList", "modelLookup", "passThrough"};
     const char *kind = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "kind"));
     const char *model_id = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "modelId"));
     int same = kind != NULL && answer->route.kind >= 1 && answer->route.kind <= 4 &&
                strcmp(kinds[answer->route.kind - 1], kind) == 0;
-    return same && (model_id == NULL ? answer->route.model_id == NULL
-                                     : answer->route.model_id != NULL && strcmp(answer->route.model_id, model_id) == 0);
+    return same && anthropic_key_headers_match(&answer->route, expected) &&
+           (model_id == NULL ? answer->route.model_id == NULL
+                             : answer->route.model_id != NULL && strcmp(answer->route.model_id, model_id) == 0);
 }
 
 static inline void anthropic_release_route_answer(anthropic_answer *answer) {

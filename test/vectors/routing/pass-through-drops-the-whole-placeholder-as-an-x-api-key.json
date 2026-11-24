@@ -9,7 +9,10 @@
       "accept": "application/json"
     },
     "bodyLength": 12,
-    "placeholderAuthorization": "Bearer placeholder"
+    "placeholderAuthorization": "Bearer placeholder",
+    "placeholderKeyHeaders": [
+      "x-api-key"
+    ]
   },
   "result": {
     "target": "https://api.example.test/v1/messages",

@@ -5,6 +5,9 @@
     "path": "/"
   },
   "output": {
-    "kind": "passThrough"
+    "kind": "passThrough",
+    "keyHeaders": [
+      "x-api-key"
+    ]
   }
 }

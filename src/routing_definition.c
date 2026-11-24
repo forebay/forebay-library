@@ -29,6 +29,8 @@
 #define OUTCOME_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_outcome_answer, reset_at)
 #define LIMITS_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_limits_answer, refresh_every_milliseconds)
 #define PASS_THROUGH_SHAPE SPISOR_SHAPE_THROUGH(forebay_pass_through_argument, placeholder_authorization)
+#define PASS_THROUGH_KEY_HEADERS_SHAPE \
+    SPISOR_SHAPE_THROUGH(forebay_pass_through_argument, placeholder_key_header_count)
 #define PASS_THROUGH_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_pass_through_answer, storage)
 #define REPLY_HEADERS_SHAPE SPISOR_SHAPE_THROUGH(forebay_reply_headers_argument, rewritten)
 #define REPLY_HEADERS_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_reply_headers_answer, storage)
@@ -230,6 +232,10 @@ static int fill_pass_through(const cJSON *result, void *filled) {
                               &answer->header_count);
 }
 
+static int names_key_headers(const forebay_pass_through_argument *argument) {
+    return spisor_has_shape(argument->size, PASS_THROUGH_KEY_HEADERS_SHAPE);
+}
+
 static spisor_status pass_through(void *context, const forebay_pass_through_argument *argument,
                                   forebay_pass_through_answer *answer, spisor_refusal *refusal) {
     (void)context;
@@ -242,12 +248,19 @@ static spisor_status pass_through(void *context, const forebay_pass_through_argu
         return forebay_refuse_member(refusal, "upstream, url, the headers or placeholder_authorization",
                                      "complete, with every text set");
     }
-    static const char *const names[] = {"upstream", "url", "headers", "bodyLength", "placeholderAuthorization"};
+    const char *const *key_headers = names_key_headers(argument) ? argument->placeholder_key_headers : NULL;
+    size_t key_header_count = names_key_headers(argument) ? argument->placeholder_key_header_count : 0;
+    if (!routing_are_texts(key_headers, key_header_count)) {
+        return forebay_refuse_member(refusal, "placeholder_key_headers", "header names, every one set");
+    }
+    static const char *const names[] = {
+        "upstream", "url", "headers", "bodyLength", "placeholderAuthorization", "placeholderKeyHeaders"};
     cJSON *items[] = {cJSON_CreateString(argument->upstream), cJSON_CreateString(argument->url),
                       routing_pairs_json(argument->headers, argument->header_count),
                       cJSON_CreateNumber((double)argument->body_length),
-                      cJSON_CreateString(argument->placeholder_authorization)};
-    return routing_decide(routing_pass_through_call, object_of(5, names, items), fill_pass_through, answer,
+                      cJSON_CreateString(argument->placeholder_authorization),
+                      routing_texts_json(key_headers, key_header_count)};
+    return routing_decide(routing_pass_through_call, object_of(6, names, items), fill_pass_through, answer,
                           &answer->storage, PASS_THROUGH_ANSWER_SHAPE, refusal);
 }
 

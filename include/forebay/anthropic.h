@@ -243,7 +243,10 @@ typedef struct forebay_anthropic_route_argument {
 
 /**
  * What the request is; for a lookup `model_id` is the text after `/v1/models/`, not URL-decoded, the provider's until
- * release_route. First shape ends at `storage`.
+ * release_route. For a pass-through, `key_headers` names the headers Anthropic's API carries a key in, `x-api-key`,
+ * for routing's pass_through to drop when they carry the placeholder; for any other kind it is NULL and its count 0.
+ * An answer whose `size` ends before `key_header_count` is answered without them. The names are static and outlive
+ * the answer. First shape ends at `storage`.
  */
 typedef struct forebay_anthropic_route_answer {
     uint32_t size;
@@ -251,6 +254,8 @@ typedef struct forebay_anthropic_route_answer {
     uint32_t kind;
     const char *model_id;
     void *storage;
+    const char *const *key_headers;
+    size_t key_header_count;
 } forebay_anthropic_route_answer;
 
 /**
@@ -408,8 +413,9 @@ typedef struct forebay_anthropic_definition {
     /**
      * What a request is, as the proxy routes it: a POST (the method compared ignoring case) to `/v1/messages` is
      * MESSAGES; a GET to `/v1/models` or `/v1/models/` is MODEL_LIST; a GET to `/v1/models/<id>` is MODEL_LOOKUP with
-     * the id; anything else, a path with its query cut off compared exactly, is PASS_THROUGH. MALFORMED, naming the
-     * member, for a NULL or empty `method` and a NULL `path`.
+     * the id; anything else, a path with its query cut off compared exactly, is PASS_THROUGH, with the key headers
+     * routing's pass_through takes as its `placeholder_key_headers`. MALFORMED, naming the member, for a NULL or empty
+     * `method` and a NULL `path`.
      */
     spisor_status (*route_request)(void *context, const forebay_anthropic_route_argument *argument,
                                    forebay_anthropic_route_answer *answer, spisor_refusal *refusal);

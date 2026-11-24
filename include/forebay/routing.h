@@ -480,10 +480,12 @@ typedef struct forebay_catalog_read_answer {
 
 /**
  * A request to send upstream undecoded, with the placeholder authorization a client sent. The placeholder never goes
- * upstream: an `authorization` header equal to `placeholder_authorization` exactly is dropped, and so is an
- * `x-api-key` header equal either to that whole value, as a client given the whole placeholder as its key sends it,
- * or to the key it carries, the text after a leading `Bearer ` (the scheme compared ignoring case), as a client given
- * the bare key sends it. First shape ends at `placeholder_authorization`.
+ * upstream: an `authorization` header equal to `placeholder_authorization` exactly is dropped, and so is a header
+ * named in `placeholder_key_headers` (compared ignoring case), the names the client's protocol carries a key in, equal
+ * either to that whole value, as a client given the whole placeholder as its key sends it, or to the key it carries,
+ * the text after a leading `Bearer ` (the scheme compared ignoring case), as a client given the bare key sends it. An
+ * argument whose `size` ends before `placeholder_key_header_count` names no such header. First shape ends at
+ * `placeholder_authorization`.
  */
 typedef struct forebay_pass_through_argument {
     uint32_t size;
@@ -493,6 +495,8 @@ typedef struct forebay_pass_through_argument {
     size_t header_count;
     uint64_t body_length;
     const char *placeholder_authorization;
+    const char *const *placeholder_key_headers;
+    size_t placeholder_key_header_count;
 } forebay_pass_through_argument;
 
 /** The upstream URL and the headers to send it. First shape ends at `storage`. */

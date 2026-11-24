@@ -9,6 +9,7 @@
 
 #define ARGUMENT_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_route_argument, path)
 #define ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_route_answer, storage)
+#define KEY_HEADERS_SHAPE SPISOR_SHAPE_THROUGH(forebay_anthropic_route_answer, key_header_count)
 
 #define MESSAGES_PATH "/v1/messages"
 #define MODELS_PATH "/v1/models"
@@ -36,6 +37,19 @@ static uint32_t kind_of(const char *method, const char *path, size_t length) {
     return FOREBAY_ANTHROPIC_ROUTE_PASS_THROUGH;
 }
 
+static void fill_key_headers(forebay_anthropic_route_answer *answer, int passes_through) {
+    static const char *const key_headers[] = {"x-api-key"};
+    if (spisor_has_shape(answer->size, KEY_HEADERS_SHAPE)) {
+        answer->key_headers = passes_through ? key_headers : NULL;
+        answer->key_header_count = passes_through ? sizeof key_headers / sizeof key_headers[0] : 0;
+    }
+}
+
+static int is_empty_answer(const forebay_anthropic_route_answer *answer) {
+    return SPISOR_IS_EMPTY_ANSWER(answer, ANSWER_SHAPE) &&
+           (!spisor_has_shape(answer->size, KEY_HEADERS_SHAPE) || answer->key_header_count == 0);
+}
+
 static spisor_status fill_route(const forebay_anthropic_route_argument *argument,
                                 forebay_anthropic_route_answer *answer) {
     size_t length = strcspn(argument->path, "?");
@@ -50,6 +64,7 @@ static spisor_status fill_route(const forebay_anthropic_route_argument *argument
         answer->model_id = id;
     }
     answer->kind = kind;
+    fill_key_headers(answer, kind == FOREBAY_ANTHROPIC_ROUTE_PASS_THROUGH);
     return SPISOR_OK;
 }
 
@@ -57,7 +72,7 @@ spisor_status anthropic_route_request(void *context, const forebay_anthropic_rou
                                       forebay_anthropic_route_answer *answer, spisor_refusal *refusal) {
     (void)context;
     if (argument == NULL || !spisor_has_shape(argument->size, ARGUMENT_SHAPE) ||
-        !SPISOR_IS_EMPTY_ANSWER(answer, ANSWER_SHAPE)) {
+        !is_empty_answer(answer)) {
         return spisor_refuse_shape(refusal, "anthropic's route_request");
     }
     if (!forebay_is_text(argument->method)) {
@@ -74,4 +89,11 @@ spisor_status anthropic_route_request(void *context, const forebay_anthropic_rou
     return status;
 }
 
-ANTHROPIC_RELEASE_ANSWER(anthropic_release_route, forebay_anthropic_route_answer, ANSWER_SHAPE)
+void anthropic_release_route(void *context, forebay_anthropic_route_answer *answer) {
+    (void)context;
+    if (answer != NULL && spisor_has_shape(answer->size, ANSWER_SHAPE)) {
+        forebay_storage_release(answer->storage);
+        SPISOR_CLEAR_ANSWER(answer, ANSWER_SHAPE);
+        fill_key_headers(answer, 0);
+    }
+}
