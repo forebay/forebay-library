@@ -724,7 +724,11 @@ static void print_provider_layouts(void) {
     FIELD(forebay_provider_handle_argument, request);
     FIELD(forebay_provider_handle_argument, headers);
     FIELD(forebay_provider_handle_argument, header_count);
+    FIELD(forebay_provider_handle_argument, token);
     SIZE(forebay_provider_handle_argument);
+    FIELD(forebay_provider_cancel_argument, size);
+    FIELD(forebay_provider_cancel_argument, token);
+    SIZE(forebay_provider_cancel_argument);
     FIELD(forebay_provider_handle_answer, size);
     FIELD(forebay_provider_handle_answer, kind);
     FIELD(forebay_provider_handle_answer, response);
@@ -750,6 +754,7 @@ static void print_provider_layouts(void) {
     FIELD(forebay_provider_definition, release_models_answer);
     FIELD(forebay_provider_definition, release_handle_answer);
     FIELD(forebay_provider_definition, release_refusal);
+    FIELD(forebay_provider_definition, cancel);
     SIZE(forebay_provider_definition);
 }
 

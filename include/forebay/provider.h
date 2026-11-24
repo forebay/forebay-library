@@ -35,7 +35,15 @@ typedef struct forebay_provider_handle_argument {
     const forebay_ir_request *request;
     const forebay_pair *headers;
     size_t header_count;
+    /** Drawn at random by the consumer for each call, so two consumers of one provider never collide. */
+    uint64_t token;
 } forebay_provider_handle_argument;
+
+/** The call to end, by the token its handle argument carried. First shape ends at `token`. */
+typedef struct forebay_provider_cancel_argument {
+    uint32_t size;
+    uint64_t token;
+} forebay_provider_cancel_argument;
 
 /**
  * How a provider served a request. THROWN is a call that got no upstream response at all, which a proxy reports to
@@ -95,7 +103,8 @@ typedef struct forebay_provider_models_answer {
  * The provider contract. Every operation answers OK with its answer filled, MALFORMED for an argument or an answer
  * absent or short of its first shape, REFUSED with the refusal saying what to repair, or OUT_OF_MEMORY with the
  * answer empty; `next` takes no refusal, since a stream that broke is an answer of its own, so it answers only OK,
- * MALFORMED or OUT_OF_MEMORY, never REFUSED. First shape ends at `release_refusal`.
+ * MALFORMED or OUT_OF_MEMORY, never REFUSED; `cancel` takes a refusal it never fills and answers only OK or MALFORMED.
+ * First shape ends at `release_refusal`.
  */
 typedef struct forebay_provider_definition {
     uint32_t size;
@@ -112,6 +121,16 @@ typedef struct forebay_provider_definition {
     void (*release_models_answer)(void *context, forebay_provider_models_answer *answer);
     void (*release_handle_answer)(void *context, forebay_provider_handle_answer *answer);
     void (*release_refusal)(void *context, spisor_refusal *refusal);
+    /**
+     * Ends what the call with that token started, its upstream request or a stream not yet handed back, and that
+     * `handle` returns early with an answer the consumer discards. It may run on another thread while `handle` runs,
+     * so an implementation guards its own token table; a stream already handed back is ended by `release_stream`. A
+     * token the provider does not know, because its call has not registered it yet or has already answered, is a
+     * no-op. It answers OK for every well-formed token and MALFORMED for an argument absent or short of its first
+     * shape, and the rules of this contract never make it REFUSED. It never blocks: a provider that cannot cancel
+     * answers OK and lets the call run.
+     */
+    spisor_status (*cancel)(void *context, const forebay_provider_cancel_argument *argument, spisor_refusal *refusal);
 } forebay_provider_definition;
 
 #ifdef __cplusplus

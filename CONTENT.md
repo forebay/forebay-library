@@ -14,7 +14,8 @@ and answers, and every refusal; this file says what they decide. No JSON crosses
 `forebay.provider`, whose description is `forebay_provider_definition_description`, generated from
 `include/forebay/provider.h`. A provider plugin implements it: `models` answers its catalog entry (its models with
 their limits, its ranking and its default model), `handle` serves an IR request as a whole response, an upstream
-failure, a stream or the message of a call that got no upstream response (which a proxy reports to `step` as thrown), and `next` reads that stream event by event to its end or to the message of its failure; `models`,
+failure, a stream or the message of a call that got no upstream response (which a proxy reports to `step` as thrown), and `next` reads that stream event by event to its end or to the message of its failure, and `cancel` ends the call a
+`handle` argument's `token` named (an unknown token is a no-op); `models`,
 `handle` and `next` may block. Every header that includes `definition.h` declares a definition: with a
 `forebay_<id>_definition_of` getter it is a service, and without one it is the contract `forebay.<id>`.
 
