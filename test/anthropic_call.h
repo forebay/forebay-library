@@ -615,6 +615,7 @@ static inline int anthropic_read_rate_limit_input(const cJSON *json, anthropic_i
     *input = (anthropic_input){0};
     const cJSON *headers = cJSON_GetObjectItemCaseSensitive(json, "upstreamHeaders");
     const cJSON *reset_at = cJSON_GetObjectItemCaseSensitive(json, "resetAt");
+    const cJSON *offset_minutes = cJSON_GetObjectItemCaseSensitive(json, "offsetMinutes");
     size_t count = (size_t)cJSON_GetArraySize(headers);
     input->pairs = calloc(count + 1, sizeof *input->pairs);
     if (!cJSON_IsObject(headers) || input->pairs == NULL) {
@@ -633,8 +634,8 @@ static inline int anthropic_read_rate_limit_input(const cJSON *json, anthropic_i
     input->rate_limit.upstream_header_count = count;
     input->rate_limit.has_reset_at = cJSON_IsNumber(reset_at) ? 1 : 0;
     input->rate_limit.reset_at = cJSON_IsNumber(reset_at) ? reset_at->valuedouble : 0;
-    input->rate_limit.now = cJSON_GetObjectItemCaseSensitive(json, "now")->valuedouble;
-    input->rate_limit.offset_minutes = (int64_t)cJSON_GetObjectItemCaseSensitive(json, "offsetMinutes")->valuedouble;
+    input->rate_limit.now = cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(json, "now"));
+    input->rate_limit.offset_minutes = cJSON_IsNumber(offset_minutes) ? (int64_t)offset_minutes->valuedouble : 0;
     input->rate_limit.zone_en_us = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zoneEnUs"));
     input->rate_limit.zone_en_gb = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zoneEnGb"));
     return 1;
@@ -650,7 +651,7 @@ static inline int anthropic_reply_matches(const anthropic_answer *answer, const 
     const forebay_anthropic_reply_answer *reply = &answer->reply;
     const cJSON *headers = cJSON_GetObjectItemCaseSensitive(expected, "headers");
     const char *body = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "body"));
-    int same = reply->status == (uint32_t)cJSON_GetObjectItemCaseSensitive(expected, "status")->valuedouble &&
+    int same = (double)reply->status == cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(expected, "status")) &&
                reply->header_count == (size_t)cJSON_GetArraySize(headers) && reply->body != NULL && body != NULL &&
                strcmp(reply->body, body) == 0;
     size_t index = 0;
@@ -727,7 +728,7 @@ static inline int anthropic_invalid_request_matches(const forebay_anthropic_requ
     const char *message = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(reply, "message"));
     return request->request == NULL && request->forwarded_header_count == 0 &&
            request->reply_kind == FOREBAY_REPLY_INVALID_REQUEST &&
-           request->status == (uint32_t)cJSON_GetObjectItemCaseSensitive(reply, "status")->valuedouble &&
+           (double)request->status == cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(reply, "status")) &&
            request->message != NULL && message != NULL && strcmp(request->message, message) == 0;
 }
 
