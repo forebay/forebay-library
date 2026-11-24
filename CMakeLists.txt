@@ -16,7 +16,10 @@ include(${forebay_siblings}/library/cmake/allocation_check.cmake)
 include(${forebay_siblings}/library/cmake/link_graph.cmake)
 spisor_refuse_plain_allocation(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+foreach(output RUNTIME LIBRARY ARCHIVE)
+    set(CMAKE_${output}_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    set(CMAKE_${output}_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
+endforeach()
 
 add_library(forebay_objects OBJECT
     src/accounts_availability.c
