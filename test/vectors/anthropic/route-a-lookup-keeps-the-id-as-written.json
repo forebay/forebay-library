@@ -6,6 +6,9 @@
   },
   "output": {
     "kind": "modelLookup",
-    "modelId": "claude%2Dx"
+    "modelId": "claude%2Dx",
+    "keyHeaders": [
+      "x-api-key"
+    ]
   }
 }

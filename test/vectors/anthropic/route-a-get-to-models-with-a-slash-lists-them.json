@@ -5,6 +5,9 @@
     "path": "/v1/models/"
   },
   "output": {
-    "kind": "modelList"
+    "kind": "modelList",
+    "keyHeaders": [
+      "x-api-key"
+    ]
   }
 }

@@ -5,6 +5,9 @@
     "path": "/v1/messages"
   },
   "output": {
-    "kind": "messages"
+    "kind": "messages",
+    "keyHeaders": [
+      "x-api-key"
+    ]
   }
 }
