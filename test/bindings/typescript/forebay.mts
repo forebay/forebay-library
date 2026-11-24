@@ -36,7 +36,7 @@ export async function openForebay(): Promise<OpenedForebay> {
   const host = Host.create({
     edgeSource: EdgeSource.Capabilities,
     coreLibraryPath,
-    descriptionCheck: (description: object) => standard.checkDescription(description),
+    descriptionCheck: (description: object, definition: object | null) => standard.checkDescription(description, definition),
     log: { debug() {}, info() {}, warn() {}, error() {} },
   });
   const read = standard.readLibrary(readFileSync(declarationPath, "utf8"));

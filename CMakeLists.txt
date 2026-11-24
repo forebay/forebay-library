@@ -116,8 +116,11 @@ weivel_describe(forebay_library
     VALUE spisor_value
     TREE spisor_value_tree
     SERVICE forebay_routing_definition SYMBOL forebay_routing_definition_description
+        ANSWERED_BY forebay_routing_definition_of
     SERVICE forebay_accounts_definition SYMBOL forebay_accounts_definition_description
+        ANSWERED_BY forebay_accounts_definition_of
     SERVICE forebay_anthropic_definition SYMBOL forebay_anthropic_definition_description
+        ANSWERED_BY forebay_anthropic_definition_of
     SERVICE forebay_provider_definition SYMBOL forebay_provider_definition_description)
 target_link_libraries(forebay_library PRIVATE weivel_standard)
 
