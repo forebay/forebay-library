@@ -6,6 +6,9 @@
   },
   "output": {
     "kind": "modelLookup",
-    "modelId": "a/b"
+    "modelId": "a/b",
+    "keyHeaders": [
+      "x-api-key"
+    ]
   }
 }

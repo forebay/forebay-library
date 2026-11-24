@@ -23,7 +23,7 @@
  * `output` the `forwardedHeaders` in order and either the
  * `model` of the request read or the `reply` (`kind`, `status`, `message`) of a body that is no object. A
  * `routeRequest` vector's `input` is the `method` and `path`, and its `output` the `kind` (`messages`, `modelList`,
- * `modelLookup` or `passThrough`), the `modelId` of a lookup and the `keyHeaders` of a pass-through.
+ * `modelLookup` or `passThrough`), the `modelId` of a lookup and the `keyHeaders` of every route.
  */
 
 static inline const forebay_anthropic_definition *anthropic_definition(void) {
