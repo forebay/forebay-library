@@ -1,0 +1,11 @@
+{
+  "direction": "resetTime",
+  "input": {
+    "headers": {},
+    "now": 0
+  },
+  "output": {
+    "hasResetAt": false,
+    "resetAt": 0
+  }
+}

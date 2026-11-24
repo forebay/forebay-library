@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-#define LARGEST_EXACT_INTEGER 9007199254740992.0
+#include "definition_support.h"
 
 const cJSON *anthropic_wire_member(const cJSON *object, const char *key) {
     return cJSON_GetObjectItemCaseSensitive(object, key);
@@ -33,7 +33,7 @@ int anthropic_wire_integer(const cJSON *item, uint64_t *value) {
         return 0;
     }
     double whole = trunc(item->valuedouble);
-    if (!(whole >= 0 && whole <= LARGEST_EXACT_INTEGER)) {
+    if (!(whole >= 0 && whole <= FOREBAY_EXACT_LIMIT)) {
         return 0;
     }
     *value = (uint64_t)whole;

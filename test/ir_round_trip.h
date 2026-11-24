@@ -96,7 +96,7 @@ static inline round_trip_function schema_round_trip(const char *definition) {
 
 /** Whether a vector of the anthropic list is the service's own, not the translator's, which the codec's tests leave. */
 static inline int is_wire_only_vector(const char *path) {
-    static const char *const prefixes[] = {"rate-limit-", "decode-", "route-", "envelope-", "reply-"};
+    static const char *const prefixes[] = {"rate-limit-", "reset-time-", "decode-", "route-", "envelope-", "reply-"};
     const char *name = path;
     for (const char *cursor = path; *cursor != '\0'; cursor++) {
         name = *cursor == '/' || *cursor == '\\' ? cursor + 1 : name;

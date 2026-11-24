@@ -13,6 +13,28 @@ int forebay_is_finite(double number) {
     return isfinite(number);
 }
 
+spisor_status forebay_check_exact_milliseconds(double milliseconds, const char *member, spisor_refusal *refusal) {
+    if (forebay_is_finite(milliseconds) && fabs(milliseconds) <= FOREBAY_EXACT_LIMIT) {
+        return SPISOR_OK;
+    }
+    return forebay_refuse_member(refusal, member, "a finite number of at most 2^53 milliseconds");
+}
+
+spisor_status forebay_check_pairs(const forebay_pair *pairs, size_t count, const char *member,
+                                  const char *count_member, spisor_refusal *refusal) {
+    if (pairs == NULL && count > 0) {
+        char rule[120];
+        snprintf(rule, sizeof rule, "a pointer to %s pairs", count_member);
+        return forebay_refuse_member(refusal, member, rule);
+    }
+    for (size_t index = 0; index < count; index++) {
+        if (pairs[index].name == NULL || pairs[index].value == NULL) {
+            return forebay_refuse_member(refusal, member, "pairs that each carry a name and a value");
+        }
+    }
+    return SPISOR_OK;
+}
+
 spisor_status forebay_refuse_member(spisor_refusal *refusal, const char *member, const char *rule) {
     char detail[200];
     char fix[200];

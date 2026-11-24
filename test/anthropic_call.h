@@ -23,7 +23,9 @@
  * `output` the `forwardedHeaders` in order and either the
  * `model` of the request read or the `reply` (`kind`, `status`, `message`) of a body that is no object. A
  * `routeRequest` vector's `input` is the `method` and `path`, and its `output` the `kind` (`messages`, `modelList`,
- * `modelLookup` or `passThrough`), the `modelId` of a lookup and the `keyHeaders` of every route.
+ * `modelLookup` or `passThrough`), the `modelId` of a lookup and the `keyHeaders` of every route. A `resetTime`
+ * vector's `input` is the upstream `headers` and `now`, and its `output` `hasResetAt` and `resetAt`, 0 when there is
+ * none.
  */
 
 static inline const forebay_anthropic_definition *anthropic_definition(void) {
@@ -156,6 +158,7 @@ typedef struct anthropic_input {
     forebay_pair *pairs;
     size_t pair_count;
     forebay_anthropic_route_argument route;
+    forebay_anthropic_reset_argument reset;
 } anthropic_input;
 
 /** Every answer a whole stream through one handle gave, each feed's and the finish's, held until released. */
@@ -175,6 +178,7 @@ typedef union anthropic_answer {
     forebay_anthropic_model_lookup_answer lookup;
     forebay_anthropic_reply_answer reply;
     forebay_anthropic_route_answer route;
+    forebay_anthropic_reset_answer reset;
     anthropic_stream_answer stream;
 } anthropic_answer;
 
@@ -803,6 +807,42 @@ static inline void anthropic_release_route_answer(anthropic_answer *answer) {
     anthropic_definition()->release_route(NULL, &answer->route);
 }
 
+/** A reset vector's input: the headers in order, borrowed from the vector, and `now`. */
+static inline int anthropic_read_reset_input(const cJSON *json, anthropic_input *input) {
+    *input = (anthropic_input){0};
+    if (!anthropic_read_pairs(cJSON_GetObjectItemCaseSensitive(json, "headers"), input)) {
+        anthropic_input_release(input);
+        return 0;
+    }
+    input->reset = (forebay_anthropic_reset_argument)SPISOR_INIT(forebay_anthropic_reset_argument);
+    input->reset.headers = input->pairs;
+    input->reset.header_count = input->pair_count;
+    input->reset.now = cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(json, "now"));
+    return 1;
+}
+
+static inline spisor_status anthropic_call_reset_time(const anthropic_input *input, anthropic_answer *answer,
+                                                      spisor_refusal *refusal) {
+    return anthropic_definition()->reset_time(NULL, &input->reset, &answer->reset, refusal);
+}
+
+static inline int anthropic_reset_matches(const anthropic_answer *answer, const cJSON *expected) {
+    const cJSON *has_reset_at = cJSON_GetObjectItemCaseSensitive(expected, "hasResetAt");
+    double reset_at = cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(expected, "resetAt"));
+    int same = cJSON_IsBool(has_reset_at) && answer->reset.has_reset_at == (uint32_t)cJSON_IsTrue(has_reset_at) &&
+               answer->reset.reset_at == reset_at;
+    if (!same) {
+        fprintf(stderr, "  expected %d at %.0f\n  actual   %u at %.0f\n", cJSON_IsTrue(has_reset_at), reset_at,
+                (unsigned)answer->reset.has_reset_at, answer->reset.reset_at);
+    }
+    return same;
+}
+
+/** A reset answer owns nothing, so there is nothing to release. */
+static inline void anthropic_release_reset_answer(anthropic_answer *answer) {
+    (void)answer;
+}
+
 /** The direction a vector's `direction` member names, NULL for one this service does not have. */
 static inline const anthropic_direction *anthropic_direction_named(const char *name) {
     static const anthropic_direction directions[] = {
@@ -830,6 +870,8 @@ static inline const anthropic_direction *anthropic_direction_named(const char *n
          anthropic_call_decode_headed_request, anthropic_headed_request_matches, anthropic_release_request},
         {"routeRequest", (uint32_t)sizeof(forebay_anthropic_route_answer), anthropic_read_route_input,
          anthropic_call_route_request, anthropic_route_matches, anthropic_release_route_answer},
+        {"resetTime", (uint32_t)sizeof(forebay_anthropic_reset_answer), anthropic_read_reset_input,
+         anthropic_call_reset_time, anthropic_reset_matches, anthropic_release_reset_answer},
     };
     for (size_t index = 0; name != NULL && index < sizeof directions / sizeof directions[0]; index++) {
         if (strcmp(directions[index].name, name) == 0) {
@@ -845,10 +887,13 @@ static inline const anthropic_direction *anthropic_direction_of(const cJSON *vec
         cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(vector, "direction")));
 }
 
-/** Whether the vector's call allocates, which a route to anything but a model lookup never does. */
+/** Whether the vector's call allocates, which a reset never does, nor a route to anything but a model lookup. */
 static inline int anthropic_vector_allocates(const cJSON *vector) {
     const char *name = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(vector, "direction"));
     const cJSON *output = cJSON_GetObjectItemCaseSensitive(vector, "output");
+    if (name != NULL && strcmp(name, "resetTime") == 0) {
+        return 0;
+    }
     return name == NULL || strcmp(name, "routeRequest") != 0 ||
            cJSON_GetObjectItemCaseSensitive(output, "modelId") != NULL;
 }

@@ -1,0 +1,14 @@
+{
+  "direction": "resetTime",
+  "input": {
+    "headers": {
+      "anthropic-ratelimit-unified-reset": "0",
+      "retry-after": "30"
+    },
+    "now": 5000000
+  },
+  "output": {
+    "hasResetAt": true,
+    "resetAt": 5030000
+  }
+}

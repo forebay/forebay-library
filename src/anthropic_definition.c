@@ -5,6 +5,7 @@
 #include "anthropic_operations.h"
 #include "anthropic_rate_limit_reply.h"
 #include "anthropic_request_answer.h"
+#include "anthropic_reset_time.h"
 #include "anthropic_route.h"
 #include "forebay/anthropic.h"
 #include "spisor/allocation.h"
@@ -197,6 +198,7 @@ static const forebay_anthropic_definition definition = {
     spisor_release_refusal,
     anthropic_route_request,
     anthropic_release_route,
+    anthropic_reset_time,
 };
 
 FOREBAY_DEFINITION_API const void *forebay_anthropic_definition_of(void) {

@@ -3,7 +3,7 @@
   "input": {
     "upstreamHeaders": {
       "content-type": "text/html",
-      "retry-after": "7"
+      "retry-after": "7.6"
     },
     "now": 1000,
     "offsetMinutes": 0,
@@ -14,10 +14,10 @@
     "status": 429,
     "headers": {
       "content-type": "application/json",
-      "retry-after": "60",
+      "retry-after": "8",
       "anthropic-ratelimit-unified-status": "rejected",
-      "anthropic-ratelimit-unified-reset": "1"
+      "anthropic-ratelimit-unified-reset": "8"
     },
-    "body": "{\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"You've hit your usage limit · try again later\"}}"
+    "body": "{\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"You've hit your usage limit · resets at 12:00 AM UTC\"}}"
   }
 }
