@@ -140,7 +140,74 @@ static void every_declared_description_is_exported_and_checks(void) {
     unload_forebay(forebay);
 }
 
+static const weivel_standard_described_operation *operation_named(const weivel_standard_description *description,
+                                                                  const char *name) {
+    for (size_t index = 0; index < description->operation_count; index++) {
+        if (strcmp(description->operations[index].name, name) == 0) {
+            return &description->operations[index];
+        }
+    }
+    return NULL;
+}
+
+static const weivel_standard_described_member *member_named(const weivel_standard_description *description,
+                                                            const char *type, const char *name) {
+    for (size_t index = 0; index < description->type_count; index++) {
+        const weivel_standard_described_type *described = &description->types[index];
+        if (strcmp(described->name, type) != 0) {
+            continue;
+        }
+        for (size_t member = 0; member < described->member_count; member++) {
+            if (strcmp(described->members[member].name, name) == 0) {
+                return &described->members[member];
+            }
+        }
+    }
+    return NULL;
+}
+
+static void the_provider_description_carries_the_token_and_the_cancel_operation(void) {
+    library_handle forebay = load_forebay();
+    describe_function describer;
+    const weivel_standard_description *description;
+    const weivel_standard_described_operation *cancel;
+    const weivel_standard_described_member *token;
+    CHECK(forebay != NULL);
+    if (forebay == NULL) {
+        return;
+    }
+    describer = describer_of(forebay, "forebay_provider_definition_description");
+    CHECK(describer != NULL);
+    description = describer == NULL ? NULL : describer();
+    CHECK(description != NULL);
+    if (description != NULL) {
+        cancel = operation_named(description, "cancel");
+        CHECK(cancel != NULL);
+        if (cancel != NULL) {
+            CHECK(cancel->returns == WEIVEL_STANDARD_DESCRIBED_STATUS);
+            CHECK(cancel->parameter_count == 3);
+            CHECK(cancel->parameters[1].kind == WEIVEL_STANDARD_DESCRIBED_POINTER);
+            CHECK(cancel->parameters[1].role == WEIVEL_STANDARD_DESCRIBED_INPUT);
+            CHECK(cancel->parameters[1].type != NULL &&
+                  strcmp(cancel->parameters[1].type, "forebay_provider_cancel_argument") == 0);
+        }
+        token = member_named(description, "forebay_provider_handle_argument", "token");
+        CHECK(token != NULL);
+        if (token != NULL) {
+            CHECK(token->kind == WEIVEL_STANDARD_DESCRIBED_U64);
+            CHECK(token->size == 8);
+        }
+        token = member_named(description, "forebay_provider_cancel_argument", "token");
+        CHECK(token != NULL);
+        if (token != NULL) {
+            CHECK(token->kind == WEIVEL_STANDARD_DESCRIBED_U64);
+        }
+    }
+    unload_forebay(forebay);
+}
+
 int main(void) {
     every_declared_description_is_exported_and_checks();
+    the_provider_description_carries_the_token_and_the_cancel_operation();
     return check_summary("description_test");
 }
