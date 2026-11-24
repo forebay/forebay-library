@@ -90,9 +90,11 @@ static spisor_status tiers(void *context, const forebay_tiers_argument *argument
         !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, TIERS_ANSWER_SHAPE, answer->count)) {
         return spisor_refuse_shape(refusal, "routing's tiers");
     }
-    if (!routing_is_profile(argument->profile, 1) ||
-        !routing_is_catalog(argument->providers, argument->provider_count)) {
-        return forebay_refuse_member(refusal, "the profile or the catalog", "complete, with every text set");
+    if (!routing_is_profile(argument->profile, 1)) {
+        return forebay_refuse_member(refusal, "the profile", "complete, with every text set");
+    }
+    if (!routing_is_catalog(argument->providers, argument->provider_count)) {
+        return forebay_refuse_member(refusal, "the catalog", "complete, with every text set");
     }
     static const char *const names[] = {"profile", "models"};
     cJSON *items[] = {routing_profile_json(argument->profile),
@@ -122,9 +124,11 @@ static spisor_status model_map(void *context, const forebay_model_map_argument *
         !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, MODEL_MAP_ANSWER_SHAPE, answer->slot_count | answer->healed_count)) {
         return spisor_refuse_shape(refusal, "routing's model_map");
     }
-    if (!routing_is_profile(argument->profile, 1) ||
-        !routing_is_catalog(argument->providers, argument->provider_count)) {
-        return forebay_refuse_member(refusal, "the profile or the catalog", "complete, with every text set");
+    if (!routing_is_profile(argument->profile, 1)) {
+        return forebay_refuse_member(refusal, "the profile", "complete, with every text set");
+    }
+    if (!routing_is_catalog(argument->providers, argument->provider_count)) {
+        return forebay_refuse_member(refusal, "the catalog", "complete, with every text set");
     }
     if (argument->settings == NULL || argument->settings->kind != SPISOR_VALUE_RECORD) {
         return forebay_refuse_member(refusal, "settings", "the user's settings record");
