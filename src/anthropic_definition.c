@@ -36,7 +36,8 @@ static const void *read_response(anthropic_reader *reader, const cJSON *root) {
 }
 
 /** The JSON a body holds, in `*root`; NULL unless OK. SPISOR_NONE, with no refusal, for bytes that are not JSON. */
-static spisor_status parse_body(const forebay_anthropic_body_argument *argument, cJSON **root, spisor_refusal *refusal) {
+static spisor_status parse_body(const forebay_anthropic_body_argument *argument, cJSON **root,
+                                spisor_refusal *refusal) {
     if (argument->bytes == NULL && argument->length > 0) {
         return anthropic_refuse_bytes(refusal);
     }

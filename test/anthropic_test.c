@@ -10,8 +10,9 @@
  * @file
  * The anthropic service's translation through its definition: every `request-*` and `response-*` vector in both
  * directions (a decode vector's `input` as bytes against its `output`, an encode vector's `input` against its
- * `output`) and every `rate-limit-*`, `decode-*`, `route-*` and `envelope-*` one, then the cases no vector writes: wire members of the wrong type, bytes that are not JSON, a root that is
- * not an object, an IR that breaks its header, and the byte form of a body.
+ * `output`) and every `rate-limit-*`, `decode-*`, `route-*` and `envelope-*` one, then the cases no vector writes:
+ * wire members of the wrong type, bytes that are not JSON, a root that is not an object, an IR that breaks its header,
+ * and the byte form of a body.
  */
 
 #define REQUEST_VECTOR_COUNT 18

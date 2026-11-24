@@ -4,11 +4,10 @@
 #include "forebay/anthropic.h"
 
 /**
- * What decode_request answers besides the request: the forwarded headers and the invalid-request reply, which an
- * answer holds only when its size reaches them.
+ * Whether the answer is present, reaches its first shape and holds nothing, including what decode_request answers
+ * besides the request, the forwarded headers and the invalid-request reply, which an answer holds only when its size
+ * reaches them.
  */
-
-/** Whether the answer is present, reaches its first shape and holds nothing. */
 int anthropic_request_answer_is_empty(const forebay_anthropic_request_answer *answer);
 
 /** MALFORMED, naming `headers`, for headers the argument reaches that are not a list of named pairs. */
