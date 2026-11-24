@@ -156,6 +156,7 @@ target_link_libraries(weivel_host_load_test PRIVATE weivel_c_standard)
 add_dependencies(weivel_host_load_test forebay_library weivel_core_shared)
 spisor_strict_warnings(weivel_host_load_test)
 add_test(NAME weivel_host_load_test COMMAND weivel_host_load_test)
+add_test(NAME weivel_host_refuses_another_definition_test COMMAND weivel_host_load_test another-definition)
 
 add_executable(description_test description_test.c)
 target_include_directories(description_test PRIVATE ${forebay_spisor_test_directory})
