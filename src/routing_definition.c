@@ -29,6 +29,8 @@
 #define OUTCOME_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_outcome_answer, reset_at)
 #define LIMITS_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_limits_answer, refresh_every_milliseconds)
 #define PASS_THROUGH_SHAPE SPISOR_SHAPE_THROUGH(forebay_pass_through_argument, placeholder_authorization)
+#define PASS_THROUGH_KEY_HEADERS_SHAPE \
+    SPISOR_SHAPE_THROUGH(forebay_pass_through_argument, placeholder_key_header_count)
 #define PASS_THROUGH_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_pass_through_answer, storage)
 #define REPLY_HEADERS_SHAPE SPISOR_SHAPE_THROUGH(forebay_reply_headers_argument, rewritten)
 #define REPLY_HEADERS_ANSWER_SHAPE SPISOR_SHAPE_THROUGH(forebay_reply_headers_answer, storage)
@@ -88,9 +90,11 @@ static spisor_status tiers(void *context, const forebay_tiers_argument *argument
         !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, TIERS_ANSWER_SHAPE, answer->count)) {
         return spisor_refuse_shape(refusal, "routing's tiers");
     }
-    if (!routing_is_profile(argument->profile, 1) ||
-        !routing_is_catalog(argument->providers, argument->provider_count)) {
-        return forebay_refuse_member(refusal, "the profile or the catalog", "complete, with every text set");
+    if (!routing_is_profile(argument->profile, 1)) {
+        return forebay_refuse_member(refusal, "the profile", "complete, with every text set");
+    }
+    if (!routing_is_catalog(argument->providers, argument->provider_count)) {
+        return forebay_refuse_member(refusal, "the catalog", "complete, with every text set");
     }
     static const char *const names[] = {"profile", "models"};
     cJSON *items[] = {routing_profile_json(argument->profile),
@@ -120,9 +124,11 @@ static spisor_status model_map(void *context, const forebay_model_map_argument *
         !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, MODEL_MAP_ANSWER_SHAPE, answer->slot_count | answer->healed_count)) {
         return spisor_refuse_shape(refusal, "routing's model_map");
     }
-    if (!routing_is_profile(argument->profile, 1) ||
-        !routing_is_catalog(argument->providers, argument->provider_count)) {
-        return forebay_refuse_member(refusal, "the profile or the catalog", "complete, with every text set");
+    if (!routing_is_profile(argument->profile, 1)) {
+        return forebay_refuse_member(refusal, "the profile", "complete, with every text set");
+    }
+    if (!routing_is_catalog(argument->providers, argument->provider_count)) {
+        return forebay_refuse_member(refusal, "the catalog", "complete, with every text set");
     }
     if (argument->settings == NULL || argument->settings->kind != SPISOR_VALUE_RECORD) {
         return forebay_refuse_member(refusal, "settings", "the user's settings record");
@@ -230,6 +236,10 @@ static int fill_pass_through(const cJSON *result, void *filled) {
                               &answer->header_count);
 }
 
+static int names_key_headers(const forebay_pass_through_argument *argument) {
+    return spisor_has_shape(argument->size, PASS_THROUGH_KEY_HEADERS_SHAPE);
+}
+
 static spisor_status pass_through(void *context, const forebay_pass_through_argument *argument,
                                   forebay_pass_through_answer *answer, spisor_refusal *refusal) {
     (void)context;
@@ -242,12 +252,19 @@ static spisor_status pass_through(void *context, const forebay_pass_through_argu
         return forebay_refuse_member(refusal, "upstream, url, the headers or placeholder_authorization",
                                      "complete, with every text set");
     }
-    static const char *const names[] = {"upstream", "url", "headers", "bodyLength", "placeholderAuthorization"};
+    const char *const *key_headers = names_key_headers(argument) ? argument->placeholder_key_headers : NULL;
+    size_t key_header_count = names_key_headers(argument) ? argument->placeholder_key_header_count : 0;
+    if (!routing_are_texts(key_headers, key_header_count)) {
+        return forebay_refuse_member(refusal, "placeholder_key_headers", "header names, every one set");
+    }
+    static const char *const names[] = {
+        "upstream", "url", "headers", "bodyLength", "placeholderAuthorization", "placeholderKeyHeaders"};
     cJSON *items[] = {cJSON_CreateString(argument->upstream), cJSON_CreateString(argument->url),
                       routing_pairs_json(argument->headers, argument->header_count),
                       cJSON_CreateNumber((double)argument->body_length),
-                      cJSON_CreateString(argument->placeholder_authorization)};
-    return routing_decide(routing_pass_through_call, object_of(5, names, items), fill_pass_through, answer,
+                      cJSON_CreateString(argument->placeholder_authorization),
+                      routing_texts_json(key_headers, key_header_count)};
+    return routing_decide(routing_pass_through_call, object_of(6, names, items), fill_pass_through, answer,
                           &answer->storage, PASS_THROUGH_ANSWER_SHAPE, refusal);
 }
 

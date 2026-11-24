@@ -1,0 +1,27 @@
+{
+  "source": "a key header the argument names, compared ignoring case, drops the placeholder key it carries",
+  "function": "passThrough",
+  "argument": {
+    "upstream": "https://api.example.test/v1/",
+    "url": "/messages",
+    "headers": {
+      "x-other-key": "placeholder",
+      "x-api-key": "placeholder",
+      "accept": "application/json"
+    },
+    "bodyLength": 12,
+    "placeholderAuthorization": "Bearer placeholder",
+    "placeholderKeyHeaders": [
+      "X-Other-Key"
+    ]
+  },
+  "result": {
+    "target": "https://api.example.test/v1/messages",
+    "headers": {
+      "x-api-key": "placeholder",
+      "accept": "application/json",
+      "host": "api.example.test",
+      "content-length": "12"
+    }
+  }
+}

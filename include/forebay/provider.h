@@ -94,8 +94,8 @@ typedef struct forebay_provider_models_answer {
 /**
  * The provider contract. Every operation answers OK with its answer filled, MALFORMED for an argument or an answer
  * absent or short of its first shape, REFUSED with the refusal saying what to repair, or OUT_OF_MEMORY with the
- * answer empty; `next` takes no refusal, since a stream that broke is an answer of its own. First shape ends at
- * `release_refusal`.
+ * answer empty; `next` takes no refusal, since a stream that broke is an answer of its own, so it answers only OK,
+ * MALFORMED or OUT_OF_MEMORY, never REFUSED. First shape ends at `release_refusal`.
  */
 typedef struct forebay_provider_definition {
     uint32_t size;

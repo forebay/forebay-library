@@ -23,7 +23,7 @@
  * `output` the `forwardedHeaders` in order and either the
  * `model` of the request read or the `reply` (`kind`, `status`, `message`) of a body that is no object. A
  * `routeRequest` vector's `input` is the `method` and `path`, and its `output` the `kind` (`messages`, `modelList`,
- * `modelLookup` or `passThrough`) and the `modelId` of a lookup.
+ * `modelLookup` or `passThrough`), the `modelId` of a lookup and the `keyHeaders` of a pass-through.
  */
 
 static inline const forebay_anthropic_definition *anthropic_definition(void) {
@@ -615,6 +615,7 @@ static inline int anthropic_read_rate_limit_input(const cJSON *json, anthropic_i
     *input = (anthropic_input){0};
     const cJSON *headers = cJSON_GetObjectItemCaseSensitive(json, "upstreamHeaders");
     const cJSON *reset_at = cJSON_GetObjectItemCaseSensitive(json, "resetAt");
+    const cJSON *offset_minutes = cJSON_GetObjectItemCaseSensitive(json, "offsetMinutes");
     size_t count = (size_t)cJSON_GetArraySize(headers);
     input->pairs = calloc(count + 1, sizeof *input->pairs);
     if (!cJSON_IsObject(headers) || input->pairs == NULL) {
@@ -633,8 +634,8 @@ static inline int anthropic_read_rate_limit_input(const cJSON *json, anthropic_i
     input->rate_limit.upstream_header_count = count;
     input->rate_limit.has_reset_at = cJSON_IsNumber(reset_at) ? 1 : 0;
     input->rate_limit.reset_at = cJSON_IsNumber(reset_at) ? reset_at->valuedouble : 0;
-    input->rate_limit.now = cJSON_GetObjectItemCaseSensitive(json, "now")->valuedouble;
-    input->rate_limit.offset_minutes = (int64_t)cJSON_GetObjectItemCaseSensitive(json, "offsetMinutes")->valuedouble;
+    input->rate_limit.now = cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(json, "now"));
+    input->rate_limit.offset_minutes = cJSON_IsNumber(offset_minutes) ? (int64_t)offset_minutes->valuedouble : 0;
     input->rate_limit.zone_en_us = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zoneEnUs"));
     input->rate_limit.zone_en_gb = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(json, "zoneEnGb"));
     return 1;
@@ -650,7 +651,7 @@ static inline int anthropic_reply_matches(const anthropic_answer *answer, const 
     const forebay_anthropic_reply_answer *reply = &answer->reply;
     const cJSON *headers = cJSON_GetObjectItemCaseSensitive(expected, "headers");
     const char *body = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "body"));
-    int same = reply->status == (uint32_t)cJSON_GetObjectItemCaseSensitive(expected, "status")->valuedouble &&
+    int same = (double)reply->status == cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(expected, "status")) &&
                reply->header_count == (size_t)cJSON_GetArraySize(headers) && reply->body != NULL && body != NULL &&
                strcmp(reply->body, body) == 0;
     size_t index = 0;
@@ -727,7 +728,7 @@ static inline int anthropic_invalid_request_matches(const forebay_anthropic_requ
     const char *message = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(reply, "message"));
     return request->request == NULL && request->forwarded_header_count == 0 &&
            request->reply_kind == FOREBAY_REPLY_INVALID_REQUEST &&
-           request->status == (uint32_t)cJSON_GetObjectItemCaseSensitive(reply, "status")->valuedouble &&
+           (double)request->status == cJSON_GetNumberValue(cJSON_GetObjectItemCaseSensitive(reply, "status")) &&
            request->message != NULL && message != NULL && strcmp(request->message, message) == 0;
 }
 
@@ -770,14 +771,32 @@ static inline spisor_status anthropic_call_route_request(const anthropic_input *
     return anthropic_definition()->route_request(NULL, &input->route, &answer->route, refusal);
 }
 
+/** Whether the answer's key headers are the vector's `keyHeaders`, in order, none when it names none. */
+static inline int anthropic_key_headers_match(const forebay_anthropic_route_answer *route, const cJSON *expected) {
+    const cJSON *names = cJSON_GetObjectItemCaseSensitive(expected, "keyHeaders");
+    size_t index = 0;
+    const cJSON *name = NULL;
+    if (route->key_header_count != (size_t)cJSON_GetArraySize(names) ||
+        (route->key_headers == NULL) != (route->key_header_count == 0)) {
+        return 0;
+    }
+    cJSON_ArrayForEach(name, names) {
+        if (!cJSON_IsString(name) || strcmp(route->key_headers[index++], name->valuestring) != 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static inline int anthropic_route_matches(const anthropic_answer *answer, const cJSON *expected) {
     static const char *const kinds[] = {"messages", "modelList", "modelLookup", "passThrough"};
     const char *kind = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "kind"));
     const char *model_id = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(expected, "modelId"));
     int same = kind != NULL && answer->route.kind >= 1 && answer->route.kind <= 4 &&
                strcmp(kinds[answer->route.kind - 1], kind) == 0;
-    return same && (model_id == NULL ? answer->route.model_id == NULL
-                                     : answer->route.model_id != NULL && strcmp(answer->route.model_id, model_id) == 0);
+    return same && anthropic_key_headers_match(&answer->route, expected) &&
+           (model_id == NULL ? answer->route.model_id == NULL
+                             : answer->route.model_id != NULL && strcmp(answer->route.model_id, model_id) == 0);
 }
 
 static inline void anthropic_release_route_answer(anthropic_answer *answer) {

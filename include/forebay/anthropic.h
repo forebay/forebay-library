@@ -45,9 +45,9 @@ typedef struct forebay_anthropic_body_argument {
 
 /**
  * The request a body held, the provider's until release_request, and the client's `forwarded_headers`, each name
- * lower cased and once. A body that is no JSON object, or no JSON this library can read, holds no `request`: `reply_kind` is
- * FOREBAY_REPLY_INVALID_REQUEST, and `status` and `message` are the reply to answer with, static text. First shape
- * ends at `storage`.
+ * lower cased and once. A body that is no JSON object, or no JSON this library can read, holds no `request`:
+ * `reply_kind` is FOREBAY_REPLY_INVALID_REQUEST, and `status` and `message` are the reply to answer with, static
+ * text. First shape ends at `storage`.
  */
 typedef struct forebay_anthropic_request_answer {
     uint32_t size;
@@ -243,7 +243,10 @@ typedef struct forebay_anthropic_route_argument {
 
 /**
  * What the request is; for a lookup `model_id` is the text after `/v1/models/`, not URL-decoded, the provider's until
- * release_route. First shape ends at `storage`.
+ * release_route. For a pass-through, `key_headers` names the headers Anthropic's API carries a key in, `x-api-key`,
+ * for routing's pass_through to drop when they carry the placeholder; for any other kind it is NULL and its count 0.
+ * An answer whose `size` ends before `key_header_count` is answered without them. The names are static and outlive
+ * the answer. First shape ends at `storage`.
  */
 typedef struct forebay_anthropic_route_answer {
     uint32_t size;
@@ -251,28 +254,30 @@ typedef struct forebay_anthropic_route_answer {
     uint32_t kind;
     const char *model_id;
     void *storage;
+    const char *const *key_headers;
+    size_t key_header_count;
 } forebay_anthropic_route_answer;
 
 /**
  * The anthropic service. Every operation answers MALFORMED, before it allocates, for an argument or an answer absent
  * or short of its first shape, an answer that is not empty and `bytes` NULL beside a nonzero `length`; MALFORMED,
- * with the refusal saying what to repair, for a body that is not JSON and for an IR that breaks the rule its header
- * states (a required text NULL, an array NULL beside a nonzero count, a block kind the header does not name, a value
- * tree spisor_value_check refuses, which includes every `extensions` record and an unknown block's `raw`); and
- * OUT_OF_MEMORY, with the answer empty. JSON this library cannot read, a string holding a NUL (`\u0000`), is refused
- * as a body that is not JSON, and a number that is not finite (`1e400`) reads as null, as JSON.stringify writes it.
- * First shape ends at `release_refusal`.
+ * with the refusal saying what to repair, for a body `decode_response` is given that is not JSON and for an IR that
+ * breaks the rule its header states (a required text NULL, an array NULL beside a nonzero count, a block kind the
+ * header does not name, a value tree spisor_value_check refuses, which includes every `extensions` record and an
+ * unknown block's `raw`); and OUT_OF_MEMORY, with the answer empty. JSON this library cannot read, a string holding a
+ * NUL (`\u0000`), is refused by `decode_response` as a body that is not JSON, and a number that is not finite
+ * (`1e400`) reads as null, as JSON.stringify writes it. First shape ends at `release_refusal`.
  */
 typedef struct forebay_anthropic_definition {
     uint32_t size;
     void *context;
     /**
      * A body to an IR request, as `anthropic-translator`'s decodeRequest does. A string `content` or `system` becomes
-     * one text block with `$contentIsString` or `$systemIsString` set. A body that is not JSON, holds a NUL in a string,
-     * or whose root is not an object is answered OK with the invalid-request reply of the answer, not MALFORMED, which
-     * stays for a misused argument or answer, among them an answer short of the one that holds the reply. The
-     * argument's headers are answered as the client's `forwarded_headers`, without `authorization`, `x-api-key`,
-     * `host`, `content-length`, `accept-encoding`, `connection`, `keep-alive`, `proxy-authenticate`,
+     * one text block with `$contentIsString` or `$systemIsString` set. A body that is not JSON, holds a NUL in a
+     * string, or whose root is not an object is answered OK with the invalid-request reply of the answer, not
+     * MALFORMED, which stays for a misused argument or answer, among them an answer short of the one that holds the
+     * reply. The argument's headers are answered as the client's `forwarded_headers`, without `authorization`,
+     * `x-api-key`, `host`, `content-length`, `accept-encoding`, `connection`, `keep-alive`, `proxy-authenticate`,
      * `proxy-authorization`, `proxy-connection`, `te`, `trailer`, `transfer-encoding` and `upgrade`.
      */
     spisor_status (*decode_request)(void *context, const forebay_anthropic_body_argument *argument,
@@ -356,11 +361,10 @@ typedef struct forebay_anthropic_definition {
     spisor_status (*error_envelope)(void *context, const forebay_anthropic_error_argument *argument,
                                     forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
     /**
-     * The `/v1/models` body, as the proxy's `model-listing.ts` writes it: every entry in order, each as `type`, `id`,
-     * `display_name` (its name), `created_at` the fixed 2025-01-01T00:00:00Z, and `max_input_tokens` and `max_tokens`
-     * when it has those limits, inside `data`, `first_id` and `last_id` (null for no entry) and `has_more` false, as a
-     * 200 `application/json` reply. MALFORMED, naming the member, for a NULL `models` beside a count and an entry
-     * whose `id` or `name` is NULL.
+     * The `/v1/models` body: every entry in order, each as `type`, `id`, `display_name` (its name), `created_at` the
+     * fixed 2025-01-01T00:00:00Z, and `max_input_tokens` and `max_tokens` when it has those limits, inside `data`,
+     * `first_id` and `last_id` (null for no entry) and `has_more` false, as a 200 `application/json` reply. MALFORMED,
+     * naming the member, for a NULL `models` beside a count and an entry whose `id` or `name` is NULL.
      */
     spisor_status (*model_listing)(void *context, const forebay_anthropic_model_listing_argument *argument,
                                    forebay_anthropic_body_answer *answer, spisor_refusal *refusal);
@@ -408,8 +412,9 @@ typedef struct forebay_anthropic_definition {
     /**
      * What a request is, as the proxy routes it: a POST (the method compared ignoring case) to `/v1/messages` is
      * MESSAGES; a GET to `/v1/models` or `/v1/models/` is MODEL_LIST; a GET to `/v1/models/<id>` is MODEL_LOOKUP with
-     * the id; anything else, a path with its query cut off compared exactly, is PASS_THROUGH. MALFORMED, naming the
-     * member, for a NULL or empty `method` and a NULL `path`.
+     * the id; anything else, a path with its query cut off compared exactly, is PASS_THROUGH, with the key headers
+     * routing's pass_through takes as its `placeholder_key_headers`. MALFORMED, naming the member, for a NULL or empty
+     * `method` and a NULL `path`.
      */
     spisor_status (*route_request)(void *context, const forebay_anthropic_route_argument *argument,
                                    forebay_anthropic_route_answer *answer, spisor_refusal *refusal);

@@ -95,8 +95,11 @@ spisor_status routing_model_entries(void *context, const forebay_model_entries_a
         !SPISOR_IS_EMPTY_COUNTED_ANSWER(answer, MODEL_ENTRIES_ANSWER_SHAPE, answer->entry_count)) {
         return spisor_refuse_shape(refusal, "routing's model_entries");
     }
-    if (!routing_is_profile(argument->profile, 0) || !routing_is_catalog(argument->catalog, argument->catalog_count)) {
-        return forebay_refuse_member(refusal, "the profile or the catalog", "complete, with every text set");
+    if (!routing_is_profile(argument->profile, 0)) {
+        return forebay_refuse_member(refusal, "the profile", "complete, with every text set");
+    }
+    if (!routing_is_catalog(argument->catalog, argument->catalog_count)) {
+        return forebay_refuse_member(refusal, "the catalog", "complete, with every text set");
     }
     if (!routing_fill_model_entries(&answer->storage, argument->profile, argument->catalog, argument->catalog_count,
                                     &answer->entries, &answer->entry_count)) {

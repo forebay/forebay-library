@@ -5,6 +5,9 @@
     "path": "/v1/messages/count_tokens"
   },
   "output": {
-    "kind": "passThrough"
+    "kind": "passThrough",
+    "keyHeaders": [
+      "x-api-key"
+    ]
   }
 }

@@ -96,16 +96,32 @@ static const char *placeholder_key(const char *placeholder) {
     return routing_starts_with_ignoring_case(placeholder, scheme) ? placeholder + sizeof scheme - 1 : placeholder;
 }
 
-static int is_placeholder_credential(const cJSON *entry, const char *placeholder) {
-    if (routing_equals_ignoring_case(entry->string, "authorization")) {
-        return strcmp(entry->valuestring, placeholder) == 0;
+/** The placeholder authorization a client sent, and the names of the headers its protocol carries a key in. */
+typedef struct placeholder_credential {
+    const char *authorization;
+    const cJSON *key_headers;
+} placeholder_credential;
+
+static int is_key_header(const char *name, const cJSON *key_headers) {
+    const cJSON *key_header;
+    cJSON_ArrayForEach(key_header, key_headers) {
+        if (routing_equals_ignoring_case(name, key_header->valuestring)) {
+            return 1;
+        }
     }
-    return routing_equals_ignoring_case(entry->string, "x-api-key") &&
-           (strcmp(entry->valuestring, placeholder) == 0 ||
-            strcmp(entry->valuestring, placeholder_key(placeholder)) == 0);
+    return 0;
 }
 
-static void drop_what_the_proxy_replaces(cJSON *headers, const char *placeholder) {
+static int is_placeholder_credential(const cJSON *entry, const placeholder_credential *placeholder) {
+    if (routing_equals_ignoring_case(entry->string, "authorization")) {
+        return strcmp(entry->valuestring, placeholder->authorization) == 0;
+    }
+    return is_key_header(entry->string, placeholder->key_headers) &&
+           (strcmp(entry->valuestring, placeholder->authorization) == 0 ||
+            strcmp(entry->valuestring, placeholder_key(placeholder->authorization)) == 0);
+}
+
+static void drop_what_the_proxy_replaces(cJSON *headers, const placeholder_credential *placeholder) {
     cJSON *entry = headers->child;
     while (entry != NULL) {
         cJSON *next = entry->next;
@@ -116,7 +132,8 @@ static void drop_what_the_proxy_replaces(cJSON *headers, const char *placeholder
     }
 }
 
-static cJSON *forwarded_headers(const cJSON *headers, const char *placeholder, const char *host, double body_length) {
+static cJSON *forwarded_headers(const cJSON *headers, const placeholder_credential *placeholder, const char *host,
+                                double body_length) {
     cJSON *forwarded = routing_end_to_end_headers(headers, 0);
     if (forwarded == NULL) {
         return NULL;
@@ -143,10 +160,10 @@ static char *join_target(const char *base, const char *url) {
 }
 
 static cJSON *pass_through_answer(const routing_upstream *parts, const cJSON *url, const cJSON *headers,
-                                  const cJSON *placeholder, double body_length) {
+                                  const placeholder_credential *placeholder, double body_length) {
     cJSON *result = cJSON_CreateObject();
     char *target = join_target(parts->base, url->valuestring);
-    cJSON *forwarded = forwarded_headers(headers, placeholder->valuestring, parts->host, body_length);
+    cJSON *forwarded = forwarded_headers(headers, placeholder, parts->host, body_length);
     if (result == NULL || target == NULL || forwarded == NULL ||
         cJSON_AddStringToObject(result, "target", target) == NULL ||
         !cJSON_AddItemToObject(result, "headers", forwarded)) {
@@ -163,7 +180,7 @@ typedef struct pass_through_arguments {
     const cJSON *url;
     const cJSON *headers;
     const cJSON *body_length;
-    const cJSON *placeholder;
+    placeholder_credential placeholder;
 } pass_through_arguments;
 
 static pass_through_arguments read_pass_through_arguments(const cJSON *argument) {
@@ -172,7 +189,8 @@ static pass_through_arguments read_pass_through_arguments(const cJSON *argument)
         cJSON_GetObjectItemCaseSensitive(argument, "url"),
         cJSON_GetObjectItemCaseSensitive(argument, "headers"),
         cJSON_GetObjectItemCaseSensitive(argument, "bodyLength"),
-        cJSON_GetObjectItemCaseSensitive(argument, "placeholderAuthorization"),
+        {cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(argument, "placeholderAuthorization")),
+         cJSON_GetObjectItemCaseSensitive(argument, "placeholderKeyHeaders")},
     };
     return read;
 }
@@ -193,7 +211,7 @@ static spisor_status answer_pass_through(const pass_through_arguments *arguments
     if (!routing_read_upstream(arguments->upstream->valuestring, &parts, reply, &status)) {
         return status;
     }
-    status = service_answer(pass_through_answer(&parts, arguments->url, arguments->headers, arguments->placeholder,
+    status = service_answer(pass_through_answer(&parts, arguments->url, arguments->headers, &arguments->placeholder,
                                                 arguments->body_length->valuedouble),
                             reply);
     routing_free_upstream(&parts);

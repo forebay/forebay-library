@@ -77,7 +77,8 @@ typedef struct forebay_catalog_provider {
  * one the profile does not declare; a profile declaring no `tier_regex` has every model tierless, its tiers
  * `tier_fallback` alone, so a profile with none of either derives only the default slot and lists every model as its
  * provider offers it. `tier_source_provider` and the two tier lists are the tier members a decision may require.
- * `default_context` and `default_output` are the token limits of a model whose catalog entry gives none. First shape ends at `unserved_model_pattern`.
+ * `default_context` and `default_output` are the token limits of a model whose catalog entry gives none. First shape
+ * ends at `unserved_model_pattern`.
  */
 typedef struct forebay_routing_profile {
     uint32_t size;
@@ -480,10 +481,12 @@ typedef struct forebay_catalog_read_answer {
 
 /**
  * A request to send upstream undecoded, with the placeholder authorization a client sent. The placeholder never goes
- * upstream: an `authorization` header equal to `placeholder_authorization` exactly is dropped, and so is an
- * `x-api-key` header equal either to that whole value, as a client given the whole placeholder as its key sends it,
- * or to the key it carries, the text after a leading `Bearer ` (the scheme compared ignoring case), as a client given
- * the bare key sends it. First shape ends at `placeholder_authorization`.
+ * upstream: an `authorization` header equal to `placeholder_authorization` exactly is dropped, and so is a header
+ * named in `placeholder_key_headers` (compared ignoring case), the names the client's protocol carries a key in, equal
+ * either to that whole value, as a client given the whole placeholder as its key sends it, or to the key it carries,
+ * the text after a leading `Bearer ` (the scheme compared ignoring case), as a client given the bare key sends it. An
+ * argument whose `size` ends before `placeholder_key_header_count` names no such header. First shape ends at
+ * `placeholder_authorization`.
  */
 typedef struct forebay_pass_through_argument {
     uint32_t size;
@@ -493,6 +496,8 @@ typedef struct forebay_pass_through_argument {
     size_t header_count;
     uint64_t body_length;
     const char *placeholder_authorization;
+    const char *const *placeholder_key_headers;
+    size_t placeholder_key_header_count;
 } forebay_pass_through_argument;
 
 /** The upstream URL and the headers to send it. First shape ends at `storage`. */

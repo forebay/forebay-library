@@ -5,6 +5,9 @@
     "path": "/v1/models/claude-x"
   },
   "output": {
-    "kind": "passThrough"
+    "kind": "passThrough",
+    "keyHeaders": [
+      "x-api-key"
+    ]
   }
 }

@@ -345,6 +345,8 @@ static void print_routing_layouts(void) {
     FIELD(forebay_pass_through_argument, header_count);
     FIELD(forebay_pass_through_argument, body_length);
     FIELD(forebay_pass_through_argument, placeholder_authorization);
+    FIELD(forebay_pass_through_argument, placeholder_key_headers);
+    FIELD(forebay_pass_through_argument, placeholder_key_header_count);
     SIZE(forebay_pass_through_argument);
     FIELD(forebay_pass_through_answer, size);
     FIELD(forebay_pass_through_answer, target);
@@ -571,6 +573,8 @@ static void print_anthropic_layouts(void) {
     FIELD(forebay_anthropic_route_answer, kind);
     FIELD(forebay_anthropic_route_answer, model_id);
     FIELD(forebay_anthropic_route_answer, storage);
+    FIELD(forebay_anthropic_route_answer, key_headers);
+    FIELD(forebay_anthropic_route_answer, key_header_count);
     SIZE(forebay_anthropic_route_answer);
     FIELD(forebay_anthropic_definition, size);
     FIELD(forebay_anthropic_definition, context);
