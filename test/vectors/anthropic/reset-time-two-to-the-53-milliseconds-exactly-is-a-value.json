@@ -1,0 +1,13 @@
+{
+  "direction": "resetTime",
+  "input": {
+    "headers": {
+      "anthropic-ratelimit-unified-reset": "9007199254740.992"
+    },
+    "now": 0
+  },
+  "output": {
+    "hasResetAt": true,
+    "resetAt": 9007199254740992
+  }
+}
