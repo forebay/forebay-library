@@ -7,6 +7,7 @@
 #include <weivel/c/standard.h>
 #include <weivel/library.h>
 
+#include "another_definition.h"
 #include "check.h"
 #include "declaration_file.h"
 #include "forebay/anthropic.h"
@@ -137,77 +138,16 @@ static void services_work_through_the_definitions_the_host_registered(void) {
     weivel_standard_library_release(&declaration);
 }
 
-/**
- * Points the definition function of the service `id` among `services` at `symbol`, through a copy of its functions
- * the caller frees; NULL when no such service declares a definition, or out of memory.
- */
-static weivel_standard_library_function *serve_by(weivel_standard_library_service *services, size_t service_count,
-                                                  const char *id, const char *symbol) {
-    for (size_t index = 0; index < service_count; index++) {
-        weivel_standard_library_service *service = &services[index];
-        weivel_standard_library_function *functions;
-        if (strcmp(service->id, id) != 0) {
-            continue;
-        }
-        functions = malloc(service->function_count * sizeof *functions);
-        if (functions == NULL) {
-            return NULL;
-        }
-        memcpy(functions, service->functions, service->function_count * sizeof *functions);
-        for (size_t function = 0; function < service->function_count; function++) {
-            if (functions[function].kind == WEIVEL_STANDARD_FUNCTION_DEFINITION) {
-                functions[function].symbol = symbol;
-                service->functions = functions;
-                return functions;
-            }
-        }
-        free(functions);
-    }
-    return NULL;
-}
-
-static void check_load_refused(const weivel_standard_library *declaration, const char *description) {
-    weivel_c_host *host = create_host();
-    weivel_c_library *library = NULL;
-    weivel_c_library_load_failure failure = WEIVEL_INIT(weivel_c_library_load_failure);
-    if (host == NULL) {
-        return;
-    }
-    CHECK(weivel_c_host_load_library(host, FOREBAY_LIBRARY_PATH, declaration, &library, &failure, NULL) ==
-          WEIVEL_C_STATUS_MISUSE);
-    CHECK(library == NULL);
-    check_text(failure.refused_description, description, "the description refused");
-    CHECK(weivel_c_host_destroy(host, NULL) == WEIVEL_C_STATUS_OK);
-    CHECK(weivel_c_host_free(host) == WEIVEL_C_STATUS_OK);
-}
-
-/**
- * `routing` served by `accounts`' definition under routing's own description: the description passes the standard's
- * check, so only the check that a description answers its service's definition refuses it, before anything is
- * registered.
- */
+/** `routing` served by `accounts`' definition under routing's own description. */
 static void a_definition_served_under_another_description_is_refused(void) {
     weivel_standard_library declaration = WEIVEL_INIT(weivel_standard_library);
-    weivel_standard_library swapped;
-    weivel_standard_library_service *services;
-    weivel_standard_library_function *functions = NULL;
     if (!read_library(&declaration)) {
         return;
     }
-    services = malloc(declaration.service_count * sizeof *services);
-    CHECK(services != NULL);
-    if (services != NULL) {
-        memcpy(services, declaration.services, declaration.service_count * sizeof *services);
-        functions = serve_by(services, declaration.service_count, "routing", "forebay_accounts_definition_of");
-        CHECK(functions != NULL);
-    }
-    if (functions != NULL) {
-        swapped = declaration;
-        swapped.services = services;
-        check_load_refused(&swapped, "forebay_routing_definition_description");
-    }
-    free(functions);
-    free(services);
+    check_failures += (int)spisor_check_served_by_another_definition(WEIVEL_CORE_PATH, FOREBAY_LIBRARY_PATH,
+                                                                     &declaration, "routing",
+                                                                     "forebay_accounts_definition_of",
+                                                                     "forebay_routing_definition_description");
     weivel_standard_library_release(&declaration);
 }
 

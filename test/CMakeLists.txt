@@ -152,7 +152,7 @@ target_include_directories(weivel_host_load_test PRIVATE ${forebay_spisor_test_d
 target_compile_definitions(weivel_host_load_test PRIVATE
     FOREBAY_DECLARATION_PATH="${PROJECT_SOURCE_DIR}/library.json"
     FOREBAY_LIBRARY_PATH="$<TARGET_FILE:forebay_library>" WEIVEL_CORE_PATH="$<TARGET_FILE:weivel_core_shared>")
-target_link_libraries(weivel_host_load_test PRIVATE weivel_c_standard)
+target_link_libraries(weivel_host_load_test PRIVATE weivel_c_standard spisor_another_definition_check)
 add_dependencies(weivel_host_load_test forebay_library weivel_core_shared)
 spisor_strict_warnings(weivel_host_load_test)
 add_test(NAME weivel_host_load_test COMMAND weivel_host_load_test)
