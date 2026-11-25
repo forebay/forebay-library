@@ -197,8 +197,10 @@ standard's check and its check that the description answers the definition its s
 generated at build time by the weivel standard's `weivel_describe` from `spisor/status.h` and every
 `include/forebay` header, a service's naming as its `answered_by` the getter the service declares and the contract's
 naming none, so a language that cannot read a C header binds the definition from it, and `description_test` loads
-each one, a contract's among them, from the built library and runs the standard's own check on it, and for a
-service the check that it answers the definition its getter answers. The symbol is the definition's name with `_description`, which is the name another library nesting a forebay definition
+each one, a contract's among them, from the built library and runs the standard's own check on it; library's
+described checks require each service's description to answer the definition its getter answers, and library's
+`testing/another_definition.c` runs the refusal above. The symbol is the definition's name with `_description`, which
+is the name another library nesting a forebay definition
 looks for. `forebay_library` links `weivel_standard` statically, and no other weivel library, and exports its
 definitions, their descriptions and the contract's description and nothing else, which
 `forebay_exports_only_definitions_test` holds.
